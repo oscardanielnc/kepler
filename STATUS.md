@@ -31,8 +31,13 @@ son precio. Ganador:
 - **Traducción producto:** o maxDD −8.6% a 1x (menos riesgo), o 1.35x a igual maxDD → **+22%/año
   (~1.86%/mes) vs 1.31%/mes hoy** (+42% retorno sin subir DD). RECOMENDADO horizonte **5d**
   (≈ Sharpe, menos turnover que 3d, IS/OOS más parejo 1.03/0.88).
-- PENDIENTE: implementar en `alphas.py` + `engine.SLEEVES` (confirmar β≈0) → validar en DEMO
-  antes de considerarlo producción (regla de oro: backtest ✓, falta demo).
+- **IMPLEMENTADO 2026-05-30** (commit bf83594): `alphas.xs_takerflow_score` + `engine.SLEEVES`
+  (`takerflow_5d`, 120h) + `engine.load_panel` (carga volume/taker_buy_volume). Motor 6 sleeves
+  verificado end-to-end: **Sharpe 1.54 · ann 18.6% · maxDD −6.3% · β realizado +0.035** (neutral OK).
+  Target limpio (13 posiciones, todas activos reales). Ciclo orquestador dry-run sin errores.
+  Encoding: `engine.main`/`orchestrator.run` reconfiguran stdout a UTF-8 (consola Windows).
+- PENDIENTE: push + `deploy.sh` en la VM → validar en DEMO que el sleeve #6 opera bien varios días
+  (regla de oro: backtest ✓, código ✓, falta validación demo antes de llamarlo producción).
 
 ## CHANGELOG 2026-05-30 (mañana — auditoría de beta-neutralidad + estado VM)
 
@@ -96,10 +101,9 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
 ## PENDIENTES (próximas sesiones, en orden)
 1. **Confirmar `deploy.sh` en la VM** con el último commit y dejar **correr en demo varios días**:
    posiciones = objetivo, maker llenan, sin errores. (Validación demo = CRÍTICA antes de real.)
-2. **[LISTO PARA IMPLEMENTAR] Integrar sleeve #6 `taker_flow` (5d).** Backtest ✓ (e16b/e16c):
-   Sharpe 1.13→1.36, maxDD −11.6→−8.6%. Falta: añadir a `alphas.py` (`xs_takerflow_score`) +
-   `engine.SLEEVES`, cargar volume/taker_buy_volume en `engine.load`, confirmar β≈0, validar DEMO.
-   Más adelante: seguir el loop (1 sleeve uncorr/semana). Próxima fuente a probar: order-book/OI.
+2. **Validar el sleeve #6 `taker_flow` en DEMO** (ya implementado, commit bf83594): push + deploy.sh
+   en la VM, dejar correr días, confirmar que opera bien y β≈0 en vivo. Luego seguir el loop
+   (1 sleeve uncorr/semana). Próximas fuentes a probar: open-interest, order-book imbalance, OI/funding.
 3. **Monitor de riesgo intradía** → BLOQUEADO: requiere primero un BACKTESTER HORARIO fiable
    (`research/e15` v1/v2 no reproducen el edge diario). La teoría ya lo desaconseja (CLAUDE.md:
    "gestión intradía = el juego que pierde"). El riesgo intradía lo cubren circuit breaker +

@@ -56,8 +56,9 @@ descartados (workflow). 1.13/−11.6% es el mejor perfil de riesgo para copy-lea
        −11.6% reproducidos. El libro es net-long en DÓLARES (~76%) pero β≈0 (longs bajo-beta + hedge
        BTC + trend overlay long-only). net-en-$ ≠ β-neutralidad. No es bug.
 +  [ ] Monitor de riesgo intradía → BLOQUEADO: requiere backtester horario fiable (research/e15 no lo logra).
-+  [~] Sleeve #6 `taker_flow` (flujo de órdenes, 5d) VALIDADO 2026-05-30 (research/e16b+e16c):
-       corr 0.06, Sharpe 1.13→1.36, maxDD −11.6→−8.6%. Falta implementar en engine + validar DEMO.
++  [x] Sleeve #6 `taker_flow` (flujo de órdenes, 5d=120h) VALIDADO + IMPLEMENTADO 2026-05-30
+       (research/e16b+e16c; alphas.py + engine.SLEEVES + engine.load_panel; commit bf83594).
+       Motor 6 sleeves: Sharpe 1.54 · ann 18.6% · maxDD −6.3% · β +0.035. Falta validar en DEMO.
 
 ## Loop de mejora diario (subir los números)
 Añadir 1 sleeve uncorr/semana (validar walk-forward) → sube Sharpe → baja DD → mejores números.
