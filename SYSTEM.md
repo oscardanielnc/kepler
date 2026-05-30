@@ -41,17 +41,18 @@ Motor live ESTABLE 1x: **Sharpe 1.13, ann +15.7%, maxDD −11.6%, 67% meses+** (
 Nota: intenté reconciliar a 1.34 (carry-breadth + gate de régimen) — AMBOS empeoraron el maxDD →
 descartados (workflow). 1.13/−11.6% es el mejor perfil de riesgo para copy-lead de bajo DD.
 
-## CHECKLIST PARA PRODUCCIÓN (qué falta ajustar)
-1. [ ] Precisión/min-notional por símbolo en execution (load_filters) — validar vs demo exchangeInfo.
-2. [ ] Refresh de datos programado (fetch 1h+funding antes de cada rebalanceo).
-3. [ ] Orquestador/scheduler (cron: fetch→engine→execution cada N horas) — rescatar supervisor de Sentinel.
-4. [ ] Gestión de fills maker (re-colocar/perseguir si no llena; aceptar parciales).
-5. [ ] Circuit breaker de cartera (halt si equity cae X%; límites gross/posición) — rescatar de Sentinel.
-6. [ ] Reconcile al arranque (DB target vs posiciones Binance reales).
-7. [ ] Track record: loguear fills reales + equity diaria + PnL → curva verificable.
-8. [ ] Monitoreo/alertas (ntfy en errores, rebalanceos, movimientos grandes).
-9. [ ] VALIDACIÓN EN DEMO: correr el loop completo con API keys demo días/semanas → confirmar
-       fills, que posiciones igualan target, sin bugs. CRÍTICO antes de real.
+## CHECKLIST PARA PRODUCCIÓN (estado al 2026-05-30 — ver STATUS.md para lo último)
+1. [x] Precisión/min-notional por símbolo en execution (load_filters).
+2. [x] Refresh de datos programado (fetch.update_universe antes de cada rebalanceo).
+3. [x] Orquestador/scheduler (orchestrator.py: heartbeat 15min + rebalanceo 24h).
+4. [x] Gestión de fills maker (re-colocar/perseguir, aceptar parciales).
+5. [x] Circuit breaker de cartera (halt −20% del pico).
+6. [x] Reconcile al arranque (execution.get_positions vs target).
+7. [x] Track record: equity_tick + equity_daily + dashboard (rentabilidad total/diaria, posiciones reales+PnL).
+8. [x] Monitoreo/alertas (notify.py ntfy: ciclo, error, halt).
+9. [~] VALIDACIÓN EN DEMO: EN CURSO desde 2026-05-29. Dejar correr días/semanas. CRÍTICO antes de real.
++  [x] Apalancamiento conservador por símbolo (set_leverage 3x).
++  [ ] Monitor de riesgo intradía (research/e15 v1 con bug metodológico → backtest válido pendiente).
 
 ## Loop de mejora diario (subir los números)
 Añadir 1 sleeve uncorr/semana (validar walk-forward) → sube Sharpe → baja DD → mejores números.
