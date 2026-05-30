@@ -31,6 +31,8 @@ BINANCE_API_SECRET=REEMPLAZAR
 KEPLER_DRY_RUN=true
 KEPLER_USE_DEMO=true
 DASHBOARD_PORT=8080
+# Alertas push (elige un topic único y suscríbete con la app ntfy.sh en el móvil)
+KEPLER_NTFY_TOPIC=
 EOF
     chmod 600 "$ENV_FILE"
     echo "  ✓ Creado. EDITA $ENV_FILE con tus API keys."

@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config  # noqa
-from kepler import fetch, execution, circuit_breaker
+from kepler import fetch, execution, circuit_breaker, notify
 from kepler.engine import compute_target, TIERS
 from kepler.db import DB
 
@@ -54,8 +54,9 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     db.audit("INFO", "orchestrator", f"Ciclo {tier} ok ({time.time()-t0:.0f}s)",
              detail={"equity": equity, "n_target": n_target, "operate": operate})
     db.export_daily_log()   # JSON descargable del día
-    return {"equity": equity, "n_target": n_target, "operate": operate,
-            "mode": "DRY_RUN" if execution.DRY_RUN else ("DEMO" if execution.USE_DEMO else "REAL")}
+    mode = "DRY_RUN" if execution.DRY_RUN else ("DEMO" if execution.USE_DEMO else "REAL")
+    notify.alert_cycle(equity, n_target, float(target.abs().sum()), operate, mode)
+    return {"equity": equity, "n_target": n_target, "operate": operate, "mode": mode}
 
 
 def run(tier="ESTABLE", once=False):
@@ -70,6 +71,7 @@ def run(tier="ESTABLE", once=False):
         except Exception as e:
             _log.exception(f"[orq] error en ciclo: {e}")
             db.audit("ERROR", "orchestrator", f"Error: {e}")
+            notify.alert_error(str(e)[:200])
         if once:
             break
         time.sleep(REBALANCE_HOURS * 3600)

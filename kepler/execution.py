@@ -137,37 +137,59 @@ def cancel_all(symbol):
 
 # ─── Rebalanceo ───────────────────────────────────────────────────────────────
 
-def rebalance(target_weights, equity=None):
-    """target_weights: Series pesos objetivo (signed, % del capital, ya con leverage).
-    Calcula deltas vs posiciones actuales y coloca órdenes límite maker."""
-    equity = equity or get_balance() or config.CAPITAL_USD
-    filt = {} if DRY_RUN else load_filters()
+MAKER_RETRIES = int(os.environ.get("KEPLER_MAKER_RETRIES", "3"))
+MAKER_WAIT_S  = int(os.environ.get("KEPLER_MAKER_WAIT_S", "20"))
+
+
+def _place_deltas(target_weights, equity, filt, attempt):
+    """Calcula deltas vs posiciones actuales y coloca límites maker. Persigue el precio
+    en cada reintento (más agresivo) sin cruzar (post-only sigue siendo maker).
+    Devuelve nº de órdenes colocadas (deltas que aún faltan)."""
     current = get_positions()
-    orders = []
+    placed = 0
+    offset = max(0.0002 - attempt * 0.00007, 0.00002)   # menos pasivo en cada reintento
     for sym, w in target_weights.items():
-        if abs(w) < 1e-4:
-            target_notional = 0.0
-        else:
-            target_notional = w * equity
-        price = book_mid(sym) if not DRY_RUN else None
-        if price is None and DRY_RUN:
-            price = 1.0   # placeholder en dry_run (no se envía)
-        target_qty = target_notional / price if price else 0.0
-        cur_qty = current.get(sym, 0.0)
-        delta = target_qty - cur_qty
-        delta_usd = abs(delta) * (price or 0)
-        if DRY_RUN:
-            if abs(w) > 1e-3:
-                logging.info(f"[exec] DRY target {sym}: w={w:+.3f} notional={target_notional:+.0f}USD")
+        target_notional = w * equity if abs(w) >= 1e-4 else 0.0
+        price = book_mid(sym)
+        if not price or sym not in filt:
             continue
-        if delta_usd < MIN_ORDER_USD or sym not in filt:
+        delta = target_notional / price - current.get(sym, 0.0)
+        if abs(delta) * price < MIN_ORDER_USD:
             continue
         f = filt[sym]; side = "BUY" if delta > 0 else "SELL"
-        # límite ligeramente pasivo para ser maker (post-only rechaza si cruzaría)
-        px = price * (1 - 0.0002) if side == "BUY" else price * (1 + 0.0002)
-        r = place_limit_maker(sym, side, abs(delta), px, f["qp"], f["pp"])
-        orders.append((sym, side, round(abs(delta), f["qp"]), r is not None))
-    return orders
+        px = price * (1 - offset) if side == "BUY" else price * (1 + offset)
+        if place_limit_maker(sym, side, abs(delta), px, f["qp"], f["pp"]) is not None:
+            placed += 1
+    return placed
+
+
+def rebalance(target_weights, equity=None):
+    """Rebalancea hacia el objetivo con órdenes LÍMITE maker + gestión de no-fills:
+    cancela stale → coloca → espera → re-coloca lo no llenado persiguiendo el precio,
+    hasta MAKER_RETRIES. Lo que no llene queda para el próximo ciclo (drift lento, OK)."""
+    equity = equity or get_balance() or config.CAPITAL_USD
+    if DRY_RUN:
+        for sym, w in target_weights.items():
+            if abs(w) > 1e-3:
+                logging.info(f"[exec] DRY target {sym}: w={w:+.3f} notional={w*equity:+.0f}USD")
+        return [("dry_run", len(target_weights))]
+    filt = load_filters()
+    syms = set(target_weights.index) | set(get_positions().keys())
+    for sym in syms:                      # 1. limpiar órdenes stale del ciclo anterior
+        cancel_all(sym)
+    summary = []
+    for attempt in range(MAKER_RETRIES):  # 2. colocar + perseguir lo no llenado
+        n = _place_deltas(target_weights, equity, filt, attempt)
+        summary.append(n)
+        if n == 0:
+            break
+        if attempt < MAKER_RETRIES - 1:
+            time.sleep(MAKER_WAIT_S)
+            for sym in syms:              # cancelar lo no llenado antes de re-colocar
+                cancel_all(sym)
+    remaining = summary[-1] if summary else 0
+    logging.info(f"[exec] rebalanceo: intentos={summary} · sin llenar al final={remaining} (queda p/próximo ciclo)")
+    return [("rebalance", summary, remaining)]
 
 
 def main():

@@ -37,6 +37,10 @@ def check(equity: float, db: DB | None = None) -> bool:
     if not halted and dd <= -MAX_DD:
         db.audit("CRITICAL", "circuit_breaker", f"HALT — drawdown {dd*100:.1f}% (equity {equity:.0f}/pico {peak:.0f})",
                  detail={"halted": True, "dd": dd, "equity": equity, "peak": peak})
+        try:
+            from kepler import notify; notify.alert_halt(dd, equity)
+        except Exception:
+            pass
         return False
     if halted and dd >= -(MAX_DD - RESUME_RECOVER):
         db.audit("INFO", "circuit_breaker", f"REANUDA — recuperado a {dd*100:.1f}%",
