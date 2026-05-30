@@ -1,5 +1,5 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-30** (mañana, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-30** (tarde, hora Lima).
 
 ---
 
@@ -8,11 +8,41 @@
 - ✅ Servicios `kepler` y `kepler-api` **activos**. Dashboard live OK en http://213.35.121.9:8080
   (verificado 2026-05-30: equity vivo ~4933, 14 posiciones source="real" con PnL, heartbeats fluyendo).
 - ✅ Circuit breaker activo (halt a −20% del pico). Alertas ntfy configuradas.
-- ✅ **β-neutralidad auditada (2026-05-30): β combinado = +0.05, Sharpe 1.13 / maxDD −11.6% reproducidos.**
-  El "76% net long en dólares" es esperado (longs bajo-beta + hedge BTC + trend overlay), NO un fallo.
+- ✅ **β-neutralidad auditada (2026-05-30): β combinado = +0.05.** El "76% net long en dólares" es
+  esperado (longs bajo-beta + hedge BTC + trend overlay), NO un fallo.
+- ✅ **6 sleeves** (añadido `takerflow_5d`) + **ancla de maxDD −10%** (leverage auto = 1.62x):
+  motor da **ann 31.8% (~2.65%/mes) · maxDD −10.0% · Sharpe 1.54 · 69% meses+**. Pendiente validar DEMO.
 - ✅ Cambios previos (leverage 3x + frontend) ya en origin/main. Falta confirmar `deploy.sh` en la VM.
 
 ---
+
+## CHANGELOG 2026-05-30 (tarde-2 — ancla maxDD −10% + ronda 3 sleeves)
+
+### 🟢 ANCLA de maxDD −10% con leverage auto-calculado (regla de Oscar) — commit d0206b1
+A pedido de Oscar: el tier ESTABLE fija el **maxDD del backtest en −10%** y el **leverage de
+estrategia se CALCULA** para clavarlo (no es múltiplo fijo). Cada mejora del Sharpe → más retorno
+al MISMO maxDD (flywheel), no menos riesgo. Excepción a reportar: si subir el maxDD diera un salto
+de beneficio desproporcionado, avisar a Oscar.
+- `config.TARGET_MAXDD=0.10` · `MAX_STRAT_LEVERAGE=4.0` (cap). `portfolio.leverage_for_maxdd_anchor`
+  (bisección, maxDD compuesto monótono en L). `engine.TIERS` = presupuesto de maxDD
+  {ESTABLE 0.10, BALANCEADO 0.20, GROWTH 0.30}. `compute_target` devuelve `lev` (6-tupla);
+  callers actualizados (orchestrator loguea lev+maxdd_target; report, execution, main).
+- **VERIFICADO (engine + orquestador dry-run): 6 sleeves → lev 1.62x → maxDD −10.0% · ann 31.8%
+  (~2.65%/mes) · 69% meses+.** (vs ESTABLE viejo 1x: +15.7%/−11.6%.) Gross sube a ~0.82 (< MAX_GROSS=2).
+- ⚠️ El −10% es del BACKTEST; el futuro puede ser peor. Circuit breaker (−20%) sigue como red.
+
+### Ronda 3 de sleeves (`research/e16d`): NINGUNO mejora el retorno anclado → no se añade
+Probé 6 candidatos OHLC+count+flujo con criterio NUEVO: no basta pasar corr<0.35 + walk-forward;
+debe **subir el retorno al maxDD −10%** (con vol-parity, un sleeve de menor Sharpe DILUYE aunque
+sea ortogonal). Resultado (Δ%/mes al ancla):
+- `close_loc_5d`: pasa filtro (corr 0.06, IS 0.33/OOS 0.46) pero **−0.12%/mes** (diluye) → NO.
+- `range_lowvol`: +0.06%/mes pero **corr 0.95 con lowvol** (redundante) → NO.
+- `count_mom`, `tradesize_mom`, `flow_accel`, `hl_position`: fallan walk-forward.
+- **LECCIÓN (queda en e16d): pasar corr+IS/OOS es necesario pero NO suficiente con el ancla; el
+  test real es Δretorno a maxDD fijo.** La veta OHLCV está agotada — todo lo derivable de
+  precio/volumen/flujo ya toca los sleeves existentes.
+- **PRÓXIMO SALTO real:** fuente de datos NUEVA → **Open Interest** y/o **long/short ratio**
+  (data.binance.vision/.../futures/um/daily/metrics/) → requiere extender `kepler/fetch.py`.
 
 ## CHANGELOG 2026-05-30 (tarde — NUEVO SLEEVE validado: taker_flow)
 
@@ -101,15 +131,18 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
 ## PENDIENTES (próximas sesiones, en orden)
 1. **Confirmar `deploy.sh` en la VM** con el último commit y dejar **correr en demo varios días**:
    posiciones = objetivo, maker llenan, sin errores. (Validación demo = CRÍTICA antes de real.)
-2. **Validar el sleeve #6 `taker_flow` en DEMO** (ya implementado, commit bf83594): push + deploy.sh
-   en la VM, dejar correr días, confirmar que opera bien y β≈0 en vivo. Luego seguir el loop
-   (1 sleeve uncorr/semana). Próximas fuentes a probar: open-interest, order-book imbalance, OI/funding.
-3. **Monitor de riesgo intradía** → BLOQUEADO: requiere primero un BACKTESTER HORARIO fiable
+2. **Validar en DEMO** sleeve #6 + ancla −10% (commits bf83594/d0206b1): push + deploy.sh en VM,
+   confirmar en vivo que opera bien, β≈0 y lev≈1.62x. (Oscar despliega por su cuenta.)
+3. **Loop de mejora — fuente NUEVA de datos (la veta OHLCV se agotó, ver e16d).** Extender
+   `kepler/fetch.py` para descargar **Open Interest** y/o **long/short ratio** de
+   data.binance.vision/.../metrics → backtestear como sleeve ortogonal (e16e) con el criterio del
+   ancla (Δretorno a maxDD −10%). Es el próximo salto real de los números.
+4. **Monitor de riesgo intradía** → BLOQUEADO: requiere primero un BACKTESTER HORARIO fiable
    (`research/e15` v1/v2 no reproducen el edge diario). La teoría ya lo desaconseja (CLAUDE.md:
    "gestión intradía = el juego que pierde"). El riesgo intradía lo cubren circuit breaker +
    diversificación + β≈0. No retomar sin construir antes el motor horario.
-4. Revisar `heartbeat` a 5 min si Oscar quiere la curva más fina (ahora 15 min).
-5. Cuando haya track record real → evaluar subir a tier BALANCEADO (decisión de Oscar).
+5. Revisar `heartbeat` a 5 min si Oscar quiere la curva más fina (ahora 15 min).
+6. Cuando haya track record real → evaluar subir a tier BALANCEADO (decisión de Oscar).
 
 ## RECORDATORIO PERSISTENTE
 - Oscar debe **retirar $1800 de Brayan / Btc-Panda** (martingala 20x, ruina probada en research/e13).
