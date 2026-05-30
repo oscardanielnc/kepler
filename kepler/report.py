@@ -20,7 +20,7 @@ from kepler.engine import compute_target, TIERS
 
 def main():
     tier = "ESTABLE"
-    target, vp, df, port, asof = compute_target(tier)
+    target, vp, df, port, asof, lev = compute_target(tier)
     eq = (1 + port).cumprod()
     fig, ax = plt.subplots(2, 3, figsize=(19, 10))
     fig.suptitle(f"KEPLER — Sistema de 5 sleeves (tier {tier} 1x) · datos hasta {str(asof)[:10]}",

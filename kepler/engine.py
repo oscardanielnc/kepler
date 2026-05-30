@@ -16,11 +16,13 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config  # noqa
 from kepler import alphas
-from kepler.portfolio import vol_parity_weights, metrics
+from kepler.portfolio import vol_parity_weights, metrics, leverage_for_maxdd_anchor
 from kepler.db import DB
 
 DRIVER = "BTCUSDT"; BETA_W = 168; MIN_BARS = 34000
-TIERS = {"ESTABLE": 1.0, "BALANCEADO": 2.0, "GROWTH": 3.0}
+# Tiers = PRESUPUESTO DE maxDD (regla Oscar 2026-05-30). El leverage de estrategia se CALCULA
+# para que el maxDD del backtest = este valor. ESTABLE ancla a −10% (config.TARGET_MAXDD).
+TIERS = {"ESTABLE": config.TARGET_MAXDD, "BALANCEADO": 0.20, "GROWTH": 0.30}
 # Sleeves: (nombre, tipo, lookback_horas)
 SLEEVES = [("mom_30d", "xs_mom", 720), ("rev_60d", "xs_rev", 1440),
            ("lowvol_14d", "xs_lowvol", 336), ("carry", "carry", None), ("trend", "trend", None),
@@ -182,16 +184,21 @@ def compute_target(tier="ESTABLE"):
         series[name] = s; weights[name] = w
     df = pd.concat(series, axis=1).dropna()
     vp = vol_parity_weights(df)
-    lev = TIERS[tier]
-    # target neto por activo = Σ vp_i · w_i, escalado por leverage
+    # retorno del combinado a 1x (para anclar el maxDD)
+    port_ret = (df * vp).sum(axis=1)
+    # LEVERAGE = el que clava el maxDD del backtest en el presupuesto del tier (regla de Oscar).
+    # Se auto-recalibra: cada sleeve nuevo que baja el maxDD a 1x → sube el leverage → más
+    # retorno al MISMO maxDD. Cap de seguridad en config.MAX_STRAT_LEVERAGE.
+    lev = min(leverage_for_maxdd_anchor(port_ret, TIERS[tier]), config.MAX_STRAT_LEVERAGE)
+    # target neto por activo = Σ vp_i · w_i, escalado por el leverage anclado
     target = pd.Series(0.0, index=C.columns)
     for name in series:
-        target = target.add(vp[name] * weights[name].reindex(C.columns).fillna(0), fill_value=0)
-    port_ret = (df * vp).sum(axis=1)
+        target = target.add(float(vp[name]) * weights[name].reindex(C.columns).fillna(0), fill_value=0)
+    target = target.reindex(C.columns).fillna(0.0)
     # GATE DE RÉGIMEN: probado (vol-target de-risk) → EMPEORA el maxDD, NO se usa (workflow).
-    # El control de riesgo efectivo es la diversificación (corr~0) + el dial de leverage.
+    # El control de riesgo efectivo es la diversificación (corr~0) + el dial de leverage anclado.
     target = (target * lev).round(4)
-    return target, vp, df, port_ret, C.index[-1]
+    return target, vp, df, port_ret, C.index[-1], lev
 
 
 def main():
@@ -199,10 +206,14 @@ def main():
     for _s in (sys.stdout, sys.stderr):
         try: _s.reconfigure(encoding="utf-8", errors="replace")
         except Exception: pass
-    target, vp, df, port_ret, asof = compute_target(tier)
-    m = metrics(port_ret * TIERS[tier])
-    print(f"KEPLER motor live · tier {tier} ({TIERS[tier]}x) · datos hasta {asof}")
-    print(f"Backtest del combinado: Sharpe {m['sharpe']:.2f} ann {m['ann']:.1f}% maxDD {m['maxdd']:.1f}%")
+    target, vp, df, port_ret, asof, lev = compute_target(tier)
+    m1 = metrics(port_ret)                 # 1x (base)
+    m = metrics(port_ret * lev)            # con leverage anclado
+    print(f"KEPLER motor live · tier {tier} · maxDD objetivo −{TIERS[tier]*100:.0f}% · "
+          f"leverage estrategia {lev:.2f}x · datos hasta {asof}")
+    print(f"Combinado a 1x:  Sharpe {m1['sharpe']:.2f} · ann {m1['ann']:.1f}% · maxDD {m1['maxdd']:.1f}%")
+    print(f"Combinado @{lev:.2f}x: ann {m['ann']:.1f}% (~{m['ann']/12:.2f}%/mes) · "
+          f"maxDD {m['maxdd']:.1f}% · mo+ {m['mo_pos']:.0f}%  ← lo que se opera")
     print(f"\nPesos vol-parity por sleeve: {vp.round(2).to_dict()}")
     print(f"\nPORTAFOLIO OBJETIVO (β≈0, gross {target.abs().sum():.2f}):")
     t = target[target.abs() > 0.005].sort_values()

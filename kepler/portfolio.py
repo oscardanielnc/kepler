@@ -54,6 +54,34 @@ def leverage_for_monthly_dd_anchor(r: pd.Series, max_monthly_dd: float = 0.08,
     return abs(max_monthly_dd / worst) if worst < 0 else 5.0
 
 
+def _maxdd(r: pd.Series, lev: float) -> float:
+    """|maxDD| de la curva de equity compuesta con leverage `lev` (valor positivo)."""
+    eq = (1 + r * lev).cumprod()
+    return float(abs((eq / eq.cummax() - 1).min()))
+
+
+def leverage_for_maxdd_anchor(r: pd.Series, target_maxdd: float = 0.10,
+                              lo: float = 0.05, hi: float = 4.0, iters: int = 60) -> float:
+    """Leverage de estrategia tal que el maxDD del backtest = target_maxdd.
+    Regla de producto (Oscar 2026-05-30): el maxDD es el ancla fija; el leverage se calcula
+    para clavarlo. El maxDD crece monótono con el leverage → bisección. Si ni con `hi` se
+    alcanza el target (curva demasiado suave), devuelve `hi` (cap de seguridad)."""
+    r = r.dropna()
+    if len(r) < 30 or r.std() == 0:
+        return 1.0
+    if _maxdd(r, hi) < target_maxdd:
+        return hi
+    if _maxdd(r, lo) > target_maxdd:
+        return lo
+    for _ in range(iters):
+        mid = (lo + hi) / 2
+        if _maxdd(r, mid) < target_maxdd:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
 if __name__ == "__main__":
     import os, sys
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

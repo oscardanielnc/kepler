@@ -51,6 +51,12 @@ MAX_WEIGHT_EVENT   = 1.00      # conviction override (evento/catalizador extremo
 TARGET_VOL_ANNUAL  = 0.10      # vol objetivo del portafolio (dial de riesgo)
 MAX_GROSS          = 2.0       # exposición bruta máx (suma |pesos|)
 NET_NEUTRAL_TOL    = 0.10      # |beta neta| tolerada (market-neutral por defecto)
+# Ancla de riesgo del PRODUCTO (regla de Oscar 2026-05-30): el tier ESTABLE fija el maxDD
+# del backtest en −TARGET_MAXDD y el leverage de estrategia se CALCULA para clavarlo ahí.
+# Cada mejora del Sharpe → más retorno al mismo maxDD (no menos riesgo). El circuit breaker
+# (−20%) sigue como red. Tope de leverage de estrategia para no inflar el gross sin control.
+TARGET_MAXDD       = 0.10      # maxDD objetivo del tier ESTABLE (10%)
+MAX_STRAT_LEVERAGE = 4.0       # tope duro del multiplicador de estrategia (seguridad)
 
 # ─── Timezone ─────────────────────────────────────────────────────────────────
 TZ_OFFSET_H = -5   # Lima

@@ -41,8 +41,8 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     equity = execution.get_balance() or config.CAPITAL_USD
     # 3. circuit breaker
     operate = circuit_breaker.check(equity, db)
-    # 4. target
-    target, vp, df, port, asof = compute_target(tier)
+    # 4. target (leverage anclado al maxDD objetivo del tier — ver engine.compute_target)
+    target, vp, df, port, asof, lev = compute_target(tier)
     target = target[target.abs() > 0.005]
     if not operate:
         _log.warning("[orq] CIRCUIT BREAKER activo — aplanando (target=0)")
@@ -51,13 +51,15 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     current = execution.get_positions() if not execution.DRY_RUN else {}
     n_target = int((target.abs() > 0.005).sum())
     _log.info(f"[orq] equity={equity:.0f} target={n_target}pos gross={target.abs().sum():.2f} "
+              f"lev={lev:.2f}x(maxDD-{TIERS[tier]*100:.0f}%) "
               f"posiciones_actuales={len(current)} cb={'OK' if operate else 'HALT'}")
     # 6. rebalanceo
     orders = execution.rebalance(target, equity)
     # 7. log
     db.snapshot_portfolio(equity=equity, gross=float(target.abs().sum()), net=float(target.sum()),
                           beta=0.0, n_positions=n_target,
-                          detail={"tier": tier, "asof": str(asof), "cb": operate,
+                          detail={"tier": tier, "asof": str(asof), "cb": operate, "leverage": lev,
+                                  "maxdd_target": TIERS[tier],
                                   "orders": len(orders) if orders else 0,
                                   "weights": target[target.abs() > 0.005].round(4).to_dict()})
     db.record_equity_tick(equity)      # punto en la curva
