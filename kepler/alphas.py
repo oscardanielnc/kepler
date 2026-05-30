@@ -65,6 +65,16 @@ def xs_lowvol_score(log_ret: pd.DataFrame, lookback_h: int = 336):
     return -log_ret.rolling(lookback_h).std()
 
 
+def xs_takerflow_score(volume: pd.DataFrame, taker_buy_volume: pd.DataFrame, lookback_h: int = 120):
+    """Sleeve #6 — FLUJO DE ÓRDENES (validado 2026-05-30, research/e16b+e16c).
+    Desbalance comprador = taker_buy/volume − 0.5, promediado en `lookback_h` (validado 5d=120h).
+    Long los de presión compradora persistente / short los de presión vendedora. β-neutral en el
+    motor. Fuente ORTOGONAL al precio → corr ~0.06 con los otros 5 sleeves (no es transformación
+    de precio). Sube el combinado a Sharpe ~1.5 / maxDD ~−6%."""
+    flow = (taker_buy_volume / volume.replace(0, np.nan)) - 0.5
+    return flow.rolling(lookback_h).mean()
+
+
 # ─── STAT-ARB (cointegración + OU) — DEPRECADO (no sobrevive walk-forward, ver E8) ─
 
 def _half_life(spread: np.ndarray) -> float:

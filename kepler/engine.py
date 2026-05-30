@@ -23,7 +23,8 @@ DRIVER = "BTCUSDT"; BETA_W = 168; MIN_BARS = 34000
 TIERS = {"ESTABLE": 1.0, "BALANCEADO": 2.0, "GROWTH": 3.0}
 # Sleeves: (nombre, tipo, lookback_horas)
 SLEEVES = [("mom_30d", "xs_mom", 720), ("rev_60d", "xs_rev", 1440),
-           ("lowvol_14d", "xs_lowvol", 336), ("carry", "carry", None), ("trend", "trend", None)]
+           ("lowvol_14d", "xs_lowvol", 336), ("carry", "carry", None), ("trend", "trend", None),
+           ("takerflow_5d", "xs_flow", 120)]
 
 
 def load():
@@ -39,6 +40,27 @@ def load():
     C = pd.DataFrame(cl).sort_index().dropna()
     C.index = pd.to_datetime(C.index, unit="ms", utc=True)
     return C
+
+
+def load_panel(cols, like: pd.DataFrame):
+    """Carga columnas extra (p.ej. volume, taker_buy_volume) del universo de historia larga,
+    alineadas al índice/columnas de `like` (el panel de close). Para el sleeve de flujo."""
+    data = {c: {} for c in cols}
+    for p in glob.glob(os.path.join(config.DATA_DIR, "futures_um", "1h", "*.parquet")):
+        s = os.path.basename(p)[:-8]
+        if s not in config.UNIVERSE:
+            continue
+        df = pd.read_parquet(p, columns=["open_time", *cols]).set_index("open_time")
+        if len(df) < MIN_BARS:
+            continue
+        for c in cols:
+            data[c][s] = df[c]
+    out = {}
+    for c in cols:
+        P = pd.DataFrame(data[c]).sort_index()
+        P.index = pd.to_datetime(P.index, unit="ms", utc=True)
+        out[c] = P.reindex(index=like.index, columns=like.columns)
+    return out
 
 
 def _beta(ret):
@@ -149,6 +171,10 @@ def compute_target(tier="ESTABLE"):
             s, w = xs_sleeve(C, ret, beta, alphas.xs_reversal_score(ret, hold), hold)
         elif typ == "xs_lowvol":
             s, w = xs_sleeve(C, ret, beta, alphas.xs_lowvol_score(ret, hold), hold)
+        elif typ == "xs_flow":
+            ex = load_panel(["volume", "taker_buy_volume"], C)
+            score = alphas.xs_takerflow_score(ex["volume"], ex["taker_buy_volume"], hold)
+            s, w = xs_sleeve(C, ret, beta, score, hold)
         elif typ == "carry":
             s, w = carry_sleeve(C, ret, beta)
         else:
@@ -170,6 +196,9 @@ def compute_target(tier="ESTABLE"):
 
 def main():
     tier = sys.argv[1] if len(sys.argv) > 1 else "ESTABLE"
+    for _s in (sys.stdout, sys.stderr):
+        try: _s.reconfigure(encoding="utf-8", errors="replace")
+        except Exception: pass
     target, vp, df, port_ret, asof = compute_target(tier)
     m = metrics(port_ret * TIERS[tier])
     print(f"KEPLER motor live · tier {tier} ({TIERS[tier]}x) · datos hasta {asof}")

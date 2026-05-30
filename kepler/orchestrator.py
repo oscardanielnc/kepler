@@ -71,6 +71,9 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
 
 
 def run(tier="ESTABLE", once=False):
+    for _s in (sys.stdout, sys.stderr):
+        try: _s.reconfigure(encoding="utf-8", errors="replace")
+        except Exception: pass
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     db = DB()
     mode = "DRY_RUN" if execution.DRY_RUN else ("DEMO" if execution.USE_DEMO else "REAL")
