@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config  # noqa
 from kepler import fetch, execution, circuit_breaker, notify
 from kepler.engine import compute_target, TIERS
+from kepler.portfolio import metrics as pf_metrics
 from kepler.db import DB
 
 REBALANCE_HOURS = 24
@@ -43,6 +44,7 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     operate = circuit_breaker.check(equity, db)
     # 4. target (leverage anclado al maxDD objetivo del tier — ver engine.compute_target)
     target, vp, df, port, asof, lev = compute_target(tier)
+    bt = pf_metrics(port * lev)   # métricas del backtest CON el leverage anclado (lo que se opera)
     target = target[target.abs() > 0.005]
     if not operate:
         _log.warning("[orq] CIRCUIT BREAKER activo — aplanando (target=0)")
@@ -60,6 +62,10 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
                           beta=0.0, n_positions=n_target,
                           detail={"tier": tier, "asof": str(asof), "cb": operate, "leverage": lev,
                                   "maxdd_target": TIERS[tier],
+                                  "backtest": {"sharpe": round(bt.get("sharpe", 0), 2),
+                                               "ann": round(bt.get("ann", 0), 1),
+                                               "maxdd": round(bt.get("maxdd", 0), 1),
+                                               "n_sleeves": df.shape[1]},
                                   "orders": len(orders) if orders else 0,
                                   "weights": target[target.abs() > 0.005].round(4).to_dict()})
     db.record_equity_tick(equity)      # punto en la curva

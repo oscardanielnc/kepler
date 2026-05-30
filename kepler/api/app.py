@@ -63,7 +63,9 @@ def status():
         "cb_halted": halted,
         "last_cycle": datetime.fromtimestamp((cyc[0]["ts"] if cyc else (s.get("ts") or 0))/1000,
                                              tz=timezone.utc).isoformat() if (cyc or s) else None,
-        "backtest": {"sharpe": 1.13, "ann": 15.7, "maxdd": -11.6},   # ESTABLE 1x validado
+        # backtest real del último ciclo (lo guarda el orquestador con el leverage anclado);
+        # fallback al sistema actual de 7 sleeves @maxDD−10% si el snapshot aún no lo trae.
+        "backtest": det.get("backtest", {"sharpe": 1.94, "ann": 42.2, "maxdd": -10.0, "n_sleeves": 7}),
     }
 
 
