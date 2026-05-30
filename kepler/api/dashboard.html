@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kepler — Panel</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--bd:#30363d;--tx:#c9d1d9;--mut:#8b949e;--grn:#3fb950;--red:#f85149;--blu:#58a6ff;--yel:#d29922}
+  *{box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
+  body{margin:0;background:var(--bg);color:var(--tx)}
+  header{padding:14px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  h1{font-size:18px;margin:0;color:#fff}
+  .badge{padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
+  .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;padding:16px;max-width:1400px;margin:auto}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px}
+  .card h2{font-size:14px;margin:0 0 10px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--bd)}
+  th{color:var(--mut);font-weight:500}
+  .long{color:var(--grn)} .short{color:var(--red)}
+  .metric{display:inline-block;margin-right:22px}
+  .metric .v{font-size:20px;font-weight:700;color:#fff} .metric .l{font-size:11px;color:var(--mut)}
+  .logs{max-height:520px;overflow-y:auto;font-family:ui-monospace,monospace;font-size:12px}
+  .log{padding:4px 6px;border-bottom:1px solid #21262d;display:flex;gap:8px}
+  .log .t{color:var(--mut);white-space:nowrap}
+  .lv-INFO{color:var(--tx)} .lv-WARNING{color:var(--yel)} .lv-ERROR,.lv-CRITICAL{color:var(--red);font-weight:600}
+  .cat{color:var(--blu)}
+  button{background:#21262d;color:var(--tx);border:1px solid var(--bd);padding:7px 14px;border-radius:7px;cursor:pointer;font-size:13px}
+  button:hover{border-color:var(--blu)}
+  .full{grid-column:1/-1}
+  .filt{margin-bottom:8px} .filt button{padding:3px 9px;font-size:11px;margin-right:4px}
+</style></head>
+<body>
+<header>
+  <h1>🛰️ KEPLER</h1>
+  <span id="mode" class="badge">—</span>
+  <span id="tier" class="badge" style="background:#1f6feb33;color:var(--blu)">—</span>
+  <span id="cb" class="badge">—</span>
+  <span style="margin-left:auto;color:var(--mut);font-size:12px" id="updated"></span>
+  <button onclick="dl()">⬇ Descargar log de hoy</button>
+</header>
+
+<div class="grid">
+  <div class="card full">
+    <span class="metric"><span class="v" id="m-eq">—</span><br><span class="l">Equity</span></span>
+    <span class="metric"><span class="v" id="m-np">—</span><br><span class="l">Posiciones</span></span>
+    <span class="metric"><span class="v" id="m-gr">—</span><br><span class="l">Gross</span></span>
+    <span class="metric"><span class="v" id="m-sh">—</span><br><span class="l">Sharpe (backtest)</span></span>
+    <span class="metric"><span class="v" id="m-dd">—</span><br><span class="l">maxDD</span></span>
+    <span class="metric"><span class="v" id="m-cyc" style="font-size:13px">—</span><br><span class="l">Último ciclo</span></span>
+  </div>
+
+  <div class="card">
+    <h2>Posiciones activas (objetivo)</h2>
+    <table><thead><tr><th>Activo</th><th>Lado</th><th>Peso</th><th>Notional</th></tr></thead>
+    <tbody id="pos"></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Curva de equity / gross</h2>
+    <canvas id="chart" height="200"></canvas>
+  </div>
+
+  <div class="card full">
+    <h2>Logs del sistema — decisiones y errores</h2>
+    <div class="filt">
+      <button onclick="setLv('')">Todos</button>
+      <button onclick="setLv('INFO')">Info</button>
+      <button onclick="setLv('WARNING')">Avisos</button>
+      <button onclick="setLv('ERROR')">Errores</button>
+      <button onclick="setLv('CRITICAL')">Críticos</button>
+    </div>
+    <div class="logs" id="logs"></div>
+  </div>
+</div>
+
+<script>
+let lv="", chart=null;
+const $=id=>document.getElementById(id);
+async function j(u){try{return await (await fetch(u)).json()}catch(e){return null}}
+function dl(){window.location="/api/download"}
+function setLv(l){lv=l;loadLogs()}
+
+async function loadStatus(){
+  const s=await j("/api/status"); if(!s)return;
+  const mb=$("mode"); mb.textContent=s.mode;
+  mb.style.background=s.mode==="REAL"?"#f8514933":s.mode==="DEMO"?"#d2992233":"#3fb95033";
+  mb.style.color=s.mode==="REAL"?"#f85149":s.mode==="DEMO"?"#d29922":"#3fb950";
+  $("tier").textContent="Tier "+s.tier;
+  const cb=$("cb"); cb.textContent=s.cb_halted?"⛔ HALT":"✓ Operando";
+  cb.style.background=s.cb_halted?"#f8514933":"#3fb95033"; cb.style.color=s.cb_halted?"#f85149":"#3fb950";
+  $("m-eq").textContent=s.equity?("$"+(+s.equity).toLocaleString()):"—";
+  $("m-np").textContent=s.n_positions??"—";
+  $("m-gr").textContent=s.gross?(+s.gross).toFixed(2):"—";
+  $("m-sh").textContent=s.backtest.sharpe.toFixed(2);
+  $("m-dd").textContent=s.backtest.maxdd+"%";
+  $("m-cyc").textContent=s.last_cycle?s.last_cycle.replace("T"," ").slice(0,16):"—";
+  $("updated").textContent="actualizado "+new Date().toLocaleTimeString();
+}
+async function loadPos(){
+  const p=await j("/api/positions")||[];
+  $("pos").innerHTML=p.map(x=>`<tr><td>${x.symbol}</td>
+    <td class="${x.side.toLowerCase()}">${x.side}</td>
+    <td>${(x.weight*100).toFixed(2)}%</td><td>$${x.notional.toLocaleString()}</td></tr>`).join("")
+    ||`<tr><td colspan=4 style="color:var(--mut)">sin posiciones</td></tr>`;
+}
+async function loadLogs(){
+  const l=await j("/api/logs?limit=150&level="+lv)||[];
+  $("logs").innerHTML=l.map(x=>`<div class="log"><span class="t">${x.time}</span>
+    <span class="lv-${x.level}">[${x.level}]</span><span class="cat">${x.category}</span>
+    <span>${x.title}</span></div>`).join("")||`<div style="color:var(--mut)">sin logs</div>`;
+}
+async function loadChart(){
+  const e=await j("/api/equity")||[]; if(!e.length)return;
+  const labels=e.map(x=>x.time), data=e.map(x=>x.equity??x.gross);
+  if(chart)chart.destroy();
+  chart=new Chart($("chart"),{type:"line",data:{labels,datasets:[{label:"equity",data,
+    borderColor:"#58a6ff",backgroundColor:"#58a6ff22",tension:.2,pointRadius:0,fill:true}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:"#8b949e",maxTicksLimit:8}},
+    y:{ticks:{color:"#8b949e"}}}}});
+}
+function refresh(){loadStatus();loadPos();loadLogs();loadChart()}
+refresh(); setInterval(refresh,10000);
+</script>
+</body></html>

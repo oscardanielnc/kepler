@@ -1,0 +1,18 @@
+[Unit]
+Description=Kepler — Dashboard API
+After=network-online.target kepler.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/kepler-app/kepler
+EnvironmentFile=/etc/kepler.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/kepler-app/venv/bin/python -m kepler.api
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

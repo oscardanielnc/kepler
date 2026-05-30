@@ -1,0 +1,10 @@
+# Datos pesados (se descargan/regeneran en la VM) y artefactos
+data/
+logs/
+*.db
+*.db-wal
+*.db-shm
+__pycache__/
+*.pyc
+venv/
+.env
