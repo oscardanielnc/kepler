@@ -2,14 +2,15 @@
 **Dueño:** Oscar Navarro (oscar@pairus.ai) · **Hijo de Sentinel** (proyecto previo en `C:\Users\LENOVO\btc`, ya retirado).
 
 > Lee también: `SYSTEM.md` (validación del edge), `STATUS.md` (estado vivo + changelog + pendientes),
-> `DEPLOY.md` (despliegue), `PLAN.md` / `INSTRUCTIONS.md` (diseño original).
+> `ROADMAP.md` (plan de mejora, faro Medallion/RenTech), `DEPLOY.md` (despliegue),
+> `PLAN.md` / `INSTRUCTIONS.md` (diseño original).
 > **Empieza cada sesión leyendo `STATUS.md`** — ahí está lo último y lo pendiente.
 
 ---
 
 ## QUÉ ES KEPLER (en una frase)
-Un sistema **market-neutral** que rebalancea a diario una cartera de ~16 posiciones long/short
-sobre 32 perps de Binance Futures, combinando **5 estrategias validadas** (walk-forward, costos reales),
+Un sistema **market-neutral** que rebalancea a diario una cartera de ~16-19 posiciones long/short
+sobre 32 perps de Binance Futures, combinando **7 estrategias validadas** (walk-forward, costos reales),
 con riesgo gestionado a nivel cartera (diversificación + circuit breaker, **sin SL/TP por trade**).
 
 **Misión real:** convertirnos en **copy-lead honesto de bajo drawdown** → track record verificable →
@@ -19,18 +20,25 @@ ver Brayan/Btc-Panda en `SYSTEM.md`). Competimos por **bajo maxDD, supervivencia
 ---
 
 ## EL EDGE (validado — no re-litigar sin backtest)
-5 sleeves con correlación ~0 entre sí, combinados por vol-parity, β-neutralizados contra BTC:
-1. **XS-Momentum 30d** · 2. **XS-Reversión 60d** · 3. **Low-vol 14d** · 4. **Carry (funding)** · 5. **Trend long-only (EMA20/100)**
+7 sleeves con correlación ~0 entre sí, combinados por vol-parity, β-neutralizados contra BTC:
+1. **XS-Momentum 30d** · 2. **XS-Reversión 60d** · 3. **Low-vol 14d** · 4. **Carry (funding)** ·
+5. **Trend long-only (EMA20/100)** · 6. **Taker-flow 5d** (desbalance comprador, e16b/c) ·
+7. **HL-position 14d** (posición en el canal, e16d/e).
 
-**Motor live ESTABLE 1x (número de producción): Sharpe 1.13 · +15.7%/año (~1.2%/mes) · maxDD −11.6% · 67% meses+.**
+**Motor backtest 7 sleeves: Sharpe 1.94 · β +0.03 · maxDD −10% (anclado) · ~+3.5%/mes · 69% meses+.**
+⚠️ **El 1.94 es BACKTEST; en vivo bajará.** Número honesto = el de DEMO en vivo (pendiente, ver ROADMAP E1).
+Histórico 5 sleeves (referencia): Sharpe 1.13 · +15.7%/año · maxDD −11.6%.
 
-### Tiers (palanca de "usar más capital" = más riesgo)
-| Tier | Exposición gross | Retorno/mes* | maxDD* | ¿Choca circuit breaker −20%? |
-|------|------------------|--------------|--------|------------------------------|
-| **ESTABLE (1x)** ← actual | ~0.57x | ~+1.2% | −11.6% | No |
-| BALANCEADO (2x) | ~1.14x | ~+2.3% | ~−23% | Sí, lo rozaría |
-| GROWTH (3x) | ~1.70x | ~+3.4% | ~−35% | Sí, se pausaría seguido |
-*backtest, no garantía. El leverage de la estrategia escala retorno Y drawdown por igual (Sharpe no cambia).
+### Tiers = PRESUPUESTO de maxDD (regla Oscar 2026-05-30, NO multiplicadores fijos)
+El tier fija el maxDD; el **leverage se CALCULA** para clavarlo (`engine.leverage_for_maxdd_anchor`).
+Cada mejora del Sharpe → más retorno al MISMO maxDD (flywheel), no menos riesgo. Cap leverage 4x.
+| Tier | maxDD objetivo | leverage* | Retorno/mes* |
+|------|----------------|-----------|--------------|
+| **ESTABLE** ← producción | **−10%** | ~1.92x | ~+3.5% |
+| BALANCEADO | −20% | (auto, cap 4x) | ~+7% |
+| GROWTH | −30% | (auto, cap 4x) | ~+7% |
+*backtest 7 sleeves, no garantía. Excepción: si subir el maxDD diera salto desproporcionado de
+beneficio, avisar a Oscar. **Plan de mejora del sistema: `ROADMAP.md`.**
 
 ### DESCARTADO por walk-forward — NO resucitar sin nuevo backtest que lo justifique
 stat-arb de pares, reversal corto, lead-lag/timing de BTC→alts, cash-and-carry absoluto,

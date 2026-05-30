@@ -1,5 +1,6 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-30** (tarde, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-30** (tarde-4, hora Lima).
+> **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 
 ---
 
@@ -16,6 +17,18 @@
 - ✅ Cambios previos (leverage 3x + frontend) ya en origin/main. Falta confirmar `deploy.sh` en la VM.
 
 ---
+
+## CHANGELOG 2026-05-30 (tarde-4 — congelar estado + ROADMAP Medallion-inspired)
+- **Estado CONGELADO y publicado en la VM (DEMO):** 7 sleeves + ancla maxDD −10% (Sharpe 1.94 backtest).
+  Oscar consciente: **el 1.94 es backtest, en vivo bajará** — por eso el plan es subir el TECHO.
+- **`ROADMAP.md` creado** (faro Medallion/RenTech): qué copiar (muchas señales débiles uncorr,
+  validación brutal, composición, β-neutral, costos modelados) y qué NO (HFT, market-making, leverage
+  extremo). Roadmap priorizado A-E. **El foso real = TIEMPO (track record), no se acelera.**
+- **Dashboard fix (commit cde862f):** el backtest mostrado ya NO está hardcodeado — el orquestador
+  guarda las métricas reales (con leverage anclado) en el snapshot cada ciclo; `api/app.py` las lee.
+  Se auto-actualiza con cada sleeve futuro. Verificado: snapshot trae {1.94, 42.2, −10.0, 7 sleeves}.
+- **Accionable AHORA (sin esperar demo):** A1 ampliar universo → C1 slippage realista → B3 deflated
+  Sharpe → A4 cross-exchange basis. Ver STATUS pendientes + ROADMAP.
 
 ## CHANGELOG 2026-05-30 (tarde-3 — sleeve #8 metrics: DESCARTADO con datos)
 
