@@ -98,6 +98,28 @@ def get_positions():
     return {e["symbol"]: float(e["positionAmt"]) for e in d if float(e.get("positionAmt", 0)) != 0}
 
 
+def get_positions_detail():
+    """Posiciones REALES abiertas con notional (USD sin lev), PnL no realizado y precios."""
+    if DRY_RUN:
+        return []
+    d = _get("/fapi/v2/positionRisk", {})
+    if not isinstance(d, list):
+        return []
+    out = []
+    for e in d:
+        amt = float(e.get("positionAmt", 0))
+        if amt == 0:
+            continue
+        mark = float(e.get("markPrice", 0) or 0)
+        notional = abs(float(e.get("notional", amt * mark) or 0))
+        out.append({
+            "symbol": e["symbol"], "side": "LONG" if amt > 0 else "SHORT",
+            "notional": round(notional, 1), "pnl": round(float(e.get("unRealizedProfit", 0) or 0), 2),
+            "entry": round(float(e.get("entryPrice", 0) or 0), 4), "mark": round(mark, 4),
+        })
+    return out
+
+
 def book_mid(symbol):
     d = _get("/fapi/v1/ticker/bookTicker", {"symbol": symbol})
     if isinstance(d, dict):
@@ -143,6 +165,12 @@ def cancel_all(symbol):
 
 MAKER_RETRIES = int(os.environ.get("KEPLER_MAKER_RETRIES", "3"))
 MAKER_WAIT_S  = int(os.environ.get("KEPLER_MAKER_WAIT_S", "20"))
+LEVERAGE_SETTING = int(_envstr("KEPLER_LEVERAGE", "3"))   # apalancamiento POR SÍMBOLO (margen/buffer)
+
+
+def set_leverage(symbol, lev):
+    """Fija el apalancamiento por símbolo (NO cambia el tamaño; solo margen/liquidación)."""
+    return _post("/fapi/v1/leverage", {"symbol": symbol, "leverage": lev})
 
 
 def _place_deltas(target_weights, equity, filt, attempt):
@@ -179,6 +207,9 @@ def rebalance(target_weights, equity=None):
         return [("dry_run", len(target_weights))]
     filt = load_filters()
     syms = set(target_weights.index) | set(get_positions().keys())
+    for sym in target_weights.index:      # 0. fijar apalancamiento conservador por símbolo
+        if abs(target_weights[sym]) > 1e-4:
+            set_leverage(sym, LEVERAGE_SETTING)
     for sym in syms:                      # 1. limpiar órdenes stale del ciclo anterior
         cancel_all(sym)
     summary = []

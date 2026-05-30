@@ -19,7 +19,16 @@ from kepler.engine import compute_target, TIERS
 from kepler.db import DB
 
 REBALANCE_HOURS = 24
+HEARTBEAT_MIN = 15          # registra equity cada 15 min (curva viva) sin rebalancear
 _log = logging.getLogger("kepler")
+
+
+def heartbeat(db: DB):
+    """Registra equity sin rebalancear — mantiene la curva y la tabla diaria al día."""
+    equity = execution.get_balance() or config.CAPITAL_USD
+    db.record_equity_tick(equity)
+    db.upsert_equity_daily(equity)
+    _log.info(f"[hb] equity={equity:.2f}")
 
 
 def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
@@ -51,6 +60,8 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
                           detail={"tier": tier, "asof": str(asof), "cb": operate,
                                   "orders": len(orders) if orders else 0,
                                   "weights": target[target.abs() > 0.005].round(4).to_dict()})
+    db.record_equity_tick(equity)      # punto en la curva
+    db.upsert_equity_daily(equity)     # retorno del día
     db.audit("INFO", "orchestrator", f"Ciclo {tier} ok ({time.time()-t0:.0f}s)",
              detail={"equity": equity, "n_target": n_target, "operate": operate})
     db.export_daily_log()   # JSON descargable del día
@@ -63,18 +74,23 @@ def run(tier="ESTABLE", once=False):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     db = DB()
     mode = "DRY_RUN" if execution.DRY_RUN else ("DEMO" if execution.USE_DEMO else "REAL")
-    _log.info(f"════ KEPLER orquestador · tier {tier} · modo {mode} · rebal {REBALANCE_HOURS}h ════")
+    _log.info(f"════ KEPLER orquestador · tier {tier} · modo {mode} · rebal {REBALANCE_HOURS}h · hb {HEARTBEAT_MIN}min ════")
+    last_rebal = 0.0
     while True:
         try:
-            r = cycle(tier, db)
-            _log.info(f"[orq] ciclo completo: {r}")
+            now = time.time()
+            if now - last_rebal >= REBALANCE_HOURS * 3600:   # rebalanceo completo (cada 24h)
+                r = cycle(tier, db); last_rebal = now
+                _log.info(f"[orq] ciclo completo: {r}")
+            else:                                            # heartbeat (solo equity)
+                heartbeat(db)
         except Exception as e:
             _log.exception(f"[orq] error en ciclo: {e}")
             db.audit("ERROR", "orchestrator", f"Error: {e}")
             notify.alert_error(str(e)[:200])
         if once:
             break
-        time.sleep(REBALANCE_HOURS * 3600)
+        time.sleep(HEARTBEAT_MIN * 60)
 
 
 if __name__ == "__main__":

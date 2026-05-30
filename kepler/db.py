@@ -52,6 +52,10 @@ CREATE TABLE IF NOT EXISTS equity_daily (
     sharpe_30d REAL, n_trades INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS equity_tick (    -- equity frecuente (heartbeat) para la curva
+    ts INTEGER PRIMARY KEY, equity REAL
+);
+
 CREATE TABLE IF NOT EXISTS daily_report (
     day TEXT PRIMARY KEY, ts INTEGER, metrics TEXT, narrative TEXT  -- JSON + texto (IA futura)
 );
@@ -115,6 +119,33 @@ class DB:
             "INSERT INTO portfolio_snapshot (ts,equity,gross,net,beta,n_positions,target_vol,detail)"
             " VALUES (?,?,?,?,?,?,?,?)",
             (_now_ms(), equity, gross, net, beta, n_positions, target_vol, json.dumps(detail or {})))
+        self.conn.commit()
+
+    def record_equity_tick(self, equity):
+        """Punto de equity frecuente (heartbeat) — alimenta la curva del frontend."""
+        if equity is None:
+            return
+        self.conn.execute("INSERT OR REPLACE INTO equity_tick (ts,equity) VALUES (?,?)",
+                          (_now_ms(), float(equity)))
+        self.conn.commit()
+
+    def upsert_equity_daily(self, equity):
+        """Actualiza la fila del día: equity de cierre, retorno vs día previo, drawdown."""
+        if equity is None:
+            return
+        equity = float(equity)
+        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        prev = self.conn.execute(
+            "SELECT equity FROM equity_daily WHERE day<? ORDER BY day DESC LIMIT 1", (day,)).fetchone()
+        prev_eq = prev[0] if prev and prev[0] else equity
+        ret = (equity / prev_eq - 1) * 100 if prev_eq else 0.0
+        pk = self.conn.execute("SELECT MAX(equity) FROM equity_daily").fetchone()[0] or equity
+        peak = max(pk, equity)
+        dd = (equity / peak - 1) * 100 if peak else 0.0
+        self.conn.execute(
+            "INSERT INTO equity_daily (day,equity,ret_pct,dd_pct) VALUES (?,?,?,?) "
+            "ON CONFLICT(day) DO UPDATE SET equity=excluded.equity, ret_pct=excluded.ret_pct, dd_pct=excluded.dd_pct",
+            (day, equity, ret, dd))
         self.conn.commit()
 
     def audit(self, level, category, title, symbol=None, detail: dict | None = None):

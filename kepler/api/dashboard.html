@@ -43,22 +43,31 @@
 <div class="grid">
   <div class="card full">
     <span class="metric"><span class="v" id="m-eq">—</span><br><span class="l">Equity</span></span>
+    <span class="metric"><span class="v" id="m-tot">—</span><br><span class="l">Rentabilidad total</span></span>
+    <span class="metric"><span class="v" id="m-tod">—</span><br><span class="l">Hoy</span></span>
     <span class="metric"><span class="v" id="m-np">—</span><br><span class="l">Posiciones</span></span>
-    <span class="metric"><span class="v" id="m-gr">—</span><br><span class="l">Gross</span></span>
+    <span class="metric"><span class="v" id="m-gr">—</span><br><span class="l">Gross (sin lev)</span></span>
     <span class="metric"><span class="v" id="m-sh">—</span><br><span class="l">Sharpe (backtest)</span></span>
-    <span class="metric"><span class="v" id="m-dd">—</span><br><span class="l">maxDD</span></span>
+    <span class="metric"><span class="v" id="m-dd">—</span><br><span class="l">maxDD (backtest)</span></span>
     <span class="metric"><span class="v" id="m-cyc" style="font-size:13px">—</span><br><span class="l">Último ciclo</span></span>
   </div>
 
   <div class="card">
-    <h2>Posiciones activas (objetivo)</h2>
-    <table><thead><tr><th>Activo</th><th>Lado</th><th>Peso</th><th>Notional</th></tr></thead>
+    <h2>Posiciones activas ahora</h2>
+    <table><thead><tr><th>Activo</th><th>Lado</th><th>USD (sin lev)</th><th>PnL</th></tr></thead>
     <tbody id="pos"></tbody></table>
+    <div id="pos-src" style="color:var(--mut);font-size:11px;margin-top:6px"></div>
   </div>
 
   <div class="card">
-    <h2>Curva de equity / gross</h2>
+    <h2>Curva de equity</h2>
     <canvas id="chart" height="200"></canvas>
+  </div>
+
+  <div class="card full">
+    <h2>Rentabilidad por día</h2>
+    <table><thead><tr><th>Día</th><th>Equity cierre</th><th>Retorno del día</th><th>Drawdown</th></tr></thead>
+    <tbody id="daily"></tbody></table>
   </div>
 
   <div class="card full">
@@ -89,9 +98,12 @@ async function loadStatus(){
   $("tier").textContent="Tier "+s.tier;
   const cb=$("cb"); cb.textContent=s.cb_halted?"⛔ HALT":"✓ Operando";
   cb.style.background=s.cb_halted?"#f8514933":"#3fb95033"; cb.style.color=s.cb_halted?"#f85149":"#3fb950";
-  $("m-eq").textContent=s.equity?("$"+(+s.equity).toLocaleString()):"—";
+  $("m-eq").textContent=s.equity?("$"+(+s.equity).toLocaleString(undefined,{maximumFractionDigits:2})):"—";
+  const pct=(v)=>(v>=0?"+":"")+(+v).toFixed(2)+"%";
+  const col=(el,v)=>{el.textContent=pct(v);el.style.color=v>=0?"var(--grn)":"var(--red)"};
+  col($("m-tot"),s.total_return??0); col($("m-tod"),s.today_return??0);
   $("m-np").textContent=s.n_positions??"—";
-  $("m-gr").textContent=s.gross?(+s.gross).toFixed(2):"—";
+  $("m-gr").textContent=s.gross?(+s.gross).toFixed(2)+"x":"—";
   $("m-sh").textContent=s.backtest.sharpe.toFixed(2);
   $("m-dd").textContent=s.backtest.maxdd+"%";
   $("m-cyc").textContent=s.last_cycle?s.last_cycle.replace("T"," ").slice(0,16):"—";
@@ -101,8 +113,19 @@ async function loadPos(){
   const p=await j("/api/positions")||[];
   $("pos").innerHTML=p.map(x=>`<tr><td>${x.symbol}</td>
     <td class="${x.side.toLowerCase()}">${x.side}</td>
-    <td>${(x.weight*100).toFixed(2)}%</td><td>$${x.notional.toLocaleString()}</td></tr>`).join("")
+    <td>$${(+x.notional).toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+    <td style="color:${x.pnl==null?'var(--mut)':(x.pnl>=0?'var(--grn)':'var(--red)')}">${x.pnl==null?'—':(x.pnl>=0?'+':'')+'$'+(+x.pnl).toFixed(2)}</td></tr>`).join("")
     ||`<tr><td colspan=4 style="color:var(--mut)">sin posiciones</td></tr>`;
+  $("pos-src").textContent=p.length&&p[0].source==="target"
+    ?"⏳ mostrando el OBJETIVO (aún sin fills reales o en simulación)":(p.length?"✓ posiciones reales en Binance":"");
+}
+async function loadDaily(){
+  const d=await j("/api/daily")||[];
+  $("daily").innerHTML=d.map(x=>`<tr><td>${x.day}</td>
+    <td>$${(+x.equity).toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+    <td class="${x.ret_pct>=0?'long':'short'}">${(x.ret_pct>=0?'+':'')+(+x.ret_pct).toFixed(2)}%</td>
+    <td style="color:var(--mut)">${(+x.dd_pct).toFixed(2)}%</td></tr>`).join("")
+    ||`<tr><td colspan=4 style="color:var(--mut)">aún sin días registrados</td></tr>`;
 }
 async function loadLogs(){
   const l=await j("/api/logs?limit=150&level="+lv)||[];
@@ -112,14 +135,16 @@ async function loadLogs(){
 }
 async function loadChart(){
   const e=await j("/api/equity")||[]; if(!e.length)return;
-  const labels=e.map(x=>x.time), data=e.map(x=>x.equity??x.gross);
-  if(chart)chart.destroy();
+  const labels=e.map(x=>x.time), data=e.map(x=>x.equity);
+  if(chart){                       // actualizar en sitio (sin parpadeo)
+    chart.data.labels=labels; chart.data.datasets[0].data=data; chart.update("none"); return;
+  }
   chart=new Chart($("chart"),{type:"line",data:{labels,datasets:[{label:"equity",data,
     borderColor:"#58a6ff",backgroundColor:"#58a6ff22",tension:.2,pointRadius:0,fill:true}]},
-    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:"#8b949e",maxTicksLimit:8}},
+    options:{animation:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:"#8b949e",maxTicksLimit:8}},
     y:{ticks:{color:"#8b949e"}}}}});
 }
-function refresh(){loadStatus();loadPos();loadLogs();loadChart()}
+function refresh(){loadStatus();loadPos();loadLogs();loadChart();loadDaily()}
 refresh(); setInterval(refresh,10000);
 </script>
 </body></html>

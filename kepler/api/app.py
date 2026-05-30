@@ -47,10 +47,19 @@ def status():
     mode = "DRY_RUN" if execution.DRY_RUN else ("DEMO" if execution.USE_DEMO else "REAL")
     s = snap[0] if snap else {}
     det = json.loads(s.get("detail") or "{}")
+    # equity vivo (último tick del heartbeat) y rentabilidad acumulada
+    tick = _q("SELECT equity FROM equity_tick ORDER BY ts DESC LIMIT 1")
+    live_eq = (tick[0]["equity"] if tick else s.get("equity")) or None
+    base = _q("SELECT equity FROM equity_daily ORDER BY day ASC LIMIT 1")
+    base_eq = base[0]["equity"] if base else live_eq
+    total_ret = (live_eq / base_eq - 1) * 100 if (live_eq and base_eq) else 0.0
+    today = _q("SELECT ret_pct FROM equity_daily ORDER BY day DESC LIMIT 1")
+    today_ret = today[0]["ret_pct"] if today else 0.0
     return {
         "mode": mode, "tier": det.get("tier", "—"),
-        "equity": s.get("equity"), "gross": s.get("gross"), "net": s.get("net"),
+        "equity": live_eq, "gross": s.get("gross"), "net": s.get("net"),
         "n_positions": s.get("n_positions", 0),
+        "total_return": round(total_ret, 2), "today_return": round(today_ret, 2),
         "cb_halted": halted,
         "last_cycle": datetime.fromtimestamp((cyc[0]["ts"] if cyc else (s.get("ts") or 0))/1000,
                                              tz=timezone.utc).isoformat() if (cyc or s) else None,
@@ -60,15 +69,31 @@ def status():
 
 @app.get("/api/positions")
 def positions():
+    # 1) posiciones REALES en Binance (lo que tienes abierto ahora)
+    if not execution.DRY_RUN:
+        try:
+            real = execution.get_positions_detail()
+        except Exception:
+            real = []
+        if real:
+            for r in real:
+                r["source"] = "real"
+            return sorted(real, key=lambda x: -abs(x["notional"]))
+    # 2) fallback: objetivo del último ciclo (DRY_RUN o sin fills aún)
     snap = _q("SELECT equity,detail FROM portfolio_snapshot ORDER BY ts DESC LIMIT 1")
     if not snap:
         return []
     det = json.loads(snap[0]["detail"] or "{}")
     eq = snap[0]["equity"] or config.CAPITAL_USD
     w = det.get("weights", {})
-    out = [{"symbol": s, "side": "LONG" if v > 0 else "SHORT", "weight": round(v, 4),
-            "notional": round(v * eq, 1)} for s, v in w.items()]
-    return sorted(out, key=lambda x: -abs(x["weight"]))
+    out = [{"symbol": s, "side": "LONG" if v > 0 else "SHORT",
+            "notional": round(v * eq, 1), "pnl": None, "source": "target"} for s, v in w.items()]
+    return sorted(out, key=lambda x: -abs(x["notional"]))
+
+
+@app.get("/api/daily")
+def daily():
+    return _q("SELECT day,equity,ret_pct,dd_pct FROM equity_daily ORDER BY day DESC")
 
 
 @app.get("/api/logs")
@@ -86,7 +111,9 @@ def logs(limit: int = 150, level: str = ""):
 
 @app.get("/api/equity")
 def equity():
-    rows = _q("SELECT ts,equity,gross,net FROM portfolio_snapshot ORDER BY ts ASC")
+    rows = _q("SELECT ts,equity FROM equity_tick ORDER BY ts ASC")
+    if not rows:   # DB antigua sin ticks → usar snapshots
+        rows = _q("SELECT ts,equity FROM portfolio_snapshot ORDER BY ts ASC")
     for r in rows:
         r["time"] = datetime.fromtimestamp(r["ts"]/1000, tz=timezone.utc).strftime("%m-%d %H:%M")
     return rows
