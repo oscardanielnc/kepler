@@ -14,6 +14,26 @@
 
 ---
 
+## CHANGELOG 2026-05-30 (tarde — NUEVO SLEEVE validado: taker_flow)
+
+### 🟢 HALLAZGO: sleeve #6 `taker_flow` pasa walk-forward + estrés → mejora material
+Loop de mejora (pendiente #2). Research en `research/e16` (precio), `e16b` (fuentes ortogonales),
+`e16c` (estrés). **Lección e16:** todo candidato derivado de PRECIO sale correlacionado con los
+sleeves actuales (accel Sh 1.10 pero corr 0.84 con mom) → no diversifica. **e16b:** señales que NO
+son precio. Ganador:
+- **`taker_flow`** = desbalance comprador (`taker_buy_volume/volume`), cross-seccional, β-neutral.
+  Mide flujo de órdenes → ortogonal al precio. corr máx con los 5 base = **0.06**.
+- Estrés (e16c) PASA los 4 tests:
+  - Horizonte: edge en PLATEAU (3d/5d/7d todos Sh 0.86–0.97), no un pico. 1d = ruido.
+  - Costos: sobrevive TAKER (combinado 1.30/−9.0% peor caso).
+  - Sub-períodos: Sharpe por cuartil +0.27/+0.66/+1.16/+1.30 (positivo en los 4, creciente).
+  - Combinado 5→6 sleeves: **Sharpe 1.13→1.36 · maxDD −11.6%→−8.6% · mo_med 0.93%→1.06%.**
+- **Traducción producto:** o maxDD −8.6% a 1x (menos riesgo), o 1.35x a igual maxDD → **+22%/año
+  (~1.86%/mes) vs 1.31%/mes hoy** (+42% retorno sin subir DD). RECOMENDADO horizonte **5d**
+  (≈ Sharpe, menos turnover que 3d, IS/OOS más parejo 1.03/0.88).
+- PENDIENTE: implementar en `alphas.py` + `engine.SLEEVES` (confirmar β≈0) → validar en DEMO
+  antes de considerarlo producción (regla de oro: backtest ✓, falta demo).
+
 ## CHANGELOG 2026-05-30 (mañana — auditoría de beta-neutralidad + estado VM)
 
 ### ✅ AUDITORÍA: el sistema SÍ es β-neutral (β=+0.05). No hay bug. (FALSA ALARMA corregida)
@@ -76,8 +96,10 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
 ## PENDIENTES (próximas sesiones, en orden)
 1. **Confirmar `deploy.sh` en la VM** con el último commit y dejar **correr en demo varios días**:
    posiciones = objetivo, maker llenan, sin errores. (Validación demo = CRÍTICA antes de real.)
-2. **Loop de mejora diario** (subir los números): añadir 1 sleeve no-correlacionado/semana,
-   validado walk-forward, para subir Sharpe / bajar maxDD (ver `SYSTEM.md`). ← research que rinde.
+2. **[LISTO PARA IMPLEMENTAR] Integrar sleeve #6 `taker_flow` (5d).** Backtest ✓ (e16b/e16c):
+   Sharpe 1.13→1.36, maxDD −11.6→−8.6%. Falta: añadir a `alphas.py` (`xs_takerflow_score`) +
+   `engine.SLEEVES`, cargar volume/taker_buy_volume en `engine.load`, confirmar β≈0, validar DEMO.
+   Más adelante: seguir el loop (1 sleeve uncorr/semana). Próxima fuente a probar: order-book/OI.
 3. **Monitor de riesgo intradía** → BLOQUEADO: requiere primero un BACKTESTER HORARIO fiable
    (`research/e15` v1/v2 no reproducen el edge diario). La teoría ya lo desaconseja (CLAUDE.md:
    "gestión intradía = el juego que pierde"). El riesgo intradía lo cubren circuit breaker +
