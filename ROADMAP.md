@@ -43,8 +43,9 @@ Todo lo demás (abajo) sube el techo; esto convierte el techo en confianza/AUM.
 Cada sleeve genuino con corr<0.35 y que mejore el retorno anclado sube el Sharpe del conjunto.
 Criterio de admisión (ya validado en e16): **walk-forward IS/OOS>0.10 + corr<0.35 + Δretorno@−10%>+0.1%/mes + pasa estrés (horizonte/costos/sub-períodos).**
 Fuentes por explorar (en orden de promesa, la OHLCV y positioning ya están agotadas):
-- [ ] **A1. Ampliar el universo** 32→~50-60 perps líquidos. Más breadth cross-seccional = más Sharpe
-      en TODOS los sleeves existentes. BARATO y de efecto inmediato. ← EMPEZAR POR AQUÍ.
+- [x] ~~**A1. Ampliar el universo**~~ → DESCARTADO 2026-05-30 (e17/e17b): edge errático (peor en 2/4
+      cuartiles), 85% de la "mejora" era leverage extra del ancla (1.92x→2.76x), y concentrada en AXS.
+      Sistema se queda en 32 perps. Ver STATUS tarde-5.
 - [ ] **A2. Order-book imbalance / profundidad** (bid-ask, depth). Requiere fuente nueva de datos.
 - [ ] **A3. On-chain** (flujos de exchange, stablecoin supply, activos en wallets). Fuente nueva.
 - [ ] **A4. Cross-exchange basis / spread** (perp vs spot, perp Binance vs otros).
@@ -84,14 +85,13 @@ El objetivo no es subir el número, es que el número sea creíble (menos gap ba
 
 ## QUÉ SE PUEDE VALIDAR/IMPLEMENTAR AHORA MISMO (sin esperar a la demo)
 Estos NO dependen de tiempo en mercado, son research puro sobre datos que ya tenemos o bajamos:
-1. **A1 — Ampliar universo** (32→50-60). Backtest comparativo del Sharpe con más símbolos. Rápido.
-2. **B1/B3 — Purga+embargo y Deflated Sharpe** en el harness de validación. Hace honestos los números
-   que ya tenemos (puede que algún sleeve baje — mejor saberlo ahora).
-3. **C1 — Slippage por liquidez** en el backtest. Re-evaluar los 7 sleeves con costos realistas.
+1. ~~**A1 — Ampliar universo**~~ → DESCARTADO (e17/e17b: edge errático + leverage frágil). ← hecho.
+2. **C1 — Slippage por liquidez** en el backtest. Re-evaluar los 7 sleeves con costos realistas. ← SIGUIENTE.
+3. **B1/B3 — Purga+embargo y Deflated Sharpe** en el harness. Hace honestos los números que ya tenemos.
 4. **A4 — Cross-exchange basis** (perp vs spot): ya tenemos spot de BTC/ETH; ampliable.
 
-Recomendación de orden: **A1 → C1 → B3 → A4**. (Breadth primero porque mejora todo; luego costos
-honestos; luego validación honesta; luego nuevo sleeve.)
+Recomendación de orden: **C1 → B3 → A4**. (Costos honestos primero — acercan el número al real;
+luego validación honesta; luego explorar un sleeve nuevo de fuente genuina.)
 
 ---
 *Mantener este archivo vivo: marcar [x] lo hecho, mover a STATUS.md el detalle de cada sesión.*
