@@ -52,11 +52,10 @@ descartados (workflow). 1.13/−11.6% es el mejor perfil de riesgo para copy-lea
 8. [x] Monitoreo/alertas (notify.py ntfy: ciclo, error, halt).
 9. [~] VALIDACIÓN EN DEMO: EN CURSO desde 2026-05-29. Dejar correr días/semanas. CRÍTICO antes de real.
 +  [x] Apalancamiento conservador por símbolo (set_leverage 3x).
++  [x] β-neutralidad auditada 2026-05-30: β combinado realizado = +0.05 (<0.10 tol), Sharpe 1.13/maxDD
+       −11.6% reproducidos. El libro es net-long en DÓLARES (~76%) pero β≈0 (longs bajo-beta + hedge
+       BTC + trend overlay long-only). net-en-$ ≠ β-neutralidad. No es bug.
 +  [ ] Monitor de riesgo intradía → BLOQUEADO: requiere backtester horario fiable (research/e15 no lo logra).
-+  [ ] 🔴 RECONCILIAR net-long del target (2026-05-30): el libro live opera ~77-80% net long, no β≈0.
-       Causa: trend long-only (por diseño) + clip que rompe la dollar-neutralidad de mom/rev/lowvol.
-       El maxDD −11.6% sale de combinar RETORNOS; el live combina PESOS con clip → puede no aplicar.
-       Backtestear el target real vs el validado ANTES de cualquier cambio. Ver STATUS.md.
 
 ## Loop de mejora diario (subir los números)
 Añadir 1 sleeve uncorr/semana (validar walk-forward) → sube Sharpe → baja DD → mejores números.

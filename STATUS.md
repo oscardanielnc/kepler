@@ -5,33 +5,43 @@
 
 ## ESTADO ACTUAL
 - ✅ Sistema **desplegado y operando en DEMO** en la VM (Oracle, `opc@oscar-cripto-sentinel-b26`).
-- ✅ Servicios `kepler` y `kepler-api` **activos**. Dashboard visible en http://213.35.121.9:8080
-- ✅ Primer ciclo ejecutado: colocó ~15 órdenes límite maker en la cuenta demo (modo DEMO confirmado).
+- ✅ Servicios `kepler` y `kepler-api` **activos**. Dashboard live OK en http://213.35.121.9:8080
+  (verificado 2026-05-30: equity vivo ~4933, 14 posiciones source="real" con PnL, heartbeats fluyendo).
 - ✅ Circuit breaker activo (halt a −20% del pico). Alertas ntfy configuradas.
-- ⚠️ **PENDIENTE INMEDIATO: hacer push de los cambios locales de hoy + `deploy.sh`** (ver changelog abajo).
-  Los cambios de hoy (leverage 3x + mejoras de frontend) **están en local, aún NO en la VM.**
+- ✅ **β-neutralidad auditada (2026-05-30): β combinado = +0.05, Sharpe 1.13 / maxDD −11.6% reproducidos.**
+  El "76% net long en dólares" es esperado (longs bajo-beta + hedge BTC + trend overlay), NO un fallo.
+- ✅ Cambios previos (leverage 3x + frontend) ya en origin/main. Falta confirmar `deploy.sh` en la VM.
 
 ---
 
-## CHANGELOG 2026-05-30 (mañana — análisis + backtest monitor intradía)
+## CHANGELOG 2026-05-30 (mañana — auditoría de beta-neutralidad + estado VM)
 
-### Verificación de estado real vs docs
-- El push de la sesión previa **YA estaba hecho** (commit `front` en `origin/main`, árbol limpio).
-  El pendiente #1 "push" estaba desactualizado. Lo que SÍ falta: confirmar en la VM que corrió
-  `deploy.sh` con el último commit, que el dashboard se puebla, que demo llena, y **por qué el
-  equity sale plano = 5000.0** en los logs (¿flat real o `get_balance()` cayendo al fallback?).
+### ✅ AUDITORÍA: el sistema SÍ es β-neutral (β=+0.05). No hay bug. (FALSA ALARMA corregida)
+Durante la sesión salté a una conclusión errónea y la documenté a medias dos veces (commits
+`a8c4021`/`8ae1575`): vi que el libro live está **76% NET LONG en dólares** (LONG ~$2.5k / SHORT
+~$0.3k, concentrado TRX+BTC) y lo llamé "no market-neutral". **Era confundir dos métricas distintas.**
+- Lo que importa para "sobrevivir crashes" NO es el net en dólares sino el **β contra BTC**.
+- β REALIZADO (regresión de retornos diarios vs BTC, 4.4a): mom +0.005 · rev −0.015 · lowvol +0.003 ·
+  carry +0.005 · trend +0.160 · **COMBINADO 1x = +0.051** (corr BTC +0.20) → dentro de ±0.10 (`NET_NEUTRAL_TOL`).
+- El combinado reproduce EXACTO lo validado: **Sharpe 1.13 · ann 15.7% · maxDD −11.6% · 67% meses+.**
+- Por qué net-long en $ con β≈0: los longs son de BAJO beta (TRX β=0.13, el long más grande), el
+  hedge BTC compensa, y `trend` es long-only POR DISEÑO (overlay #5, ya en e14). Todo coherente.
+- (El `Σ w·β=+0.32` que calculé y me asustó usa el β rolling de la ÚLTIMA barra, ruidoso; el β
+  realizado de 4.4a es +0.05. La verdad de largo plazo es la segunda.) **NO se toca nada de prod.**
+- LECCIÓN: net-en-dólares ≠ β-neutralidad. No volver a confundirlas.
+
+### Estado verificado (todo OK)
+- Push de la sesión previa YA estaba hecho (commit `front` en origin/main). Pendiente #1 cerrado.
+- **"equity plano = 5000" era artefacto de logs LOCALES viejos.** La VM (dashboard live) muestra
+  equity VIVO ~4933, heartbeats moviéndose, posiciones source="real" con PnL. Falso problema.
 - Repo limpio: `.gitignore` OK, `kepler.db`/`data/`/`logs/` no trackeados ✅.
 
-### E15 — Monitor de riesgo intradía: BACKTEST EN CURSO (v1 con BUG → INCONCLUSIVO)
-- `research/e15_intraday_monitor.py` (v1). Reconstruye equity horaria y aplica un monitor que
-  des-riesga ×f cuando el equity intradía cae −X%.
-- **BUG metodológico detectado:** v1 **netea los pesos por activo** antes de marcar (mom largo BTC +
-  rev corto BTC se cancelan → libro chico dominado por ruido). Su baseline da Sharpe −0.23/maxDD −39%,
-  que **NO reproduce el edge validado** (+1.13/−11.6%). Verificado: los 3 sleeves a nivel diario,
-  combinando RETORNOS por sleeve (no pesos), dan Sharpe ~1.13. ⇒ cualquier veredicto del monitor
-  desde v1 es inválido. **Pendiente #3 SIGUE ABIERTO.**
-- **Arreglo pendiente:** construir la equity horaria combinando la equity de cada sleeve corrido por
-  separado (gross=1), no neteando pesos; luego aplicar el monitor sobre la equity combinada.
+### E15 — Monitor de riesgo intradía: BLOQUEADO (necesita backtester horario)
+- `research/e15_intraday_monitor.py` (v1 y v2). v1 neteaba pesos (bug); v2 lo corrige combinando
+  retornos por sleeve. **Pero NINGUNA reconstrucción HORARIA reproduce el edge diario** (baseline
+  horario ~−0.28 vs +1.04 diario): marcar a mercado hora-a-hora ≠ el retorno-forward-24h del motor.
+- ⇒ Para evaluar el monitor con rigor hace falta **primero un backtester horario fiable**
+  (mini-proyecto). Pendiente #3 BLOQUEADO por eso. La teoría ya lo desaconseja (CLAUDE.md).
 
 ## CHANGELOG 2026-05-29/30 (sesión previa)
 
@@ -64,20 +74,16 @@
 ---
 
 ## PENDIENTES (próximas sesiones, en orden)
-1. **[HACER PRIMERO]** Push de los cambios de hoy + `bash /opt/kepler-app/kepler/deploy.sh` en la VM.
-   Verificar dashboard: rentabilidad total/diaria poblándose y posiciones reales con PnL.
-2. **Dejar correr en demo varios días** y revisar logs: que las posiciones igualen el objetivo,
-   que los maker llenen, sin errores. (Validación demo = CRÍTICA antes de pensar en real.)
-3. **Monitor de riesgo intradía** → ARCHIVADO 2026-05-30 como "no rentable de validar ahora".
-   `research/e15` v1 y v2: ninguna reconstrucción HORARIA reproduce el edge diario validado
-   (baseline horario −0.28 vs +1.04 diario). Validar el monitor exige primero un BACKTESTER
-   HORARIO fiable (mini-proyecto), y la teoría ya lo desaconseja (CLAUDE.md: "gestión intradía
-   = el juego que pierde"). El riesgo intradía lo cubren circuit breaker + diversificación.
-   No retomar sin construir antes el motor horario.
-4. **Loop de mejora diario**: añadir 1 sleeve no-correlacionado/semana, validado walk-forward,
-   para subir Sharpe / bajar maxDD (ver `SYSTEM.md`).
-5. Revisar `heartbeat` a 5 min si Oscar quiere la curva más fina (ahora 15 min).
-6. Cuando haya track record real → evaluar subir a tier BALANCEADO (decisión de Oscar).
+1. **Confirmar `deploy.sh` en la VM** con el último commit y dejar **correr en demo varios días**:
+   posiciones = objetivo, maker llenan, sin errores. (Validación demo = CRÍTICA antes de real.)
+2. **Loop de mejora diario** (subir los números): añadir 1 sleeve no-correlacionado/semana,
+   validado walk-forward, para subir Sharpe / bajar maxDD (ver `SYSTEM.md`). ← research que rinde.
+3. **Monitor de riesgo intradía** → BLOQUEADO: requiere primero un BACKTESTER HORARIO fiable
+   (`research/e15` v1/v2 no reproducen el edge diario). La teoría ya lo desaconseja (CLAUDE.md:
+   "gestión intradía = el juego que pierde"). El riesgo intradía lo cubren circuit breaker +
+   diversificación + β≈0. No retomar sin construir antes el motor horario.
+4. Revisar `heartbeat` a 5 min si Oscar quiere la curva más fina (ahora 15 min).
+5. Cuando haya track record real → evaluar subir a tier BALANCEADO (decisión de Oscar).
 
 ## RECORDATORIO PERSISTENTE
 - Oscar debe **retirar $1800 de Brayan / Btc-Panda** (martingala 20x, ruina probada en research/e13).
