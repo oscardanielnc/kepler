@@ -26,7 +26,7 @@ TIERS = {"ESTABLE": config.TARGET_MAXDD, "BALANCEADO": 0.20, "GROWTH": 0.30}
 # Sleeves: (nombre, tipo, lookback_horas)
 SLEEVES = [("mom_30d", "xs_mom", 720), ("rev_60d", "xs_rev", 1440),
            ("lowvol_14d", "xs_lowvol", 336), ("carry", "carry", None), ("trend", "trend", None),
-           ("takerflow_5d", "xs_flow", 120)]
+           ("takerflow_5d", "xs_flow", 120), ("hlpos_14d", "xs_hlpos", 336)]
 
 
 def load():
@@ -177,6 +177,8 @@ def compute_target(tier="ESTABLE"):
             ex = load_panel(["volume", "taker_buy_volume"], C)
             score = alphas.xs_takerflow_score(ex["volume"], ex["taker_buy_volume"], hold)
             s, w = xs_sleeve(C, ret, beta, score, hold)
+        elif typ == "xs_hlpos":
+            s, w = xs_sleeve(C, ret, beta, alphas.xs_hlposition_score(C, hold), hold)
         elif typ == "carry":
             s, w = carry_sleeve(C, ret, beta)
         else:

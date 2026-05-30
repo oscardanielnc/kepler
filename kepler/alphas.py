@@ -75,6 +75,18 @@ def xs_takerflow_score(volume: pd.DataFrame, taker_buy_volume: pd.DataFrame, loo
     return flow.rolling(lookback_h).mean()
 
 
+def xs_hlposition_score(close: pd.DataFrame, lookback_h: int = 336):
+    """Sleeve #7 — POSICIÓN EN EL CANAL (validado 2026-05-30, research/e16d+e16e).
+    (close − min_N) / (max_N − min_N) − 0.5 sobre ventana rolling `lookback_h` (validado 14d=336h).
+    Mide dónde está el precio dentro de su rango reciente: long los cerca del techo del canal /
+    short los cerca del piso. Momentum normalizado por rango → corr ~0.20 con los 6 sleeves
+    (distinto de mom puro). β-neutral en el motor. Sube el combinado a Sharpe ~1.62 y, al ancla
+    de maxDD −10%, ~+0.83%/mes."""
+    mn = close.rolling(lookback_h).min()
+    mx = close.rolling(lookback_h).max()
+    return (close - mn) / (mx - mn).replace(0, np.nan) - 0.5
+
+
 # ─── STAT-ARB (cointegración + OU) — DEPRECADO (no sobrevive walk-forward, ver E8) ─
 
 def _half_life(spread: np.ndarray) -> float:

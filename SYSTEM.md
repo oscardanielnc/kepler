@@ -13,11 +13,19 @@
 Combinados (vol-parity): **Sharpe +1.34 (IS +1.34/OOS +1.48)**, vol 14%, maxDD −11% (1x).
 
 ## Niveles de riesgo (producto copy-lead)
-| Tier | ROI/año | maxDD | Mensual | Calmar |
-|------|---------|-------|---------|--------|
-| ESTABLE (1x) | +21% | −11% | +0.8% | 1.89 |
-| **BALANCEADO (2x)** | **+47%** | **−21%** | +1.5% | 2.18 |
-| GROWTH (3x) | +77% | −31% | +2.1% | 2.52 |
+**Regla 2026-05-30 (Oscar): el tier define un PRESUPUESTO DE maxDD; el leverage se CALCULA para
+clavarlo.** ESTABLE = −10% fijo. Cada sleeve nuevo que baje el maxDD a 1x → sube el leverage → más
+retorno al mismo riesgo. (`engine.TIERS` = {ESTABLE 0.10, BALANCEADO 0.20, GROWTH 0.30}; cap
+`MAX_STRAT_LEVERAGE=4.0`.) Excepción: si subir el maxDD diera un salto desproporcionado, avisar a Oscar.
+
+| Tier | maxDD objetivo | leverage* | ROI/año* | Mensual* |
+|------|----------------|-----------|----------|----------|
+| **ESTABLE** ← producción | **−10%** | ~1.92x | **+42.2%** | **+3.52%** |
+| BALANCEADO | −20% | cap 4x | ~+85% | ~+7% |
+| GROWTH | −30% | cap 4x | ~+85% | ~+7% |
+*Con 7 sleeves (Sharpe 1.94), 2026-05-30. maxDD del BACKTEST (futuro puede ser peor; circuit
+breaker −20% como red). Histórico 5 sleeves multiplicador fijo (referencia): ESTABLE 1x +21%/−11%,
+BALANCEADO 2x +47%/−21%, GROWTH 3x +77%/−31%.
 
 ## Posicionamiento (research de foros)
 NO competimos por ROI llamativo (eso lo hacen los martingalas que revientan). Competimos por
@@ -57,8 +65,11 @@ descartados (workflow). 1.13/−11.6% es el mejor perfil de riesgo para copy-lea
        BTC + trend overlay long-only). net-en-$ ≠ β-neutralidad. No es bug.
 +  [ ] Monitor de riesgo intradía → BLOQUEADO: requiere backtester horario fiable (research/e15 no lo logra).
 +  [x] Sleeve #6 `taker_flow` (flujo de órdenes, 5d=120h) VALIDADO + IMPLEMENTADO 2026-05-30
-       (research/e16b+e16c; alphas.py + engine.SLEEVES + engine.load_panel; commit bf83594).
-       Motor 6 sleeves: Sharpe 1.54 · ann 18.6% · maxDD −6.3% · β +0.035. Falta validar en DEMO.
+       (research/e16b+e16c; commit bf83594). corr 0.06.
++  [x] Sleeve #7 `hlpos_14d` (posición en el canal, 14d=336h) VALIDADO + IMPLEMENTADO 2026-05-30
+       (research/e16d+e16e). corr 0.20, Sharpe propio 1.19 (IS/OOS 1.09/1.33).
++  [x] Ancla de maxDD −10% con leverage auto-calculado (regla Oscar; commit d0206b1).
+       Motor 7 sleeves @−10%: lev 1.92x · Sharpe 1.94 · ann 42.2% (~3.52%/mes) · β +0.028. Falta DEMO.
 
 ## Loop de mejora diario (subir los números)
 Añadir 1 sleeve uncorr/semana (validar walk-forward) → sube Sharpe → baja DD → mejores números.

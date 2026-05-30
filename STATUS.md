@@ -10,8 +10,9 @@
 - ✅ Circuit breaker activo (halt a −20% del pico). Alertas ntfy configuradas.
 - ✅ **β-neutralidad auditada (2026-05-30): β combinado = +0.05.** El "76% net long en dólares" es
   esperado (longs bajo-beta + hedge BTC + trend overlay), NO un fallo.
-- ✅ **6 sleeves** (añadido `takerflow_5d`) + **ancla de maxDD −10%** (leverage auto = 1.62x):
-  motor da **ann 31.8% (~2.65%/mes) · maxDD −10.0% · Sharpe 1.54 · 69% meses+**. Pendiente validar DEMO.
+- ✅ **7 sleeves** (+`takerflow_5d` +`hlpos_14d`) + **ancla de maxDD −10%** (leverage auto = 1.92x):
+  motor da **ann 42.2% (~3.52%/mes) · maxDD −10.0% · Sharpe 1.94 · β +0.028 · 69% meses+**.
+  Pendiente validar en DEMO.
 - ✅ Cambios previos (leverage 3x + frontend) ya en origin/main. Falta confirmar `deploy.sh` en la VM.
 
 ---
@@ -31,18 +32,23 @@ de beneficio desproporcionado, avisar a Oscar.
   (~2.65%/mes) · 69% meses+.** (vs ESTABLE viejo 1x: +15.7%/−11.6%.) Gross sube a ~0.82 (< MAX_GROSS=2).
 - ⚠️ El −10% es del BACKTEST; el futuro puede ser peor. Circuit breaker (−20%) sigue como red.
 
-### Ronda 3 de sleeves (`research/e16d`): NINGUNO mejora el retorno anclado → no se añade
-Probé 6 candidatos OHLC+count+flujo con criterio NUEVO: no basta pasar corr<0.35 + walk-forward;
-debe **subir el retorno al maxDD −10%** (con vol-parity, un sleeve de menor Sharpe DILUYE aunque
-sea ortogonal). Resultado (Δ%/mes al ancla):
-- `close_loc_5d`: pasa filtro (corr 0.06, IS 0.33/OOS 0.46) pero **−0.12%/mes** (diluye) → NO.
-- `range_lowvol`: +0.06%/mes pero **corr 0.95 con lowvol** (redundante) → NO.
-- `count_mom`, `tradesize_mom`, `flow_accel`, `hl_position`: fallan walk-forward.
-- **LECCIÓN (queda en e16d): pasar corr+IS/OOS es necesario pero NO suficiente con el ancla; el
-  test real es Δretorno a maxDD fijo.** La veta OHLCV está agotada — todo lo derivable de
-  precio/volumen/flujo ya toca los sleeves existentes.
-- **PRÓXIMO SALTO real:** fuente de datos NUEVA → **Open Interest** y/o **long/short ratio**
-  (data.binance.vision/.../futures/um/daily/metrics/) → requiere extender `kepler/fetch.py`.
+### 🟢 SLEEVE #7 `hlpos_14d` (posición en el canal) VALIDADO + IMPLEMENTADO
+Ronda 3 (`research/e16d`) con criterio NUEVO: no basta pasar corr<0.35 + walk-forward; debe
+**subir el retorno al maxDD −10%** (con vol-parity, un sleeve de menor Sharpe DILUYE aunque sea
+ortogonal). De 6 candidatos OHLC/count/flujo, el ganador:
+- **`hl_position`** = (close−min_N)/(max_N−min_N)−0.5, 14d=336h. Momentum normalizado por rango.
+  Sharpe 1.19 (IS 1.09/OOS 1.33), corr 0.20, **+0.87%/mes al ancla −10%.**
+- Estrés (`research/e16e`) PASA: 14d es el óptimo (7/10d flojos, 21d se degrada, 30d colapsa
+  corr 0.84 → el edge está en 14d, no es plateau ancho pero los demás tests lo sostienen);
+  sobrevive taker (+0.83%/mes); sub-períodos Q1-Q4 todos +0.9..+1.5 (robusto).
+- Descartados: `close_loc_5d` (pasa filtro pero DILUYE −0.12%/mes); `range_lowvol` (corr 0.95 con
+  lowvol); `count_mom`/`tradesize_mom`/`flow_accel` (fallan walk-forward).
+- **IMPLEMENTADO:** `alphas.xs_hlposition_score` + `engine.SLEEVES` (`hlpos_14d`, 336h). Motor 7
+  sleeves verificado: **Sharpe 1.94 · maxDD −5.3% (1x) · @−10% lev 1.92x → ann 42.2% (~3.52%/mes)
+  · β +0.028 · 19 pos limpias.**
+- **LECCIÓN clave (en e16d): con el ancla, el test real de un sleeve es Δretorno a maxDD fijo**
+  (corr+IS/OOS es necesario, no suficiente). Próximas fuentes (la veta OHLCV se acerca a su
+  límite): **Open Interest / long-short ratio** (data.binance.vision/.../metrics/, extender fetch.py).
 
 ## CHANGELOG 2026-05-30 (tarde — NUEVO SLEEVE validado: taker_flow)
 
@@ -133,10 +139,10 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
    posiciones = objetivo, maker llenan, sin errores. (Validación demo = CRÍTICA antes de real.)
 2. **Validar en DEMO** sleeve #6 + ancla −10% (commits bf83594/d0206b1): push + deploy.sh en VM,
    confirmar en vivo que opera bien, β≈0 y lev≈1.62x. (Oscar despliega por su cuenta.)
-3. **Loop de mejora — fuente NUEVA de datos (la veta OHLCV se agotó, ver e16d).** Extender
-   `kepler/fetch.py` para descargar **Open Interest** y/o **long/short ratio** de
-   data.binance.vision/.../metrics → backtestear como sleeve ortogonal (e16e) con el criterio del
-   ancla (Δretorno a maxDD −10%). Es el próximo salto real de los números.
+3. **Loop de mejora — fuente NUEVA de datos.** Ya exprimida la veta OHLCV (sleeves #6 taker_flow y
+   #7 hl_position implementados). Próximo salto: extender `kepler/fetch.py` para **Open Interest**
+   y/o **long/short ratio** (data.binance.vision/.../metrics) → backtestear (e16f) con el criterio
+   del ancla (Δretorno a maxDD −10%).
 4. **Monitor de riesgo intradía** → BLOQUEADO: requiere primero un BACKTESTER HORARIO fiable
    (`research/e15` v1/v2 no reproducen el edge diario). La teoría ya lo desaconseja (CLAUDE.md:
    "gestión intradía = el juego que pierde"). El riesgo intradía lo cubren circuit breaker +
