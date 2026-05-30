@@ -180,20 +180,42 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
 ---
 
 ## PENDIENTES (próximas sesiones, en orden)
-1. **Confirmar `deploy.sh` en la VM** con el último commit y dejar **correr en demo varios días**:
-   posiciones = objetivo, maker llenan, sin errores. (Validación demo = CRÍTICA antes de real.)
-2. **Validar en DEMO** sleeve #6 + ancla −10% (commits bf83594/d0206b1): push + deploy.sh en VM,
-   confirmar en vivo que opera bien, β≈0 y lev≈1.62x. (Oscar despliega por su cuenta.)
-3. **Loop de mejora — fuente NUEVA de datos.** Ya exprimida la veta OHLCV (sleeves #6 taker_flow y
-   #7 hl_position implementados). Próximo salto: extender `kepler/fetch.py` para **Open Interest**
-   y/o **long/short ratio** (data.binance.vision/.../metrics) → backtestear (e16f) con el criterio
-   del ancla (Δretorno a maxDD −10%).
-4. **Monitor de riesgo intradía** → BLOQUEADO: requiere primero un BACKTESTER HORARIO fiable
-   (`research/e15` v1/v2 no reproducen el edge diario). La teoría ya lo desaconseja (CLAUDE.md:
-   "gestión intradía = el juego que pierde"). El riesgo intradía lo cubren circuit breaker +
-   diversificación + β≈0. No retomar sin construir antes el motor horario.
-5. Revisar `heartbeat` a 5 min si Oscar quiere la curva más fina (ahora 15 min).
-6. Cuando haya track record real → evaluar subir a tier BALANCEADO (decisión de Oscar).
+> Roadmap completo en `ROADMAP.md`. Empezar la próxima sesión leyendo este STATUS + ROADMAP.
+
+### ⚠️ VERIFICAR AL ARRANCAR (antes de tocar nada)
+- **0a. VM/demo viva:** en la VM `journalctl -u kepler -n 50 --no-pager` → buscar línea reciente con
+  `lev=1.92x(maxDD-10%)` y `target=~19pos`. Confirma que los **7 sleeves + ancla** corren en vivo.
+  (Hoy NO se verificó en logs — el dashboard mostraba aún el ciclo viejo de 5 sleeves al cerrar.)
+- **0b. Dashboard:** http://213.35.121.9:8080 → el panel "backtest" debe decir **Sharpe 1.94 / maxDD −10**
+  (no 1.13/−11.6). Si dice lo viejo, falta `deploy.sh` en la VM con commit `cde862f`+ (Oscar despliega).
+- **0c. git:** repo limpio, `main`==`origin/main`. Último commit sesión 2026-05-30: **`e3d29d5`**.
+- **0d. Estado esperado:** **32 perps · 7 sleeves · ancla −10% · lev ~1.92x**. NADA pendiente de
+  implementar en código — lo de hoy ya está. Lo nuevo es research (C1).
+
+### EN MARCHA (research puro, NO requiere tiempo de mercado — AHORA)
+1. **C1 — Slippage realista por liquidez** (ROADMAP §C1): reemplazar el costo plano (~2bps) por uno
+   función de la liquidez/ADV de cada símbolo. Re-evaluar los 7 sleeves. **Bajará el 1.94 → es lo
+   que se busca: acercar el backtest al número real.** ← SIGUIENTE.
+2. **B3 — Deflated Sharpe Ratio** (ROADMAP §B3): penalizar el Sharpe por el nº de configs probadas
+   (~22 experimentos). Dice cuánto del 1.94 es señal vs suerte. Número creíble.
+3. **A4 — Cross-exchange basis** (perp vs spot) como sleeve nuevo de fuente genuina (ROADMAP §A4).
+
+### DEPENDE DE TIEMPO EN MERCADO (el foso real — track record)
+4. **Dejar correr DEMO semanas** → medir Sharpe REAL vs 1.94 backtest. **El número honesto.**
+5. Cuando demo confirme → evaluar paso a REAL con capital chico (decisión de Oscar).
+
+### BLOQUEADO / DESCARTADO (no re-litigar sin algo nuevo)
+- Monitor riesgo intradía → BLOQUEADO (e15: falta backtester horario que reproduzca el edge).
+- Ampliar universo (e17/e17b), OHLCV derivados (e16), Open Interest/long-short (e16f) → no aportan.
+
+### MENOR
+- heartbeat a 5min si se quiere curva más fina (ahora 15min).
+- Cuando haya track record real → evaluar tier BALANCEADO (decisión de Oscar).
+
+### REGLA DE PROCESO (recordatorio para mí, Claude)
+- No documentar/preguntar con números sin verificar (pasó varias veces hoy; las cancelaciones
+  evitaron commitearlos). Completar el backtest ANTES de afirmar. Antes de cualquier deploy a la VM,
+  listar cambios y esperar OK de Oscar. Ver memorias `kepler-verify-before-documenting`, `deploy-confirm-changes-first`.
 
 ## RECORDATORIO PERSISTENTE
 - Oscar debe **retirar $1800 de Brayan / Btc-Panda** (martingala 20x, ruina probada en research/e13).
