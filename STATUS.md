@@ -68,9 +68,12 @@
    Verificar dashboard: rentabilidad total/diaria poblándose y posiciones reales con PnL.
 2. **Dejar correr en demo varios días** y revisar logs: que las posiciones igualen el objetivo,
    que los maker llenen, sin errores. (Validación demo = CRÍTICA antes de pensar en real.)
-3. **Monitor de riesgo intradía** (pendiente de backtest VÁLIDO): v1 (`research/e15`) tiene bug
-   metodológico (netea pesos). Arreglar (combinar equity por sleeve) → backtestear → números antes
-   de implementar. Hipótesis a confirmar/refutar: "gestión intradía = el juego que pierde".
+3. **Monitor de riesgo intradía** → ARCHIVADO 2026-05-30 como "no rentable de validar ahora".
+   `research/e15` v1 y v2: ninguna reconstrucción HORARIA reproduce el edge diario validado
+   (baseline horario −0.28 vs +1.04 diario). Validar el monitor exige primero un BACKTESTER
+   HORARIO fiable (mini-proyecto), y la teoría ya lo desaconseja (CLAUDE.md: "gestión intradía
+   = el juego que pierde"). El riesgo intradía lo cubren circuit breaker + diversificación.
+   No retomar sin construir antes el motor horario.
 4. **Loop de mejora diario**: añadir 1 sleeve no-correlacionado/semana, validado walk-forward,
    para subir Sharpe / bajar maxDD (ver `SYSTEM.md`).
 5. Revisar `heartbeat` a 5 min si Oscar quiere la curva más fina (ahora 15 min).
