@@ -9,6 +9,7 @@ GIT_DIR="${APP_DIR}/kepler"
 PYTHON="${APP_DIR}/venv/bin/python"
 
 cd "$GIT_DIR"
+git config --global --add safe.directory "$GIT_DIR" 2>/dev/null || true
 echo ""
 echo "═══════════════════════════════════════════════════════"
 echo "  KEPLER DEPLOY  —  $(date '+%Y-%m-%d %H:%M') UTC"

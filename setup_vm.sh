@@ -63,6 +63,13 @@ fi
 echo "  ⚠ Abre también el 8080 en la consola del proveedor (Oracle VCN/Security List)"
 
 echo ""
+echo "[5b/6] Ajustando permisos (dueño = usuario que invocó sudo)..."
+OWNER="${SUDO_USER:-opc}"
+chown -R "$OWNER":"$OWNER" "$APP_DIR" 2>/dev/null || true
+sudo -u "$OWNER" git config --global --add safe.directory "$GIT_DIR" 2>/dev/null || true
+echo "  ✓ $APP_DIR es de $OWNER (deploy.sh correrá sin problemas de Git)"
+
+echo ""
 echo "[6/6] Arrancando..."
 systemctl restart kepler kepler-api
 sleep 2

@@ -21,10 +21,14 @@ import config  # noqa
 
 # ─── Config de ejecución (por variables de entorno → no se pisa con git pull) ──
 # KEPLER_DRY_RUN=false y KEPLER_USE_DEMO=true → opera en demo. Default seguro: DRY_RUN.
-DRY_RUN  = os.environ.get("KEPLER_DRY_RUN", "true").lower() != "false"
-USE_DEMO = os.environ.get("KEPLER_USE_DEMO", "true").lower() != "false"
-API_KEY    = os.environ.get("BINANCE_API_KEY", "")
-API_SECRET = os.environ.get("BINANCE_API_SECRET", "")
+def _envstr(name, default=""):
+    # robusto a comentarios inline y comillas (systemd no los separa)
+    return os.environ.get(name, default).split("#")[0].strip().strip('"').strip("'")
+
+DRY_RUN  = _envstr("KEPLER_DRY_RUN", "true").lower() != "false"
+USE_DEMO = _envstr("KEPLER_USE_DEMO", "true").lower() != "false"
+API_KEY    = _envstr("BINANCE_API_KEY")
+API_SECRET = _envstr("BINANCE_API_SECRET")
 MIN_ORDER_USD = 5.0   # ignorar deltas menores (ruido/min-notional Binance)
 
 _BASE_REAL = "https://fapi.binance.com"
