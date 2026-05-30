@@ -17,6 +17,24 @@
 
 ---
 
+## CHANGELOG 2026-05-30 (tarde-3 — sleeve #8 metrics: DESCARTADO con datos)
+
+### Open Interest / long-short ratio NO aportan → sistema se queda en 7 sleeves
+Fuente nueva: Binance `metrics` (data.binance.vision/.../daily/metrics, desde 2023, 5min→1h).
+Descargada para los 23 símbolos (`research/e16f_download_metrics.py`, paralelo). Backtest
+`research/e16f_metrics_sleeves.py` con criterio del ancla (Δretorno a maxDD −10%, sobre overlap 2023+):
+- Candidatos: oi_mom (5d/14d), oi_px_div, ls_crowd_rev (contrarian retail), toptrader_fol.
+- Solo `ls_crowd_rev` (z-score invertido del count_long_short_ratio) pasó el filtro corr+IS/OOS,
+  pero **DESCARTADO**: (1) **OOS frágil** — cuartiles inconsistentes en el estrés de horizonte
+  (7d: [−0.98,+1.88,−0.31,+2.13]), señal de ruido no edge; (2) aporte marginal **+0.24%/mes** vs
+  +0.87 de hl_position; (3) **mal trade estructural**: metrics solo existe desde 2023 → añadirlo
+  cegaría el ancla de maxDD al peor año cripto (**2022: LUNA/FTX**). No vale renunciar al stress de
+  2022 por +0.24%/mes. (Probé implementación con código + ancla híbrida; Oscar decidió NO. Revertido.)
+- `toptrader_fol` (seguir "smart money") da Sharpe **−0.70** → seguir el ratio de top traders PIERDE.
+- **HALLAZGO (negativo pero valioso): la data de posicionamiento (OI, L/S ratio) NO aporta sobre los
+  7 sleeves** — el flujo (`taker_flow`) + `trend` ya capturan esa información. **Sistema = 7 sleeves.**
+- Data en `data/metrics/` (no trackeada, .gitignore *.parquet). Reutilizable para futuras ideas.
+
 ## CHANGELOG 2026-05-30 (tarde-2 — ancla maxDD −10% + ronda 3 sleeves)
 
 ### 🟢 ANCLA de maxDD −10% con leverage auto-calculado (regla de Oscar) — commit d0206b1
