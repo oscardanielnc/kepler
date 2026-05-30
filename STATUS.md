@@ -18,6 +18,20 @@
 
 ---
 
+## CHANGELOG 2026-05-30 (tarde-5 — A1 ampliar universo: VALIDADO con estrés → NO conviene)
+- `research/e17_expand_universe.py` (greedy 1-a-1, criterio: retorno@−10% + OOS + no recorta panel)
+  + `research/e17b_stress_universe.py` (estrés del subconjunto ganador). Descargué 20 candidatos
+  reales de historia ≥2022 (XMR,ALGO,ICP,AXS,DASH,DYDX,OP,APE,ENS,CRV,VET,IOTA,CHZ,XTZ,SAND,...).
+- **Resultado: NO ampliar.** El subconjunto "ganador" (8 símbolos) parecía +2.6%/mes (Sharpe
+  1.94→2.25, OOS 2.06→2.94) pero el ESTRÉS lo tumba:
+  - T1 cuartiles: mejora ERRÁTICA — PEOR en Q1/Q2, casi todo viene de Q3. No repartida = no robusta.
+  - T2 desglose: solo **+0.38%/mes es EDGE**; **+2.23%/mes es LEVERAGE** extra (ancla 1.92x→2.76x).
+  - T3 robustez: quitar AXS borra +0.96%/mes → concentración frágil en 1 símbolo.
+  - Conclusión: apalancar 2.76x sobre edge errático = frágil al gap backtest↔vivo. Oscar decidió NO.
+- **Lección: la veta "más símbolos" está agotada** (como OHLCV y positioning). Las mejoras reales que
+  quedan NO suben el número de fantasía sino que lo acercan al real: **C1 (costos realistas)** y
+  **B3 (Deflated Sharpe)**. ← próximo. Sistema sigue 32 perps / 7 sleeves. Datos candidatos en data/.
+
 ## CHANGELOG 2026-05-30 (tarde-4 — congelar estado + ROADMAP Medallion-inspired)
 - **Estado CONGELADO y publicado en la VM (DEMO):** 7 sleeves + ancla maxDD −10% (Sharpe 1.94 backtest).
   Oscar consciente: **el 1.94 es backtest, en vivo bajará** — por eso el plan es subir el TECHO.
