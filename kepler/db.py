@@ -78,6 +78,10 @@ class DB:
         self.conn = sqlite3.connect(path or config.DB_PATH, check_same_thread=False)
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.executescript(_SCHEMA)
+        # migración idempotente: columnas para medir slippage REAL de fills (C3)
+        for col in ("ref_px REAL", "slip_bps REAL"):
+            try: self.conn.execute(f"ALTER TABLE trades ADD COLUMN {col}")
+            except Exception: pass
         self.conn.commit()
 
     # ── escritura ──────────────────────────────────────────────────────────
@@ -109,19 +113,20 @@ class DB:
         self.conn.commit()
 
     def log_fill(self, symbol, direction, qty, price, weight=None, leverage=None,
-                 prev_amt=None, new_amt=None, ts=None) -> int:
+                 prev_amt=None, new_amt=None, ts=None, ref_px=None, slip_bps=None) -> int:
         """Registra un FILL del rebalanceo (cambio real de posición en un ciclo). El sistema
         es de rebalanceo rodante (sin entrada/salida discretas): cada fila = un cambio de tamaño.
         status='closed' si la posición resultante quedó en 0, si no 'open'. r_multiple/exit_px no
-        aplican aquí (no hay ciclo de vida open→close clásico; eso sería otro proyecto)."""
+        aplican aquí (no hay ciclo de vida open→close clásico; eso sería otro proyecto).
+        ref_px/slip_bps (C3): precio de referencia y slippage realizado (fill vs ref) para calibrar costos."""
         status = "closed" if (new_amt is not None and abs(new_amt) < 1e-12) else "open"
         notes = (f"{prev_amt:+.6f}->{new_amt:+.6f}"
                  if (prev_amt is not None and new_amt is not None) else None)
         cur = self.conn.execute(
             "INSERT INTO trades (symbol,alpha,direction,open_ts,entry_px,qty,weight,leverage,"
-            "reason,status,notes) VALUES (?,?,?,?,?,?,?,?, 'rebalance_fill', ?, ?)",
+            "reason,status,notes,ref_px,slip_bps) VALUES (?,?,?,?,?,?,?,?, 'rebalance_fill', ?, ?, ?, ?)",
             (symbol, "rebalance", direction, ts or _now_ms(), price, qty, weight, leverage,
-             status, notes))
+             status, notes, ref_px, slip_bps))
         self.conn.commit(); return cur.lastrowid
 
     def append_note(self, trade_id, note: str):

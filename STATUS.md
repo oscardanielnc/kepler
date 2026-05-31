@@ -39,6 +39,27 @@ flat reproduce el 1.94 exacto.
   pesos; puede recuperar buena parte del −0.82%/mes → posible MEJORA real. Luego cobrar costo a trend
   y calibrar slippage con fills reales de DEMO (C3).
 
+## CHANGELOG 2026-05-31 (tarde — B3 Deflated Sharpe (resultado) + C3 medición de slippage (montado))
+### B3 — Deflated Sharpe Ratio (`research/e20_deflated_sharpe.py`) — RESULTADO
+DSR = prob. de que el Sharpe 2.07 sea real y no suerte de buscar N configs (Bailey & López de Prado).
+| Nº trials asumido | SR0 (benchmark suerte) | DSR |
+|---|---|---|
+| 24 (grilla) | 1.12 | **0.995** |
+| 72 (×3) | 1.36 | 0.973 |
+| 120 (×5, muy conserv.) | 1.46 | **0.951** |
+- **El 2.07 sobrevive al multiple-testing** (DSR>0.95 incluso a 120 trials). NO es artefacto de buscar.
+- ⚠️ Caveats: serie diaria muy no-normal (skew 7.6/kurt 122 por contabilización a "picos" → el número
+  exacto es blando) y el DSR ataca SELECCIÓN, no el gap backtest→vivo. El número vivo seguirá menor.
+
+### C3 — Medición de slippage real (montado; GATED por datos)
+No da números hoy (1 ciclo de fills + DB en la VM + faltaba capturar el fill real). MONTADA la medición:
+- `execution.get_user_trades(sym, start_ms)` (read-only, blindado) → fills reales de Binance.
+- `orchestrator._log_fills` calcula **VWAP real vs ref book_mid → slip_bps** (signo adverso) por fill.
+- `db`: migración idempotente cols `ref_px`, `slip_bps` en trades; `log_fill` los guarda.
+- `research/e21_fill_slippage.py`: analizador que agrega slip real por símbolo vs el modelo K50 de e18.
+- **PENDIENTE (gated):** desplegar → dejar correr DEMO varios días → traer `kepler.db` de la VM →
+  correr e21 → recalibrar K (o usar slip por símbolo) → re-correr e18 = número de costo HONESTO real.
+
 ## CHANGELOG 2026-05-31 (mediodía-3 — costo a trend (honestidad) + workflow: Claude no hace push)
 - **Costo a `trend` IMPLEMENTADO:** `engine.trend_sleeve` ahora resta `MAKER_FEE` plano sobre su
   turnover (antes pagaba 0; rota ~57x/año). Contabilidad de costos ya UNIFORME en los 7 sleeves.

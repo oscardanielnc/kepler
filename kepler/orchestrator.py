@@ -58,18 +58,30 @@ def _log_signals(db: DB, target, vp, weights, lev, asof):
                                 "leverage": round(float(lev), 3), "asof": str(asof)})
 
 
-def _log_fills(db: DB, before: dict, after: dict, lev, target):
+def _log_fills(db: DB, before: dict, after: dict, lev, target, t0_ms):
     """Registra los FILLS reales del ciclo = diferencia de posiciones antes vs después del
-    rebalanceo. Honesto con los maker GTX que no siempre llenan: solo cuenta lo que SÍ cambió."""
+    rebalanceo. Honesto con los maker GTX que no siempre llenan: solo cuenta lo que SÍ cambió.
+    C3: además mide el slippage realizado = VWAP de los fills reales (userTrades) vs la referencia
+    book_mid, con signo adverso (caro al comprar / barato al vender). Blindado: si falla, slip=None."""
     for sym in set(before) | set(after):
         b, a = float(before.get(sym, 0.0)), float(after.get(sym, 0.0))
         d = a - b
-        px = execution.book_mid(sym) or 0.0
-        if abs(d) * px < execution.MIN_ORDER_USD:   # cambio insignificante / ruido
+        ref = execution.book_mid(sym) or 0.0
+        if abs(d) * ref < execution.MIN_ORDER_USD:   # cambio insignificante / ruido
             continue
-        db.log_fill(symbol=sym, direction="BUY" if d > 0 else "SELL", qty=abs(d), price=px,
+        fill_px, slip_bps = ref, None
+        try:                                          # VWAP de los fills reales del ciclo (C3)
+            tr = execution.get_user_trades(sym, t0_ms)
+            num = sum(float(x["price"]) * float(x["qty"]) for x in tr)
+            den = sum(float(x["qty"]) for x in tr)
+            if den > 0 and ref > 0:
+                fill_px = num / den
+                slip_bps = (1 if d > 0 else -1) * (fill_px - ref) / ref * 1e4
+        except Exception:
+            pass
+        db.log_fill(symbol=sym, direction="BUY" if d > 0 else "SELL", qty=abs(d), price=fill_px,
                     weight=round(float(target.get(sym, 0.0)), 4), leverage=float(lev),
-                    prev_amt=b, new_amt=a)
+                    prev_amt=b, new_amt=a, ref_px=ref, slip_bps=slip_bps)
 
 
 def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
@@ -114,7 +126,7 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
         try:
             after = execution.get_positions()
             positions_detail = execution.get_positions_detail()
-            _log_fills(db, current, after, lev, target)
+            _log_fills(db, current, after, lev, target, int(t0 * 1000))
         except Exception as e:
             _log.warning(f"[orq] no se pudieron loguear trades/posiciones: {e}")
     # 7. log

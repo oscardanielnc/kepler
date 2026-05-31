@@ -120,6 +120,15 @@ def get_positions_detail():
     return out
 
 
+def get_user_trades(symbol, start_ms):
+    """Fills REALES de la cuenta para `symbol` desde start_ms (para medir slippage, C3).
+    Read-only y blindado: nunca lanza (devuelve [] si falla o en DRY_RUN)."""
+    if DRY_RUN:
+        return []
+    d = _get("/fapi/v1/userTrades", {"symbol": symbol, "startTime": int(start_ms), "limit": 200})
+    return d if isinstance(d, list) else []
+
+
 def book_mid(symbol):
     d = _get("/fapi/v1/ticker/bookTicker", {"symbol": symbol})
     if isinstance(d, dict):
