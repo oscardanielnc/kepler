@@ -122,9 +122,14 @@ def equity():
 
 
 @app.get("/api/download")
-def download(date: str = ""):
-    date = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    path = _DB.export_daily_log(date)
+def download(date: str = "", start: str = "", end: str = "", full: bool = False):
+    # full=1 (o un rango start/end) → export de ANÁLISIS con todo (señales, fills, snapshots
+    # con posiciones+PnL, curva, audit). Sin parámetros → log del día (compat).
+    if full or start or end:
+        path = _DB.export_log(start or None, end or None)
+    else:
+        date = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        path = _DB.export_daily_log(date)
     if not os.path.exists(path):
         return JSONResponse({"error": "no hay log"}, status_code=404)
-    return FileResponse(path, filename=f"kepler_{date}.json", media_type="application/json")
+    return FileResponse(path, filename=os.path.basename(path), media_type="application/json")

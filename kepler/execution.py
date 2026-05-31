@@ -230,7 +230,7 @@ def rebalance(target_weights, equity=None):
 def main():
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     from kepler.engine import compute_target
-    target, vp, df, port, asof, lev = compute_target("ESTABLE")
+    target, vp, df, port, asof, lev, _w = compute_target("ESTABLE")
     target = target[target.abs() > 0.005]
     print(f"Modo: {'DRY_RUN' if DRY_RUN else ('DEMO' if USE_DEMO else 'REAL')} · "
           f"objetivo {len(target)} posiciones · datos hasta {str(asof)[:10]}")

@@ -108,6 +108,22 @@ class DB:
             (close_ts or _now_ms(), exit_px, pnl_usd, r_multiple, fees_usd, funding_usd, reason, trade_id))
         self.conn.commit()
 
+    def log_fill(self, symbol, direction, qty, price, weight=None, leverage=None,
+                 prev_amt=None, new_amt=None, ts=None) -> int:
+        """Registra un FILL del rebalanceo (cambio real de posición en un ciclo). El sistema
+        es de rebalanceo rodante (sin entrada/salida discretas): cada fila = un cambio de tamaño.
+        status='closed' si la posición resultante quedó en 0, si no 'open'. r_multiple/exit_px no
+        aplican aquí (no hay ciclo de vida open→close clásico; eso sería otro proyecto)."""
+        status = "closed" if (new_amt is not None and abs(new_amt) < 1e-12) else "open"
+        notes = (f"{prev_amt:+.6f}->{new_amt:+.6f}"
+                 if (prev_amt is not None and new_amt is not None) else None)
+        cur = self.conn.execute(
+            "INSERT INTO trades (symbol,alpha,direction,open_ts,entry_px,qty,weight,leverage,"
+            "reason,status,notes) VALUES (?,?,?,?,?,?,?,?, 'rebalance_fill', ?, ?)",
+            (symbol, "rebalance", direction, ts or _now_ms(), price, qty, weight, leverage,
+             status, notes))
+        self.conn.commit(); return cur.lastrowid
+
     def append_note(self, trade_id, note: str):
         row = self.conn.execute("SELECT notes FROM trades WHERE id=?", (trade_id,)).fetchone()
         prev = (row[0] + " | ") if row and row[0] else ""
@@ -175,6 +191,33 @@ class DB:
             "signals": rows("SELECT * FROM signals WHERE ts BETWEEN ? AND ?", (d0,d1)),
             "audit":   rows("SELECT * FROM audit_event WHERE ts BETWEEN ? AND ?", (d0,d1)),
             "report":  rows("SELECT * FROM daily_report WHERE day=?", (day,)),
+        }
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        return path
+
+    def export_log(self, start: str | None = None, end: str | None = None) -> str:
+        """Export para ANÁLISIS: rango de días (o histórico completo si start/end=None).
+        Incluye TODO lo que se persiste — señales, fills, snapshots de cartera (con posiciones
+        y PnL), curva de equity (ticks + diaria), auditoría y reportes. Un solo archivo."""
+        def day_ms(d):
+            return int(datetime.strptime(d, "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp()*1000)
+        d0 = day_ms(start) if start else 0
+        d1 = (day_ms(end) + 86_400_000) if end else _now_ms() + 86_400_000
+        tag = f"{start or 'inicio'}_a_{end or 'ahora'}"
+        path = os.path.join(config.LOGS_DIR, f"kepler_{tag}.json")
+        def rows(q, a=()): return [dict(zip([c[0] for c in cur.description], r))
+                                   for cur in [self.conn.execute(q, a)] for r in cur.fetchall()]
+        payload = {
+            "range": {"start": start, "end": end},
+            "generated": datetime.now(timezone.utc).isoformat(),
+            "signals":            rows("SELECT * FROM signals WHERE ts BETWEEN ? AND ? ORDER BY ts", (d0,d1)),
+            "trades":             rows("SELECT * FROM trades WHERE COALESCE(open_ts,close_ts) BETWEEN ? AND ? ORDER BY open_ts", (d0,d1)),
+            "portfolio_snapshot": rows("SELECT * FROM portfolio_snapshot WHERE ts BETWEEN ? AND ? ORDER BY ts", (d0,d1)),
+            "equity_tick":        rows("SELECT * FROM equity_tick WHERE ts BETWEEN ? AND ? ORDER BY ts", (d0,d1)),
+            "equity_daily":       rows("SELECT * FROM equity_daily ORDER BY day"),
+            "audit":              rows("SELECT * FROM audit_event WHERE ts BETWEEN ? AND ? ORDER BY ts", (d0,d1)),
+            "daily_report":       rows("SELECT * FROM daily_report ORDER BY day"),
         }
         with open(path, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)

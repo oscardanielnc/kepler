@@ -200,7 +200,9 @@ def compute_target(tier="ESTABLE"):
     # GATE DE RÉGIMEN: probado (vol-target de-risk) → EMPEORA el maxDD, NO se usa (workflow).
     # El control de riesgo efectivo es la diversificación (corr~0) + el dial de leverage anclado.
     target = (target * lev).round(4)
-    return target, vp, df, port_ret, C.index[-1], lev
+    # `weights` = pesos por sleeve (cada uno serie por símbolo) → para registrar en la DB
+    # el desglose de cada decisión: qué sleeve empuja cada posición. NO afecta al cálculo.
+    return target, vp, df, port_ret, C.index[-1], lev, weights
 
 
 def main():
@@ -208,7 +210,7 @@ def main():
     for _s in (sys.stdout, sys.stderr):
         try: _s.reconfigure(encoding="utf-8", errors="replace")
         except Exception: pass
-    target, vp, df, port_ret, asof, lev = compute_target(tier)
+    target, vp, df, port_ret, asof, lev, _w = compute_target(tier)
     m1 = metrics(port_ret)                 # 1x (base)
     m = metrics(port_ret * lev)            # con leverage anclado
     print(f"KEPLER motor live · tier {tier} · maxDD objetivo −{TIERS[tier]*100:.0f}% · "

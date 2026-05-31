@@ -37,7 +37,8 @@
   <span id="tier" class="badge" style="background:#1f6feb33;color:var(--blu)">—</span>
   <span id="cb" class="badge">—</span>
   <span style="margin-left:auto;color:var(--mut);font-size:12px" id="updated"></span>
-  <button onclick="dl()">⬇ Descargar log de hoy</button>
+  <button onclick="dl('')">⬇ Log de hoy</button>
+  <button onclick="dl('?full=1')">⬇ Histórico completo (análisis)</button>
 </header>
 
 <div class="grid">
@@ -52,16 +53,16 @@
     <span class="metric"><span class="v" id="m-cyc" style="font-size:13px">—</span><br><span class="l">Último ciclo</span></span>
   </div>
 
-  <div class="card">
+  <div class="card full">
+    <h2>Curva de equity</h2>
+    <div style="position:relative;height:300px;width:100%"><canvas id="chart"></canvas></div>
+  </div>
+
+  <div class="card full">
     <h2>Posiciones activas ahora</h2>
     <table><thead><tr><th>Activo</th><th>Lado</th><th>USD (sin lev)</th><th>PnL</th></tr></thead>
     <tbody id="pos"></tbody></table>
     <div id="pos-src" style="color:var(--mut);font-size:11px;margin-top:6px"></div>
-  </div>
-
-  <div class="card">
-    <h2>Curva de equity</h2>
-    <canvas id="chart" height="200"></canvas>
   </div>
 
   <div class="card full">
@@ -87,7 +88,7 @@
 let lv="", chart=null;
 const $=id=>document.getElementById(id);
 async function j(u){try{return await (await fetch(u)).json()}catch(e){return null}}
-function dl(){window.location="/api/download"}
+function dl(q){window.location="/api/download"+(q||"")}
 function setLv(l){lv=l;loadLogs()}
 
 async function loadStatus(){
@@ -141,8 +142,8 @@ async function loadChart(){
   }
   chart=new Chart($("chart"),{type:"line",data:{labels,datasets:[{label:"equity",data,
     borderColor:"#58a6ff",backgroundColor:"#58a6ff22",tension:.2,pointRadius:0,fill:true}]},
-    options:{animation:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:"#8b949e",maxTicksLimit:8}},
-    y:{ticks:{color:"#8b949e"}}}}});
+    options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:"#8b949e",maxTicksLimit:12}},y:{ticks:{color:"#8b949e"}}}}});
 }
 function refresh(){loadStatus();loadPos();loadLogs();loadChart();loadDaily()}
 refresh(); setInterval(refresh,10000);

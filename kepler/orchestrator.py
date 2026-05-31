@@ -25,38 +25,98 @@ _log = logging.getLogger("kepler")
 
 
 def heartbeat(db: DB):
-    """Registra equity sin rebalancear — mantiene la curva y la tabla diaria al día."""
-    equity = execution.get_balance() or config.CAPITAL_USD
+    """Registra equity sin rebalancear — mantiene la curva y la tabla diaria al día.
+    Si NO se puede leer el balance, se OMITE el punto (no se inventa un 5000 que mete
+    escalones falsos en la curva y corrompe la rentabilidad). En DRY_RUN get_balance
+    devuelve el capital configurado, así que esto solo afecta a DEMO/REAL con la API caída."""
+    equity = execution.get_balance()
+    if equity is None:
+        _log.warning("[hb] balance ilegible — se omite este punto de la curva")
+        return
     db.record_equity_tick(equity)
     db.upsert_equity_daily(equity)
     _log.info(f"[hb] equity={equity:.2f}")
 
 
+def _log_signals(db: DB, target, vp, weights, lev, asof):
+    """Registra la DECISIÓN del ciclo: una señal por símbolo (lado + peso final) con el
+    desglose de qué sleeve la empuja. Es lo que faltaba para reconstruir el porqué de cada posición."""
+    vp_d = {k: round(float(v), 4) for k, v in vp.items()}
+    for sym in target.index:
+        w = float(target[sym])
+        breakdown = {}
+        for name, wser in weights.items():
+            try:
+                sw = float(wser.reindex([sym]).fillna(0.0).iloc[0])
+            except Exception:
+                sw = 0.0
+            if abs(sw) > 1e-6:
+                breakdown[name] = round(sw, 4)
+        db.log_signal(alpha="combined", symbol=sym,
+                      direction="LONG" if w > 0 else "SHORT", score=round(w, 4),
+                      features={"sleeves": breakdown, "vp": vp_d,
+                                "leverage": round(float(lev), 3), "asof": str(asof)})
+
+
+def _log_fills(db: DB, before: dict, after: dict, lev, target):
+    """Registra los FILLS reales del ciclo = diferencia de posiciones antes vs después del
+    rebalanceo. Honesto con los maker GTX que no siempre llenan: solo cuenta lo que SÍ cambió."""
+    for sym in set(before) | set(after):
+        b, a = float(before.get(sym, 0.0)), float(after.get(sym, 0.0))
+        d = a - b
+        px = execution.book_mid(sym) or 0.0
+        if abs(d) * px < execution.MIN_ORDER_USD:   # cambio insignificante / ruido
+            continue
+        db.log_fill(symbol=sym, direction="BUY" if d > 0 else "SELL", qty=abs(d), price=px,
+                    weight=round(float(target.get(sym, 0.0)), 4), leverage=float(lev),
+                    prev_amt=b, new_amt=a)
+
+
 def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     db = db or DB()
     t0 = time.time()
+    mode = "DRY_RUN" if execution.DRY_RUN else ("DEMO" if execution.USE_DEMO else "REAL")
     # 1. datos
     n = fetch.update_universe("1h")
     _log.info(f"[orq] datos actualizados ({n} símbolos)")
-    # 2. equity
-    equity = execution.get_balance() or config.CAPITAL_USD
+    # 2. equity — si NO se puede leer, se OMITE el ciclo (no se rebalancea el libro entero
+    #    con un valor inventado; mejor reintentar en el próximo heartbeat).
+    equity = execution.get_balance()
+    if equity is None:
+        _log.warning("[orq] balance ilegible — ciclo OMITIDO (no se rebalancea con valor falso)")
+        db.audit("WARNING", "orchestrator", "Ciclo omitido: balance ilegible")
+        return {"equity": None, "n_target": 0, "operate": None, "mode": mode, "skipped": True}
     # 3. circuit breaker
     operate = circuit_breaker.check(equity, db)
     # 4. target (leverage anclado al maxDD objetivo del tier — ver engine.compute_target)
-    target, vp, df, port, asof, lev = compute_target(tier)
+    target, vp, df, port, asof, lev, weights = compute_target(tier)
     bt = pf_metrics(port * lev)   # métricas del backtest CON el leverage anclado (lo que se opera)
     target = target[target.abs() > 0.005]
     if not operate:
         _log.warning("[orq] CIRCUIT BREAKER activo — aplanando (target=0)")
         target = target * 0.0
-    # 5. reconcile
+    # 5. reconcile (posiciones reales ANTES del rebalanceo, para medir los fills)
     current = execution.get_positions() if not execution.DRY_RUN else {}
     n_target = int((target.abs() > 0.005).sum())
     _log.info(f"[orq] equity={equity:.0f} target={n_target}pos gross={target.abs().sum():.2f} "
               f"lev={lev:.2f}x(maxDD-{TIERS[tier]*100:.0f}%) "
               f"posiciones_actuales={len(current)} cb={'OK' if operate else 'HALT'}")
+    # 5b. registrar la DECISIÓN (señales por símbolo + desglose por sleeve)
+    try:
+        _log_signals(db, target[target.abs() > 0.005], vp, weights, lev, asof)
+    except Exception as e:
+        _log.warning(f"[orq] no se pudieron loguear señales: {e}")
     # 6. rebalanceo
     orders = execution.rebalance(target, equity)
+    # 6b. registrar FILLS reales (diff posiciones) + leer posiciones reales con PnL
+    positions_detail = []
+    if not execution.DRY_RUN:
+        try:
+            after = execution.get_positions()
+            positions_detail = execution.get_positions_detail()
+            _log_fills(db, current, after, lev, target)
+        except Exception as e:
+            _log.warning(f"[orq] no se pudieron loguear trades/posiciones: {e}")
     # 7. log
     db.snapshot_portfolio(equity=equity, gross=float(target.abs().sum()), net=float(target.sum()),
                           beta=0.0, n_positions=n_target,
@@ -67,13 +127,14 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
                                                "maxdd": round(bt.get("maxdd", 0), 1),
                                                "n_sleeves": df.shape[1]},
                                   "orders": len(orders) if orders else 0,
+                                  "vp": {k: round(float(v), 4) for k, v in vp.items()},
+                                  "positions": positions_detail,   # posiciones reales + PnL del ciclo
                                   "weights": target[target.abs() > 0.005].round(4).to_dict()})
     db.record_equity_tick(equity)      # punto en la curva
     db.upsert_equity_daily(equity)     # retorno del día
     db.audit("INFO", "orchestrator", f"Ciclo {tier} ok ({time.time()-t0:.0f}s)",
              detail={"equity": equity, "n_target": n_target, "operate": operate})
     db.export_daily_log()   # JSON descargable del día
-    mode = "DRY_RUN" if execution.DRY_RUN else ("DEMO" if execution.USE_DEMO else "REAL")
     notify.alert_cycle(equity, n_target, float(target.abs().sum()), operate, mode)
     return {"equity": equity, "n_target": n_target, "operate": operate, "mode": mode}
 
@@ -91,8 +152,12 @@ def run(tier="ESTABLE", once=False):
         try:
             now = time.time()
             if now - last_rebal >= REBALANCE_HOURS * 3600:   # rebalanceo completo (cada 24h)
-                r = cycle(tier, db); last_rebal = now
-                _log.info(f"[orq] ciclo completo: {r}")
+                r = cycle(tier, db)
+                if r.get("skipped"):     # balance ilegible → NO consumir la ventana; reintentar
+                    _log.warning("[orq] ciclo omitido — se reintenta en el próximo heartbeat")
+                else:
+                    last_rebal = now
+                    _log.info(f"[orq] ciclo completo: {r}")
             else:                                            # heartbeat (solo equity)
                 heartbeat(db)
         except Exception as e:

@@ -18,6 +18,49 @@
 
 ---
 
+## CHANGELOG 2026-05-31 (mañana — FIX logging de señales/trades + export de análisis + gráfico)
+**Motivo:** Oscar descargó "log de hoy" del dashboard y salió vacío (`trades/signals/audit/report` = []).
+Diagnóstico (2 causas):
+1. El export era **por día UTC** y solo 4 tablas; hoy aún no había corrido el ciclo de 24h (último
+   May 30 18:02, próximo ~May 31 18:02) y los heartbeats solo escriben `equity_tick` → vacío legítimo.
+2. **Hueco real:** `signals` y `trades` NUNCA se persistían — los métodos existían en `db.py` pero no
+   se llamaban desde ningún sitio. Solo se guardaba snapshot/equity/audit.
+
+**Implementado (validado en DRY_RUN end-to-end + test DB aislado):**
+- `engine.compute_target` ahora devuelve también `weights` (pesos por sleeve) → 7-tupla. Callers
+  actualizados (orchestrator, engine.main, execution.main, report.py).
+- `orchestrator.cycle`: registra **señales** (1 por símbolo: lado + peso final + **desglose por sleeve**
+  en `features`) vía `_log_signals`; registra **trades/fills reales** = diff de posiciones antes/después
+  del rebalanceo vía `_log_fills` (honesto con maker GTX que no siempre llenan; solo cuenta lo que cambió).
+- `db.log_fill` nuevo (cada fila = un cambio de tamaño; status closed si la posición queda en 0).
+- `portfolio_snapshot.detail` ahora incluye `vp` (pesos por sleeve) y `positions` (posiciones reales
+  + PnL del ciclo) → histórico de holdings con PnL sin tabla nueva.
+- `db.export_log(start,end)` nuevo: export de ANÁLISIS con rango o histórico completo, incluyendo
+  signals/trades/portfolio_snapshot/equity_tick/equity_daily/audit/daily_report en un archivo.
+- `api/app.py` `/api/download` acepta `?full=1` y `?start=&end=`. Frontend: botón nuevo
+  **"Histórico completo (análisis)"** junto al de hoy.
+- Dashboard: **curva de equity a todo el ancho y horizontal** (300px, movida bajo las métricas);
+  posiciones pasan a ancho completo debajo.
+- ⚠️ NOTA: `r_multiple`/`exit_px` quedan null (el sistema es rebalanceo rodante, sin ciclo open→close
+  clásico; el ciclo de vida completo de trade sería otro proyecto). Los fills + snapshots ya permiten
+  analizar el comportamiento.
+
+**FIX balance ilegible (sale del análisis de los 2 días):** antes `get_balance() or CAPITAL_USD`
+metía un **5000 falso** cuando la API no respondía (los 2 primeros ciclos del 05-30 marcaron 5000.0
+exacto en 16s = fallback; el balance real era ~4933). Ahora: `heartbeat` OMITE el punto si el balance
+es ilegible (no inventa); `cycle` OMITE el rebalanceo (no sizar el libro con valor falso) y NO consume
+la ventana de 24h → reintenta en el próximo heartbeat (15min). En DRY_RUN no cambia nada
+(`get_balance` devuelve el capital configurado).
+
+**Análisis de los ~31h en demo (curva wallet + audit, hecho 2026-05-31):** equity PLANO 4933→4939
+(+0.11%), maxDD wallet ≈ −0.01%, funding casi neutral (−0.06 USD a 00/08h UTC). El "5000→4933" NO
+fue pérdida = artefacto del fallback (ver fix). 8 ciclos el 05-30 = reinicios del servicio (dev/deploy),
+no cadencia 24h; próximo rebal real ≈18:03 UTC. **Conclusión: operativamente sano; de edge no se
+concluye nada (1 período de tenencia + wallet no ve PnL no realizado).** Es el E1 del ROADMAP (tiempo).
+- **PENDIENTE DEPLOY** (lo hace Oscar): push a origin/main → en la VM `bash /opt/kepler-app/kepler/deploy.sh`
+  + reiniciar `kepler` y `kepler-api`. El logging empieza a llenar a partir del próximo ciclo (~18:02).
+  Para análisis de los 2 días YA corridos: Oscar trae `kepler.db` de la VM (`/opt/kepler-app/kepler.db`).
+
 ## CHANGELOG 2026-05-30 (tarde-5 — A1 ampliar universo: VALIDADO con estrés → NO conviene)
 - `research/e17_expand_universe.py` (greedy 1-a-1, criterio: retorno@−10% + OOS + no recorta panel)
   + `research/e17b_stress_universe.py` (estrés del subconjunto ganador). Descargué 20 candidatos
