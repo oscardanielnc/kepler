@@ -39,6 +39,18 @@ flat reproduce el 1.94 exacto.
   pesos; puede recuperar buena parte del −0.82%/mes → posible MEJORA real. Luego cobrar costo a trend
   y calibrar slippage con fills reales de DEMO (C3).
 
+## CHANGELOG 2026-05-31 (tarde-2 — A4 cross-exchange basis: PARADO, basis ≈ carry)
+`research/e22_basis_check.py`. Antes de bajar 23 historias de spot para un sleeve cross-seccional de
+basis, chequeo barato con BTC/ETH (lo único con spot): **el basis (perp/spot−1) ≈ funding/carry**.
+- corr(basis, funding) = **0.74** (BTC y ETH, nivel) · forward 0.70 (el basis ES el funding de mañana)
+- cross-seccional corr(Δbasis, Δfunding) BTC−ETH = **0.53** (la señal que rankearía el sleeve)
+- **Veredicto: duplicaría el sleeve #4 (carry), no diversifica** (corr > umbral 0.35) → diluiría
+  (lección e16d). NO bajar spot del universo. Único ángulo ortogonal posible: el RESIDUAL (dislocaciones
+  perp-spot que el funding no explica), especulativo + necesita spot del universo → no se hace ahora.
+- **Conclusión de fondo:** las vetas de research SIN datos nuevos están agotadas (universo ✗, OHLCV ✗,
+  positioning ✗, basis ≈ carry). Lo ortogonal que queda exige FUENTES NUEVAS (A2 order-book, A3 on-chain)
+  o, lo más valioso, dejar correr la DEMO (el foso real = tiempo, E1).
+
 ## CHANGELOG 2026-05-31 (tarde — B3 Deflated Sharpe (resultado) + C3 medición de slippage (montado))
 ### B3 — Deflated Sharpe Ratio (`research/e20_deflated_sharpe.py`) — RESULTADO
 DSR = prob. de que el Sharpe 2.07 sea real y no suerte de buscar N configs (Bailey & López de Prado).

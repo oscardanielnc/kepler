@@ -48,7 +48,10 @@ Fuentes por explorar (en orden de promesa, la OHLCV y positioning ya están agot
       Sistema se queda en 32 perps. Ver STATUS tarde-5.
 - [ ] **A2. Order-book imbalance / profundidad** (bid-ask, depth). Requiere fuente nueva de datos.
 - [ ] **A3. On-chain** (flujos de exchange, stablecoin supply, activos en wallets). Fuente nueva.
-- [ ] **A4. Cross-exchange basis / spread** (perp vs spot, perp Binance vs otros).
+- [x] ~~**A4. Cross-exchange basis** (perp vs spot)~~ → PARADO 2026-05-31 (e22): basis ≈ funding/carry
+      (corr 0.74 nivel · 0.53 cross-seccional · 0.70 predice funding) → duplicaría el sleeve #4, no
+      diversifica. NO bajar spot del universo. Único ángulo vivo: el RESIDUAL (dislocaciones que el
+      funding no ve), especulativo + necesita spot del universo. Ver STATUS tarde-2.
 - [ ] **A5. Estacionalidad / efectos calendario** (hora del día, día de semana, vencimientos).
 - [x] ~~OHLCV derivados~~ agotado (e16: precio→correlado). ~~Open Interest / long-short~~ no aporta (e16f).
 
