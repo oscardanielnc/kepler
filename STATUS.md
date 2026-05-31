@@ -57,6 +57,8 @@ Foco de Oscar: nuevas fuentes de datos. **Liquidaciones (la candidata #1) NO tie
   e15 por falta de backtester horario). **La ruta para monetizar microestructura (order-book, y lo que
   liquidaciones habría sido) pasa por construir el BACKTESTER HORARIO, no por otro sleeve diario.**
   Data bajada y reutilizable si algún día se ataca el intradía. Sistema sigue 7 sleeves / 32 perps.
+  **HALLAZGOS INTRADÍA DOCUMENTADOS en `INTRADAY.md`** (guía futura; Oscar pidió aparcar intradía y
+  seguir con el menú diario). ROADMAP §F creado. Próximo DIARIO vivo: opciones Deribit (A6).
 
 ## CHANGELOG 2026-05-31 (mediodía — C1 slippage realista: el 1.94 estaba inflado por turnover)
 `research/e18_slippage.py`. El motor cobra costo PLANO (turnover×MAKER_FEE 1.8bps) en xs/carry y

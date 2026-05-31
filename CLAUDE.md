@@ -3,7 +3,8 @@
 
 > Lee también: `SYSTEM.md` (validación del edge), `STATUS.md` (estado vivo + changelog + pendientes),
 > `ROADMAP.md` (plan de mejora, faro Medallion/RenTech), `DEPLOY.md` (despliegue),
-> `PLAN.md` / `INSTRUCTIONS.md` (diseño original).
+> `PLAN.md` / `INSTRUCTIONS.md` (diseño original), `INTRADAY.md` (frontera intradía — aparcada,
+> guía para cuando el proyecto crezca: edge de microestructura es sub-diario; requiere backtester horario).
 > **Empieza cada sesión leyendo `STATUS.md`** — ahí está lo último y lo pendiente.
 
 ---

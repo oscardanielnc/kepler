@@ -46,7 +46,9 @@ Fuentes por explorar (en orden de promesa, la OHLCV y positioning ya están agot
 - [x] ~~**A1. Ampliar el universo**~~ → DESCARTADO 2026-05-30 (e17/e17b): edge errático (peor en 2/4
       cuartiles), 85% de la "mejora" era leverage extra del ancla (1.92x→2.76x), y concentrada en AXS.
       Sistema se queda en 32 perps. Ver STATUS tarde-5.
-- [ ] **A2. Order-book imbalance / profundidad** (bid-ask, depth). Requiere fuente nueva de datos.
+- [x] ~~**A2. Order-book imbalance / profundidad**~~ → DESCARTADO como sleeve DIARIO 2026-05-31
+      (e23/e24): real y ortogonal (corr 0.06–0.10), pero Δ al ancla maxDD −10% = **+0.00%/mes** (taker).
+      Su edge genuino es **INTRADÍA** → movido a §F. Data en `data/bookdepth_daily/`. Ver STATUS noche.
 - [ ] **A3. On-chain** (flujos de exchange, stablecoin supply, activos en wallets). Fuente nueva.
 - [x] ~~**A4. Cross-exchange basis** (perp vs spot)~~ → PARADO 2026-05-31 (e22): basis ≈ funding/carry
       (corr 0.74 nivel · 0.53 cross-seccional · 0.70 predice funding) → duplicaría el sleeve #4, no
@@ -77,24 +79,46 @@ El objetivo no es subir el número, es que el número sea creíble (menos gap ba
 - [ ] **D1. Validación del β en vivo** (no solo backtest): confirmar que el libro real mantiene β≈0.
 - [ ] **D2. Monitor de correlación entre sleeves en vivo:** si dos sleeves empiezan a correlacionar
       (su diversificación se rompe), avisar. La diversificación es nuestro control de riesgo nº1.
-- [x] ~~Monitor de riesgo intradía~~ BLOQUEADO (e15: necesita backtester horario que reproduzca el edge).
+- [x] ~~Monitor de riesgo intradía~~ BLOQUEADO (e15: necesita backtester horario). Movido a §F (F4) — el
+      backtester horario es la llave común con order-book/liquidaciones intradía. Ver `INTRADAY.md`.
 
 ### E. PRODUCTO / TRACK RECORD
 - [ ] **E1. Dejar correr DEMO semanas** y medir el Sharpe REAL vs el 1.94 de backtest. ← EL NÚMERO HONESTO.
 - [ ] **E2. Reporte de track record verificable** (curva de equity, métricas mensuales) para AUM.
 - [ ] **E3. Cuando demo confirme:** evaluar paso a REAL con capital chico. Decisión de Oscar.
 
+### F. FRONTERA INTRADÍA  ← APARCADO a propósito (futuro, cuando el proyecto crezca)
+Hoy Kepler es SOLO diario (rebal 24h). Hay evidencia de **edge real en microestructura a horizonte
+SUB-DIARIO** (order-book, liquidaciones) que el sistema diario deja sobre la mesa. **Guía completa:
+`INTRADAY.md`.** No es trabajo inmediato; el menú DIARIO (§A) sigue siendo el foco.
+- **Llave común:** todo lo intradía está bloqueado por la falta de un **backtester horario fiable**
+  (mismo cuello de botella que el monitor de riesgo, e15). Es un mini-proyecto, no un sleeve.
+- [ ] **F1. Backtester horario** (requisitos en `INTRADAY.md` §3: forward-return correcto, coste de
+      spread, turnover/capacidad, reconciliación con el diario @24h, validación brutal).
+- [ ] **F2. Order-book intradía** (re-evaluar e23/e24 a 1h–12h con coste de spread real; bajar raw 30s).
+- [ ] **F3. Liquidaciones intradía** (montar colector WS `@forceOrder` o Coinglass — sin histórico gratis).
+- [ ] **F4. Monitor de riesgo intradía** (e15, sobre el mismo backtester).
+- ⚠️ Línea roja: intradía = **señal lenta de horas con costos modelados**, NO HFT/market-making/latencia
+  (fuera de la misión, CLAUDE.md). Mantener bajo maxDD y supervivencia, no ROI llamativo.
+
 ---
 
 ## QUÉ SE PUEDE VALIDAR/IMPLEMENTAR AHORA MISMO (sin esperar a la demo)
-Estos NO dependen de tiempo en mercado, son research puro sobre datos que ya tenemos o bajamos:
-1. ~~**A1 — Ampliar universo**~~ → DESCARTADO (e17/e17b: edge errático + leverage frágil). ← hecho.
-2. **C1 — Slippage por liquidez** en el backtest. Re-evaluar los 7 sleeves con costos realistas. ← SIGUIENTE.
-3. **B1/B3 — Purga+embargo y Deflated Sharpe** en el harness. Hace honestos los números que ya tenemos.
-4. **A4 — Cross-exchange basis** (perp vs spot): ya tenemos spot de BTC/ETH; ampliable.
+Estos NO dependen de tiempo en mercado, son research puro sobre datos que ya tenemos o bajamos.
+**Hecho (2026-05-30/31):** ~~A1 universo~~, ~~C1 slippage (e18)~~, ~~B3 Deflated Sharpe (e20)~~,
+~~A4 basis (e22)~~, ~~A2 order-book diario (e23/e24)~~. Todas las vetas baratas DIARIAS de PRECIO/
+microestructura están agotadas o descartadas.
 
-Recomendación de orden: **C1 → B3 → A4**. (Costos honestos primero — acercan el número al real;
-luego validación honesta; luego explorar un sleeve nuevo de fuente genuina.)
+**Foco DIARIO vivo (orden sugerido), cada uno con chequeo de ortogonalidad barato ANTES de bajar histórico:**
+1. **A6 — Opciones (Deribit):** IV, skew, put/call, risk-reversal → prima de riesgo de vol. ← mejor candidata viva.
+2. **A3 — On-chain:** flujos exchange, stablecoin supply. Más lift de datos.
+3. **A5 — Estacionalidad / calendario:** barato, no necesita datos nuevos; incierto.
+4. **B1/B2 — Purga+embargo / CPCV** en el walk-forward: no sube el número, lo hace más creíble.
+
+⚠️ **Recordar el criterio (e16d/e24):** corr<0.35 + IS/OOS>0.10 **NO basta** — el sleeve debe subir el
+retorno al **maxDD fijo con costos taker**. Un Sharpe orto pero bajo (~1.3) solo DILUYE el combinado.
+
+**Frontera INTRADÍA (§F, `INTRADAY.md`):** aparcada a propósito; requiere el backtester horario. No ahora.
 
 ---
 *Mantener este archivo vivo: marcar [x] lo hecho, mover a STATUS.md el detalle de cada sesión.*
