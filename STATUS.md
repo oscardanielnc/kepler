@@ -18,6 +18,27 @@
 
 ---
 
+## CHANGELOG 2026-05-31 (mediodía — C1 slippage realista: el 1.94 estaba inflado por turnover)
+`research/e18_slippage.py`. El motor cobra costo PLANO (turnover×MAKER_FEE 1.8bps) en xs/carry y
+**CERO en trend** → subestima costos. C1 modela slippage por liquidez (ADV; el estimador de spread
+Abdi-Ranaldo NO sirve con barras 1h → spread sub-bp enterrado bajo vol intrahora). Sanity: escenario
+flat reproduce el 1.94 exacto.
+- **TURNOVER anualizado (× capital/año, one-way):** carry **198.9x** (⚠️ reordena el libro cada 48h por
+  ranking de funding), takerflow 82.9x, trend 56.8x (¡paga 0!), hlpos 38.8x, lowvol 21.5x, mom 20x, rev 9.7x.
+- **Resultado al ancla −10% con slip realista (BTC 0.5bps→LIT 13bps, mediana 4bps):**
+  | escenario | Sharpe | lev | %/mes |
+  |---|---|---|---|
+  | motor actual | 1.94 | 1.92 | 3.52 |
+  | + slip ADV central (~4bps) | **1.67** | 1.77 | **2.70** (−0.82) |
+  | + slip ADV ×3 (estrés) | 1.18 | 1.22 | 1.21 |
+  | + 10bps plano (estrés duro) | 1.34 | 1.37 | 1.57 |
+- **CONCLUSIÓN:** el número honesto es **~1.67 / 2.7%/mes** (no 3.5%); el 1.94 estaba inflado por
+  subestimar costos. El lever es el TURNOVER, sobre todo **carry (199x)** y **trend sin costo**. No se
+  tocó el motor (cambiarlo bajaría el leverage del ancla = decisión de Oscar).
+- **Próximo (decidido por Oscar): B — reducir turnover de carry** (ROADMAP C2): suavizar/umbralizar sus
+  pesos; puede recuperar buena parte del −0.82%/mes → posible MEJORA real. Luego cobrar costo a trend
+  y calibrar slippage con fills reales de DEMO (C3).
+
 ## CHANGELOG 2026-05-31 (mañana — FIX logging de señales/trades + export de análisis + gráfico)
 **Motivo:** Oscar descargó "log de hoy" del dashboard y salió vacío (`trades/signals/audit/report` = []).
 Diagnóstico (2 causas):
