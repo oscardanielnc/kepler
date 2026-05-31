@@ -15,13 +15,13 @@
   realista el honesto baja a ~2.7-3.5%/mes; C3 (medición de slippage real) montada, esperando datos.
 - ✅ **Telemetría completa:** señales (con desglose por sleeve), fills reales, posiciones+PnL, export
   de análisis (histórico completo). Curva de equity full-width.
-- ⚠️ **PENDIENTE PUSH+DEPLOY (Oscar):** 3 commits locales (carry ya en origin/main `979b246`):
-  `77e0a08` costo trend · `6c49c40` B3+C3 · `939da8a` A4 · (+ mejoras de dashboard de esta sesión).
+- ✅ **DESPLEGADO Y CORRIENDO (Oscar confirmó 2026-05-31 ~09:28 Lima):** la versión actual está en la
+  VM operando en DEMO, se deja corriendo. **Confirmar al arrancar** (ver "VERIFICAR AL ARRANCAR").
 
 ### Estado del código vs producción
-- En **origin/main**: hasta `979b246` (carry suavizado → 2.07). **Esto ya es desplegable.**
-- En **local sin push** (Oscar pushea cuando quiera): costo trend, B3, C3, A4, dashboard.
-- Claude NO hace push/pull ni deploy (memorias `kepler-no-git-push`, `kepler-claude-no-ssh-deploy`).
+- Commits de hoy (carry 2.07, costo trend, B3, C3, A4, dashboard explicativo) desplegados por Oscar.
+- Claude NO hace push/pull ni deploy (memorias `kepler-no-git-push`, `kepler-claude-no-ssh-deploy`);
+  Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
 
@@ -339,24 +339,28 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
 > Roadmap completo en `ROADMAP.md`. Empezar la próxima sesión leyendo este STATUS + ROADMAP.
 
 ### ⚠️ VERIFICAR AL ARRANCAR (antes de tocar nada)
-- **0a. Push+deploy hechos?** Si Oscar ya pusheó+desplegó los commits de hoy: en la VM
-  `journalctl -u kepler -n 50` → buscar `lev≈2.02x(maxDD-10%)`. Dashboard panel backtest = **2.07 / −10**.
-  Si aún dice 1.94/1.92x → falta deploy (commits locales `77e0a08`, `6c49c40`, `939da8a` + dashboard).
-- **0b. git:** en origin/main hasta `979b246`; el resto local (ver "Estado del código vs producción").
+- **0a. Demo viva con la versión nueva:** en la VM `journalctl -u kepler -n 50` → buscar
+  `lev≈2.02x(maxDD-10%)`. Dashboard http://213.35.121.9:8080 panel backtest = **2.07 / −10** y deben
+  verse los paneles nuevos (Cómo funciona, Drawdown, Diversificación, PnL por posición).
+- **0b. Acumulación de datos:** ¿hay varios ciclos con fills y `slip_bps`? (para C3). Pedir a Oscar la
+  `kepler.db` de la VM si ya pasaron días → correr `python -m research.e21_fill_slippage <ruta_db>`.
 - **0c. Estado esperado:** **32 perps · 7 sleeves · ancla −10% · lev ~2.02x · carry suavizado 7d.**
 
-### LO MÁS VALIOSO AHORA — DEJAR CORRER LA DEMO (el foso real = tiempo, E1)
-1. **Validar en DEMO** (días/semanas): que el carry suavizado baje el turnover en vivo (logs de fills),
-   medir Sharpe REAL vs 2.07 backtest. **El número honesto.** Cuando confirme → evaluar REAL (Oscar).
-2. **C3 — calibrar slippage con fills reales:** traer `kepler.db` de la VM tras unos días →
-   `python -m research.e21_fill_slippage <ruta_db>` → recalibrar K → re-correr e18 = costo honesto real.
+### 🎯 FOCO PRÓXIMA SESIÓN (directiva de Oscar 2026-05-31): NUEVAS FUENTES DE DATOS
+Oscar: "seguir buscando más fuentes de información para mejorar la rentabilidad." Las vetas baratas
+(precio/OHLCV, positioning, basis, universo) están AGOTADAS → el siguiente edge ortogonal exige
+DATOS NUEVOS. Menú a evaluar (cada uno: ¿ortogonal a los 7? ¿pasa walk-forward + estrés + Δret@−10%?):
+1. **Liquidaciones** (Binance forceOrders / data.binance.vision liquidationSnapshot): cascadas →
+   señal contrarian/mean-reversion. Probablemente la MÁS prometedora y barata de conseguir. ← empezar aquí.
+2. **A2 — Order-book / profundidad** (depth, bid-ask imbalance): microestructura, ortogonal al precio.
+3. **Opciones (Deribit)** — IV, skew, put/call, risk-reversal: prima de riesgo de vol, fuente distinta.
+4. **A3 — On-chain** (flujos a/desde exchanges, stablecoin supply): macro-cripto, más lift de datos.
+5. **A5 — Estacionalidad / calendario** (hora, día, vencimientos): NO necesita datos nuevos, barato; incierto.
+   *Método: para cada fuente, primero el chequeo barato de ORTOGONALIDAD (como e22) antes de invertir en bajar histórico.*
 
-### RESEARCH QUE QUEDA (ya NO hay vetas sin datos nuevos — todo lo barato está agotado)
-3. **A2 — Order-book imbalance / profundidad** (bid-ask, depth): fuente de datos NUEVA. Genuinamente
-   ortogonal. Es el siguiente candidato real de sleeve, pero requiere bajar/streamear profundidad.
-4. **A3 — On-chain** (flujos exchange, stablecoin supply): fuente nueva, más lift.
-5. **A5 — Estacionalidad / calendario** (hora, día de semana, vencimientos): barato de probar, incierto.
-6. **B1/B2 — Purga+embargo / CPCV** en el walk-forward: hace el OOS más honesto (no sube el número).
+### EN PARALELO — DEJAR CORRER LA DEMO (el foso real = tiempo, E1)
+- Validar en vivo que el carry suavizado baja el turnover; medir Sharpe REAL vs 2.07; alimentar C3.
+- **B1/B2 — Purga+embargo / CPCV** en el walk-forward: hace el OOS más honesto (no sube el número).
 
 ### BLOQUEADO / DESCARTADO (no re-litigar sin algo nuevo)
 - Monitor riesgo intradía → BLOQUEADO (e15: falta backtester horario que reproduzca el edge).
