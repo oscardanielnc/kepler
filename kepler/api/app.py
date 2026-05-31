@@ -65,7 +65,9 @@ def status():
                                              tz=timezone.utc).isoformat() if (cyc or s) else None,
         # backtest real del último ciclo (lo guarda el orquestador con el leverage anclado);
         # fallback al sistema actual de 7 sleeves @maxDD−10% si el snapshot aún no lo trae.
-        "backtest": det.get("backtest", {"sharpe": 1.94, "ann": 42.2, "maxdd": -10.0, "n_sleeves": 7}),
+        "backtest": det.get("backtest", {"sharpe": 2.07, "ann": 49.3, "maxdd": -10.0, "n_sleeves": 7}),
+        "leverage": det.get("leverage"),                 # leverage de estrategia (ancla)
+        "sleeves": det.get("vp", {}),                    # pesos vol-parity por sleeve (diversificación)
     }
 
 

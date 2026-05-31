@@ -1,20 +1,27 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-30** (tarde-4, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (tarde, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 
 ---
 
-## ESTADO ACTUAL
+## ESTADO ACTUAL (2026-05-31)
 - ✅ Sistema **desplegado y operando en DEMO** en la VM (Oracle, `opc@oscar-cripto-sentinel-b26`).
-- ✅ Servicios `kepler` y `kepler-api` **activos**. Dashboard live OK en http://213.35.121.9:8080
-  (verificado 2026-05-30: equity vivo ~4933, 14 posiciones source="real" con PnL, heartbeats fluyendo).
-- ✅ Circuit breaker activo (halt a −20% del pico). Alertas ntfy configuradas.
-- ✅ **β-neutralidad auditada (2026-05-30): β combinado = +0.05.** El "76% net long en dólares" es
-  esperado (longs bajo-beta + hedge BTC + trend overlay), NO un fallo.
-- ✅ **7 sleeves** (+`takerflow_5d` +`hlpos_14d`) + **ancla de maxDD −10%** (leverage auto = 1.92x):
-  motor da **ann 42.2% (~3.52%/mes) · maxDD −10.0% · Sharpe 1.94 · β +0.028 · 69% meses+**.
-  Pendiente validar en DEMO.
-- ✅ Cambios previos (leverage 3x + frontend) ya en origin/main. Falta confirmar `deploy.sh` en la VM.
+  Dashboard http://213.35.121.9:8080. Circuit breaker −20% activo. Alertas ntfy OK.
+- ✅ **7 sleeves + ancla maxDD −10%.** Tras mejoras de hoy (carry suavizado 7d):
+  **Sharpe 2.07 · ann 49.3% (~4.11%/mes) · maxDD −10% · lev 2.02x · 71% meses+** (BACKTEST; en vivo bajará).
+- ✅ **β-neutral auditado: β ≈ +0.05** (net-long en $ es esperado, no fallo). Ver memoria.
+- ✅ **Honestidad estadística:** Deflated Sharpe **0.951–0.995** (e20) → el 2.07 no es suerte de buscar.
+- ✅ **Costos:** contabilidad uniforme en los 7 sleeves (trend ya paga). C1 (e18) mostró que con slip
+  realista el honesto baja a ~2.7-3.5%/mes; C3 (medición de slippage real) montada, esperando datos.
+- ✅ **Telemetría completa:** señales (con desglose por sleeve), fills reales, posiciones+PnL, export
+  de análisis (histórico completo). Curva de equity full-width.
+- ⚠️ **PENDIENTE PUSH+DEPLOY (Oscar):** 3 commits locales (carry ya en origin/main `979b246`):
+  `77e0a08` costo trend · `6c49c40` B3+C3 · `939da8a` A4 · (+ mejoras de dashboard de esta sesión).
+
+### Estado del código vs producción
+- En **origin/main**: hasta `979b246` (carry suavizado → 2.07). **Esto ya es desplegable.**
+- En **local sin push** (Oscar pushea cuando quiera): costo trend, B3, C3, A4, dashboard.
+- Claude NO hace push/pull ni deploy (memorias `kepler-no-git-push`, `kepler-claude-no-ssh-deploy`).
 
 ---
 
@@ -38,6 +45,17 @@ flat reproduce el 1.94 exacto.
 - **Próximo (decidido por Oscar): B — reducir turnover de carry** (ROADMAP C2): suavizar/umbralizar sus
   pesos; puede recuperar buena parte del −0.82%/mes → posible MEJORA real. Luego cobrar costo a trend
   y calibrar slippage con fills reales de DEMO (C3).
+
+## CHANGELOG 2026-05-31 (tarde-3 — dashboard explicativo + estado/pendientes actualizados)
+Dashboard mejorado para transparencia (misión copy-lead). `api/dashboard.html` + `api/app.py`:
+- Panel **"¿Cómo funciona Kepler?"** (market-neutral, 7 sleeves, rebal 24h, sin SL, circuit breaker;
+  con aviso de que Sharpe/maxDD son BACKTEST).
+- **Drawdown** (caída desde el pico) bajo la curva de equity — clave para el pitch de bajo-DD.
+- **Diversificación por estrategia** (doughnut de pesos vol-parity de los 7 sleeves).
+- **PnL por posición** (barras verde/rojo, de posiciones reales) + chips **Long/Short/Net $**.
+- Métrica **leverage estrategia** añadida; fallback backtest a 2.07/49.3.
+- `/api/status` ahora expone `leverage` y `sleeves` (vp). Smoke test con TestClient OK.
+- Cabecera de STATUS (ESTADO ACTUAL) y sección PENDIENTES reescritas a la realidad de hoy.
 
 ## CHANGELOG 2026-05-31 (tarde-2 — A4 cross-exchange basis: PARADO, basis ≈ carry)
 `research/e22_basis_check.py`. Antes de bajar 23 historias de spot para un sleeve cross-seccional de
@@ -321,30 +339,28 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
 > Roadmap completo en `ROADMAP.md`. Empezar la próxima sesión leyendo este STATUS + ROADMAP.
 
 ### ⚠️ VERIFICAR AL ARRANCAR (antes de tocar nada)
-- **0a. VM/demo viva:** en la VM `journalctl -u kepler -n 50 --no-pager` → buscar línea reciente con
-  `lev=1.92x(maxDD-10%)` y `target=~19pos`. Confirma que los **7 sleeves + ancla** corren en vivo.
-  (Hoy NO se verificó en logs — el dashboard mostraba aún el ciclo viejo de 5 sleeves al cerrar.)
-- **0b. Dashboard:** http://213.35.121.9:8080 → el panel "backtest" debe decir **Sharpe 1.94 / maxDD −10**
-  (no 1.13/−11.6). Si dice lo viejo, falta `deploy.sh` en la VM con commit `cde862f`+ (Oscar despliega).
-- **0c. git:** repo limpio, `main`==`origin/main`. Último commit sesión 2026-05-30: **`e3d29d5`**.
-- **0d. Estado esperado:** **32 perps · 7 sleeves · ancla −10% · lev ~1.92x**. NADA pendiente de
-  implementar en código — lo de hoy ya está. Lo nuevo es research (C1).
+- **0a. Push+deploy hechos?** Si Oscar ya pusheó+desplegó los commits de hoy: en la VM
+  `journalctl -u kepler -n 50` → buscar `lev≈2.02x(maxDD-10%)`. Dashboard panel backtest = **2.07 / −10**.
+  Si aún dice 1.94/1.92x → falta deploy (commits locales `77e0a08`, `6c49c40`, `939da8a` + dashboard).
+- **0b. git:** en origin/main hasta `979b246`; el resto local (ver "Estado del código vs producción").
+- **0c. Estado esperado:** **32 perps · 7 sleeves · ancla −10% · lev ~2.02x · carry suavizado 7d.**
 
-### EN MARCHA (research puro, NO requiere tiempo de mercado — AHORA)
-1. **C1 — Slippage realista por liquidez** (ROADMAP §C1): reemplazar el costo plano (~2bps) por uno
-   función de la liquidez/ADV de cada símbolo. Re-evaluar los 7 sleeves. **Bajará el 1.94 → es lo
-   que se busca: acercar el backtest al número real.** ← SIGUIENTE.
-2. **B3 — Deflated Sharpe Ratio** (ROADMAP §B3): penalizar el Sharpe por el nº de configs probadas
-   (~22 experimentos). Dice cuánto del 1.94 es señal vs suerte. Número creíble.
-3. **A4 — Cross-exchange basis** (perp vs spot) como sleeve nuevo de fuente genuina (ROADMAP §A4).
+### LO MÁS VALIOSO AHORA — DEJAR CORRER LA DEMO (el foso real = tiempo, E1)
+1. **Validar en DEMO** (días/semanas): que el carry suavizado baje el turnover en vivo (logs de fills),
+   medir Sharpe REAL vs 2.07 backtest. **El número honesto.** Cuando confirme → evaluar REAL (Oscar).
+2. **C3 — calibrar slippage con fills reales:** traer `kepler.db` de la VM tras unos días →
+   `python -m research.e21_fill_slippage <ruta_db>` → recalibrar K → re-correr e18 = costo honesto real.
 
-### DEPENDE DE TIEMPO EN MERCADO (el foso real — track record)
-4. **Dejar correr DEMO semanas** → medir Sharpe REAL vs 1.94 backtest. **El número honesto.**
-5. Cuando demo confirme → evaluar paso a REAL con capital chico (decisión de Oscar).
+### RESEARCH QUE QUEDA (ya NO hay vetas sin datos nuevos — todo lo barato está agotado)
+3. **A2 — Order-book imbalance / profundidad** (bid-ask, depth): fuente de datos NUEVA. Genuinamente
+   ortogonal. Es el siguiente candidato real de sleeve, pero requiere bajar/streamear profundidad.
+4. **A3 — On-chain** (flujos exchange, stablecoin supply): fuente nueva, más lift.
+5. **A5 — Estacionalidad / calendario** (hora, día de semana, vencimientos): barato de probar, incierto.
+6. **B1/B2 — Purga+embargo / CPCV** en el walk-forward: hace el OOS más honesto (no sube el número).
 
 ### BLOQUEADO / DESCARTADO (no re-litigar sin algo nuevo)
 - Monitor riesgo intradía → BLOQUEADO (e15: falta backtester horario que reproduzca el edge).
-- Ampliar universo (e17/e17b), OHLCV derivados (e16), Open Interest/long-short (e16f) → no aportan.
+- Ampliar universo (e17/e17b), OHLCV derivados (e16), OI/long-short (e16f), **basis≈carry (e22)** → no aportan.
 
 ### MENOR
 - heartbeat a 5min si se quiere curva más fina (ahora 15min).

@@ -13,12 +13,13 @@
   .badge{padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
   .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;padding:16px;max-width:1400px;margin:auto}
   .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px}
-  .card h2{font-size:14px;margin:0 0 10px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+  .card h2{font-size:14px;margin:0 0 4px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+  .card .hint{font-size:11px;color:var(--mut);margin:0 0 10px;font-style:italic}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--bd)}
   th{color:var(--mut);font-weight:500}
   .long{color:var(--grn)} .short{color:var(--red)}
-  .metric{display:inline-block;margin-right:22px}
+  .metric{display:inline-block;margin-right:22px;margin-bottom:4px}
   .metric .v{font-size:20px;font-weight:700;color:#fff} .metric .l{font-size:11px;color:var(--mut)}
   .logs{max-height:520px;overflow-y:auto;font-family:ui-monospace,monospace;font-size:12px}
   .log{padding:4px 6px;border-bottom:1px solid #21262d;display:flex;gap:8px}
@@ -29,6 +30,12 @@
   button:hover{border-color:var(--blu)}
   .full{grid-column:1/-1}
   .filt{margin-bottom:8px} .filt button{padding:3px 9px;font-size:11px;margin-right:4px}
+  .how{font-size:13px;line-height:1.55;color:var(--tx)} .how b{color:#fff}
+  .how .note{color:var(--yel);font-size:12px;margin-top:8px;display:block}
+  .expo{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .expo .ch{position:relative;height:220px;flex:1 1 220px;min-width:200px}
+  .chips{display:flex;gap:18px;flex-wrap:wrap;margin-top:6px}
+  .chip .v{font-size:17px;font-weight:700} .chip .l{font-size:11px;color:var(--mut)}
 </style></head>
 <body>
 <header>
@@ -48,19 +55,57 @@
     <span class="metric"><span class="v" id="m-tod">—</span><br><span class="l">Hoy</span></span>
     <span class="metric"><span class="v" id="m-np">—</span><br><span class="l">Posiciones</span></span>
     <span class="metric"><span class="v" id="m-gr">—</span><br><span class="l">Gross (sin lev)</span></span>
+    <span class="metric"><span class="v" id="m-lev">—</span><br><span class="l">Leverage estrategia</span></span>
     <span class="metric"><span class="v" id="m-sh">—</span><br><span class="l">Sharpe (backtest)</span></span>
     <span class="metric"><span class="v" id="m-dd">—</span><br><span class="l">maxDD (backtest)</span></span>
     <span class="metric"><span class="v" id="m-cyc" style="font-size:13px">—</span><br><span class="l">Último ciclo</span></span>
   </div>
 
   <div class="card full">
+    <h2>¿Cómo funciona Kepler?</h2>
+    <div class="how">
+      Sistema <b>market-neutral</b> (β≈0 contra BTC): mantiene ~20 posiciones <span class="long">long</span>/<span class="short">short</span>
+      sobre 32 perps de Binance Futures, combinando <b>7 estrategias descorrelacionadas</b> por vol-parity.
+      <b>Rebalancea cada 24h</b> — no opera intradía (los edges son lentos, de días). <b>Sin stop-loss por trade:</b>
+      el riesgo se gestiona a nivel cartera — diversificación + cobertura de β + un <b>circuit breaker</b> que
+      detiene todo si la equity cae 20% desde el pico. Objetivo: <b>drawdown bajo y consistencia</b> (copy-lead
+      honesto), no ROI llamativo.
+      <span class="note">⚠️ El Sharpe y maxDD mostrados son de BACKTEST; el rendimiento en vivo será menor. El número honesto es el de la demo.</span>
+    </div>
+  </div>
+
+  <div class="card full">
     <h2>Curva de equity</h2>
-    <div style="position:relative;height:300px;width:100%"><canvas id="chart"></canvas></div>
+    <p class="hint">Valor de la cuenta en el tiempo (heartbeat cada 15 min).</p>
+    <div style="position:relative;height:280px;width:100%"><canvas id="chart"></canvas></div>
+  </div>
+
+  <div class="card full">
+    <h2>Drawdown (caída desde el pico)</h2>
+    <p class="hint">Cuánto está por debajo de su máximo histórico. La promesa del producto es mantenerlo bajo (objetivo backtest −10%).</p>
+    <div style="position:relative;height:170px;width:100%"><canvas id="ddchart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h2>Diversificación por estrategia</h2>
+    <p class="hint">Peso (vol-parity) de cada uno de los 7 sleeves. Su baja correlación es el control de riesgo nº1.</p>
+    <div class="expo"><div class="ch"><canvas id="sleevechart"></canvas></div></div>
+  </div>
+
+  <div class="card">
+    <h2>PnL por posición (en vivo)</h2>
+    <p class="hint">Ganancia/pérdida no realizada de cada posición abierta ahora mismo.</p>
+    <div style="position:relative;height:220px;width:100%"><canvas id="pnlchart"></canvas></div>
   </div>
 
   <div class="card full">
     <h2>Posiciones activas ahora</h2>
-    <table><thead><tr><th>Activo</th><th>Lado</th><th>USD (sin lev)</th><th>PnL</th></tr></thead>
+    <div class="chips">
+      <span class="chip"><span class="v long" id="x-long">—</span><br><span class="l">Long $</span></span>
+      <span class="chip"><span class="v short" id="x-short">—</span><br><span class="l">Short $</span></span>
+      <span class="chip"><span class="v" id="x-net">—</span><br><span class="l">Net $ (≈ exposición direccional)</span></span>
+    </div>
+    <table style="margin-top:10px"><thead><tr><th>Activo</th><th>Lado</th><th>USD (sin lev)</th><th>PnL</th></tr></thead>
     <tbody id="pos"></tbody></table>
     <div id="pos-src" style="color:var(--mut);font-size:11px;margin-top:6px"></div>
   </div>
@@ -85,11 +130,15 @@
 </div>
 
 <script>
-let lv="", chart=null;
+let lv="", chart=null, ddchart=null, sleevechart=null, pnlchart=null;
 const $=id=>document.getElementById(id);
 async function j(u){try{return await (await fetch(u)).json()}catch(e){return null}}
 function dl(q){window.location="/api/download"+(q||"")}
 function setLv(l){lv=l;loadLogs()}
+const PALETTE=["#58a6ff","#3fb950","#d29922","#bc8cff","#f778ba","#56d4dd","#ff7b72"];
+const SLEEVE_LBL={mom_30d:"Momentum 30d",rev_60d:"Reversión 60d",lowvol_14d:"Low-vol 14d",
+  carry:"Carry (funding)",trend:"Trend",takerflow_5d:"Taker-flow 5d",hlpos_14d:"Canal 14d"};
+const usd=v=>"$"+(+v).toLocaleString(undefined,{maximumFractionDigits:0});
 
 async function loadStatus(){
   const s=await j("/api/status"); if(!s)return;
@@ -105,10 +154,22 @@ async function loadStatus(){
   col($("m-tot"),s.total_return??0); col($("m-tod"),s.today_return??0);
   $("m-np").textContent=s.n_positions??"—";
   $("m-gr").textContent=s.gross?(+s.gross).toFixed(2)+"x":"—";
+  $("m-lev").textContent=s.leverage?(+s.leverage).toFixed(2)+"x":"—";
   $("m-sh").textContent=s.backtest.sharpe.toFixed(2);
   $("m-dd").textContent=s.backtest.maxdd+"%";
   $("m-cyc").textContent=s.last_cycle?s.last_cycle.replace("T"," ").slice(0,16):"—";
   $("updated").textContent="actualizado "+new Date().toLocaleTimeString();
+  loadSleeves(s.sleeves||{});
+}
+function loadSleeves(vp){
+  const keys=Object.keys(vp); if(!keys.length)return;
+  const labels=keys.map(k=>SLEEVE_LBL[k]||k), data=keys.map(k=>+(vp[k]*100).toFixed(1));
+  if(sleevechart){sleevechart.data.labels=labels;sleevechart.data.datasets[0].data=data;sleevechart.update("none");return;}
+  sleevechart=new Chart($("sleevechart"),{type:"doughnut",
+    data:{labels,datasets:[{data,backgroundColor:PALETTE,borderColor:"#161b22",borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",
+      labels:{color:"#c9d1d9",font:{size:11},boxWidth:12}},
+      tooltip:{callbacks:{label:c=>c.label+": "+c.parsed+"%"}}}}});
 }
 async function loadPos(){
   const p=await j("/api/positions")||[];
@@ -119,6 +180,25 @@ async function loadPos(){
     ||`<tr><td colspan=4 style="color:var(--mut)">sin posiciones</td></tr>`;
   $("pos-src").textContent=p.length&&p[0].source==="target"
     ?"⏳ mostrando el OBJETIVO (aún sin fills reales o en simulación)":(p.length?"✓ posiciones reales en Binance":"");
+  // long/short/net
+  let L=0,S=0; p.forEach(x=>{x.side==="LONG"?L+=+x.notional:S+=+x.notional});
+  $("x-long").textContent=usd(L); $("x-short").textContent=usd(S);
+  const net=L-S; $("x-net").textContent=(net>=0?"+":"-")+usd(Math.abs(net)); $("x-net").style.color=net>=0?"var(--grn)":"var(--red)";
+  // pnl por posición (solo si hay PnL real)
+  const wp=p.filter(x=>x.pnl!=null).sort((a,b)=>b.pnl-a.pnl);
+  loadPnl(wp);
+}
+function loadPnl(wp){
+  if(!wp.length){if(pnlchart){pnlchart.destroy();pnlchart=null;} return;}
+  const labels=wp.map(x=>x.symbol.replace("USDT","")), data=wp.map(x=>+(+x.pnl).toFixed(2));
+  const colors=data.map(v=>v>=0?"#3fb950":"#f85149");
+  if(pnlchart){pnlchart.data.labels=labels;pnlchart.data.datasets[0].data=data;pnlchart.data.datasets[0].backgroundColor=colors;pnlchart.update("none");return;}
+  pnlchart=new Chart($("pnlchart"),{type:"bar",
+    data:{labels,datasets:[{data,backgroundColor:colors}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>"$"+c.parsed.y}}},
+      scales:{x:{ticks:{color:"#8b949e",font:{size:10},maxRotation:90,minRotation:60}},
+        y:{ticks:{color:"#8b949e",callback:v=>"$"+v}}}}});
 }
 async function loadDaily(){
   const d=await j("/api/daily")||[];
@@ -137,13 +217,19 @@ async function loadLogs(){
 async function loadChart(){
   const e=await j("/api/equity")||[]; if(!e.length)return;
   const labels=e.map(x=>x.time), data=e.map(x=>x.equity);
-  if(chart){                       // actualizar en sitio (sin parpadeo)
-    chart.data.labels=labels; chart.data.datasets[0].data=data; chart.update("none"); return;
-  }
-  chart=new Chart($("chart"),{type:"line",data:{labels,datasets:[{label:"equity",data,
+  // drawdown desde el pico
+  let peak=-Infinity; const dd=data.map(v=>{peak=Math.max(peak,v);return +((v/peak-1)*100).toFixed(3)});
+  if(chart){chart.data.labels=labels;chart.data.datasets[0].data=data;chart.update("none");}
+  else chart=new Chart($("chart"),{type:"line",data:{labels,datasets:[{label:"equity",data,
     borderColor:"#58a6ff",backgroundColor:"#58a6ff22",tension:.2,pointRadius:0,fill:true}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},
     scales:{x:{ticks:{color:"#8b949e",maxTicksLimit:12}},y:{ticks:{color:"#8b949e"}}}}});
+  if(ddchart){ddchart.data.labels=labels;ddchart.data.datasets[0].data=dd;ddchart.update("none");}
+  else ddchart=new Chart($("ddchart"),{type:"line",data:{labels,datasets:[{label:"drawdown",data:dd,
+    borderColor:"#f85149",backgroundColor:"#f8514922",tension:.2,pointRadius:0,fill:true}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>c.parsed.y+"%"}}},
+    scales:{x:{ticks:{color:"#8b949e",maxTicksLimit:12}},y:{ticks:{color:"#8b949e",callback:v=>v+"%"},max:0}}}});
 }
 function refresh(){loadStatus();loadPos();loadLogs();loadChart();loadDaily()}
 refresh(); setInterval(refresh,10000);
