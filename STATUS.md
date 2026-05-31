@@ -1,5 +1,5 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (tarde, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 
 ---
@@ -24,6 +24,39 @@
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-05-31 (noche — A2 ORDER-BOOK: real+ortogonal pero NO aporta al ancla → DESCARTADO)
+Foco de Oscar: nuevas fuentes de datos. **Liquidaciones (la candidata #1) NO tiene histórico gratis:**
+`allForceOrders` REST = "out of maintenance"; `liquidationSnapshot` en data.binance.vision = vacío
+(retirado). Solo se consigue pagando (Coinglass) o capturando el WS `@forceOrder` hacia adelante
+(lento). → pivote a **A2 order-book** (`bookDepth` SÍ está, 2023+, misma infra que metrics).
+
+### e23 (chequeo barato) → PROMETÍA · e24 (validación seria) → NO aporta
+- `research/e23_orderbook_check.py`: 12 símbolos líquidos, imbalance = mean_t(bid−ask)/(bid+ask) a
+  ±1/2/5% del mid. **Bug que cacé y corregí:** la media diaria ve el día completo → look-ahead;
+  rezagar 1 día desinfló Sharpe de 7–9 (falsos) a ~1–2. Con 2 regímenes (2023-24): ortogonal
+  (corr 0.06–0.23), contrarian estable, OOS positivo en 7/12 → luz verde al download completo.
+- **Download completo** bookDepth 32 símbolos × 2023-01→2026-05 (cache `data/bookdepth_daily/`, ~97min).
+- `research/e24_orderbook_sleeve.py` (molde e16e): ANCHO×HORIZONTE×coste + turnover + cuartiles + 7→8.
+  | | baseline 7 (overlap 2023+) | +order-book (mejor imb1_5d) |
+  |---|---|---|
+  | Sharpe | 2.17 | 2.33 (+0.16) |
+  | %/mes @−10% maker | 5.11 | 5.19 (+0.09) |
+  | %/mes @−10% **taker** | 5.11 | **5.11 (+0.00)** |
+  - El sleeve es REAL: imb1/imb2 a 2d–7d Sharpe 1.1–1.4, IS/OOS consistentes, 4 cuartiles + (+1.65/
+    +1.16/+1.05/+1.37), turnover sano 35–50x. PERO **todas las variantes dan Δ≤0 a coste taker.**
+  - **Lección e16d reconfirmada:** con el ancla, corr~0 + IS/OOS NO basta — el sleeve debe subir el
+    retorno a maxDD fijo. Standalone Sharpe ~1.3 < combinado 2.17 → vía vol-parity solo DILUYE. El
+    +0.16 de Sharpe es ride más suave, pero el retorno al maxDD −10% no se mueve.
+  - Clavos extra: (1) baseline 5.11%/mes es el del overlap 2023+ (excluye 2022, optimista) y aun así
+    no aporta; (2) bookDepth no existe pre-2023 → cegaría el ancla al bear 2022 (como ls_crowd_rev e16f).
+  - NO se corre e18 (slippage ADV): el bracket taker ya lleva el Δ a +0.00; ADV sobre ilíquidos solo
+    lo haría negativo. **DESCARTADO como sleeve diario. No se toca prod.**
+- **CONCLUSIÓN DE FONDO (reordena el roadmap):** el order-book imbalance sin-lag daba Sharpe 7–9 a 24h
+  → su edge genuino es **INTRADÍA**, que el sistema HOY no opera (rebal 24h; monitor intradía BLOQUEADO
+  e15 por falta de backtester horario). **La ruta para monetizar microestructura (order-book, y lo que
+  liquidaciones habría sido) pasa por construir el BACKTESTER HORARIO, no por otro sleeve diario.**
+  Data bajada y reutilizable si algún día se ataca el intradía. Sistema sigue 7 sleeves / 32 perps.
 
 ## CHANGELOG 2026-05-31 (mediodía — C1 slippage realista: el 1.94 estaba inflado por turnover)
 `research/e18_slippage.py`. El motor cobra costo PLANO (turnover×MAKER_FEE 1.8bps) en xs/carry y
@@ -346,25 +379,34 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
   `kepler.db` de la VM si ya pasaron días → correr `python -m research.e21_fill_slippage <ruta_db>`.
 - **0c. Estado esperado:** **32 perps · 7 sleeves · ancla −10% · lev ~2.02x · carry suavizado 7d.**
 
-### 🎯 FOCO PRÓXIMA SESIÓN (directiva de Oscar 2026-05-31): NUEVAS FUENTES DE DATOS
-Oscar: "seguir buscando más fuentes de información para mejorar la rentabilidad." Las vetas baratas
-(precio/OHLCV, positioning, basis, universo) están AGOTADAS → el siguiente edge ortogonal exige
-DATOS NUEVOS. Menú a evaluar (cada uno: ¿ortogonal a los 7? ¿pasa walk-forward + estrés + Δret@−10%?):
-1. **Liquidaciones** (Binance forceOrders / data.binance.vision liquidationSnapshot): cascadas →
-   señal contrarian/mean-reversion. Probablemente la MÁS prometedora y barata de conseguir. ← empezar aquí.
-2. **A2 — Order-book / profundidad** (depth, bid-ask imbalance): microestructura, ortogonal al precio.
-3. **Opciones (Deribit)** — IV, skew, put/call, risk-reversal: prima de riesgo de vol, fuente distinta.
-4. **A3 — On-chain** (flujos a/desde exchanges, stablecoin supply): macro-cripto, más lift de datos.
-5. **A5 — Estacionalidad / calendario** (hora, día, vencimientos): NO necesita datos nuevos, barato; incierto.
-   *Método: para cada fuente, primero el chequeo barato de ORTOGONALIDAD (como e22) antes de invertir en bajar histórico.*
+### 🎯 FOCO PRÓXIMA SESIÓN: ¿BACKTESTER HORARIO o seguir el menú de fuentes?
+Directiva de Oscar (2026-05-31): "más fuentes de información para mejorar rentabilidad." Estado tras
+esta sesión: las vetas baratas DIARIAS están agotadas (precio/OHLCV ✗, positioning ✗, basis ✗,
+universo ✗, **order-book diario ✗ e24**). **HALLAZGO QUE REORDENA EL PLAN:** el order-book imbalance
+tiene edge fuerte INTRADÍA (Sharpe 7–9 a 24h sin-lag) pero ~0 a resolución diaria; lo mismo valdría
+para liquidaciones. **El siguiente salto real exige operar INTRADÍA → construir el BACKTESTER HORARIO**
+(el prerequisito que también desbloquea el monitor de riesgo e15). Es un mini-proyecto, no un sleeve.
+Decisión de Oscar para la próxima: **(A)** atacar el backtester horario (abre order-book/liquidaciones
+intradía), vs **(B)** seguir el menú de fuentes que aún podrían dar señal DIARIA:
+1. ~~Liquidaciones~~ — **SIN histórico gratis** (Binance retiró allForceOrders + liquidationSnapshot).
+   Solo de pago (Coinglass) o capturando WS hacia adelante. Su edge además es intradía → ver (A).
+2. ~~A2 Order-book diario~~ — **DESCARTADO (e24):** real+ortogonal pero Δ+0.00%/mes al ancla (taker).
+   Data bajada en `data/bookdepth_daily/` (reutilizable si se ataca el intradía). Edge = intradía → (A).
+3. **Opciones (Deribit)** — IV, skew, put/call, risk-reversal: prima de riesgo de vol. ← mejor candidata DIARIA viva.
+4. **A3 — On-chain** (flujos exchange, stablecoin supply): macro-cripto, más lift de datos.
+5. **A5 — Estacionalidad / calendario**: no necesita datos nuevos, barato; incierto.
+   *Método: chequeo barato de ORTOGONALIDAD (e22/e23) ANTES de bajar histórico. Y recordar e16d: con
+   el ancla, corr~0 + IS/OOS NO basta — debe subir el retorno a maxDD fijo, costos taker incluidos.*
 
 ### EN PARALELO — DEJAR CORRER LA DEMO (el foso real = tiempo, E1)
 - Validar en vivo que el carry suavizado baja el turnover; medir Sharpe REAL vs 2.07; alimentar C3.
 - **B1/B2 — Purga+embargo / CPCV** en el walk-forward: hace el OOS más honesto (no sube el número).
 
 ### BLOQUEADO / DESCARTADO (no re-litigar sin algo nuevo)
-- Monitor riesgo intradía → BLOQUEADO (e15: falta backtester horario que reproduzca el edge).
-- Ampliar universo (e17/e17b), OHLCV derivados (e16), OI/long-short (e16f), **basis≈carry (e22)** → no aportan.
+- Monitor riesgo intradía → BLOQUEADO (e15: falta backtester horario). **Mismo prerequisito que
+  desbloquearía el order-book/liquidaciones intradía** → el backtester horario es la llave común.
+- Ampliar universo (e17/e17b), OHLCV derivados (e16), OI/long-short (e16f), **basis≈carry (e22)**,
+  **order-book diario (e23/e24)** → no aportan al ancla. Liquidaciones → sin histórico gratis.
 
 ### MENOR
 - heartbeat a 5min si se quiere curva más fina (ahora 15min).
