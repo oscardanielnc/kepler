@@ -57,8 +57,11 @@ que se puede suavizar la señal sin perder el edge (la funding cobrada sigue sie
 - **Mejora bajo AMBOS modelos de costo** (plano +0.59, real +0.82) → pasa la regla de oro (mejora
   rentabilidad incluso con la contabilidad actual del motor). Cambio mínimo: 1 línea en
   `engine.carry_sleeve` (rankear sobre `F.rolling(21).mean()` en vez de la lectura instantánea).
-- **PENDIENTE: decisión de Oscar para implementar** en el motor + validar en DEMO (regla dura #2).
-  Cambiará ligeramente el leverage del ancla. Alternativa de menor turnover: 7d/168h (42x, 3.42%/mes).
+- **IMPLEMENTADO (Oscar OK, opción 1 = 7d/48h):** `engine.CARRY_SMOOTH=21` + `carry_sleeve` rankea
+  sobre `F.rolling(21).mean()` (funding cobrada sigue real). Verificado `engine.main ESTABLE`:
+  **Sharpe 1.94→2.07 · %/mes(plano) 3.52→4.11 · leverage 1.92→2.02x · maxDD −10% · mo+ 71%.**
+  PENDIENTE: deploy a DEMO (Oscar corre `deploy.sh`) + validar. El dashboard mostrará 2.07/49.3/−10
+  desde el próximo ciclo (snapshot recalcula). Alternativa descartada: 7d/168h (42x, 3.42%/mes).
 
 ## CHANGELOG 2026-05-31 (mañana — FIX logging de señales/trades + export de análisis + gráfico)
 **Motivo:** Oscar descargó "log de hoy" del dashboard y salió vacío (`trades/signals/audit/report` = []).

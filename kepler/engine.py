@@ -20,6 +20,7 @@ from kepler.portfolio import vol_parity_weights, metrics, leverage_for_maxdd_anc
 from kepler.db import DB
 
 DRIVER = "BTCUSDT"; BETA_W = 168; MIN_BARS = 34000
+CARRY_SMOOTH = 21   # media móvil del funding-signal del carry: 7d (21×8h) → recorta turnover (e19)
 # Tiers = PRESUPUESTO DE maxDD (regla Oscar 2026-05-30). El leverage de estrategia se CALCULA
 # para que el maxDD del backtest = este valor. ESTABLE ancla a −10% (config.TARGET_MAXDD).
 TIERS = {"ESTABLE": config.TARGET_MAXDD, "BALANCEADO": 0.20, "GROWTH": 0.30}
@@ -131,19 +132,24 @@ def carry_sleeve(C, ret, beta):
         fd[s] = f.resample("8h").sum()
     F = pd.DataFrame(fd).reindex(pd.date_range(C.index[0], C.index[-1], freq="8h", tz="UTC")).fillna(0)
     syms = [s for s in C.columns if s != DRIVER]
+    # SEÑAL suavizada (media móvil 7d = 21 períodos de 8h). El funding persiste días; rankear sobre
+    # la lectura instantánea disparaba el turnover a 199x/año → con costos reales el carry era
+    # PERDEDOR (Sharpe −0.41). Suavizar a 7d: turnover 65x, carry +0.35, combinado +0.59%/mes plano
+    # (+0.82 real). Validado e19_carry_turnover (estrés por cuartiles OK). La funding COBRADA usa F real.
+    Fs = F.rolling(CARRY_SMOOTH, min_periods=1).mean()
     # serie: re-usar pesos por nivel de funding cada 48h, retorno = funding cobrado + price (≈0 neutral)
     Cr = C.reindex(F.index, method="ffill"); pr = Cr.pct_change()
     bet = pr[syms].rolling(90).cov(pr[DRIVER]).div(pr[DRIVER].rolling(90).var(), axis=0).clip(-3, 3)
     idx = range(91, len(F) - 6, 6); prev = pd.Series(0.0, index=syms); ph = 0.0; rets = []; ts = []
     for t in idx:
-        w, h = alphas.carry_weights(F[syms].iloc[t], bet.iloc[t], config.MAX_WEIGHT_NORMAL)
+        w, h = alphas.carry_weights(Fs[syms].iloc[t], bet.iloc[t], config.MAX_WEIGHT_NORMAL)
         w = w.reindex(syms).fillna(0.0)
         fund = -float((w * F[syms].iloc[t+1:t+7].sum()).sum())
         px = float((w * (Cr[syms].iloc[t+6]/Cr[syms].iloc[t]-1)).sum()) + h*(Cr[DRIVER].iloc[t+6]/Cr[DRIVER].iloc[t]-1)
         turn = float((w-prev).abs().sum())+abs(h-ph)
         rets.append(fund+px-turn*config.MAKER_FEE); ts.append(F.index[t]); prev, ph = w, h
     series = pd.Series(rets, index=ts); series=(1+series).cumprod().resample("1D").last().ffill().pct_change().dropna()
-    w_now, h_now = alphas.carry_weights(F[syms].iloc[-1], bet.iloc[-1], config.MAX_WEIGHT_NORMAL)
+    w_now, h_now = alphas.carry_weights(Fs[syms].iloc[-1], bet.iloc[-1], config.MAX_WEIGHT_NORMAL)
     full = w_now.reindex(syms).fillna(0.0); full[DRIVER] = h_now
     return series, full
 
