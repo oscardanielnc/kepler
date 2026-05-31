@@ -39,6 +39,27 @@ flat reproduce el 1.94 exacto.
   pesos; puede recuperar buena parte del −0.82%/mes → posible MEJORA real. Luego cobrar costo a trend
   y calibrar slippage con fills reales de DEMO (C3).
 
+## CHANGELOG 2026-05-31 (mediodía-2 — B: suavizar funding de carry = WIN limpio, pendiente implementar)
+`research/e19_carry_turnover.py`. El carry rankeaba sobre funding INSTANTÁNEO (1 lectura 8h, ruidoso)
+→ 199x turnover → con costos reales Sharpe NETO **−0.41** (perdedor). El funding persiste días, así
+que se puede suavizar la señal sin perder el edge (la funding cobrada sigue siendo la real).
+- **Estrés por cuartiles:** el carry actual tiene un AGUJERO en Q3 (Sharpe 0.37); las variantes
+  suavizadas lo tapan y reparten la mejora en los 4 cuartiles. El "mejor" bruto (inst/168h, 3.96) era
+  ARTEFACTO no monótono → descartado por el estrés.
+- **GANADOR robusto: suavizar funding a 7d (media móvil 21×8h), holding 48h igual.**
+  | métrica | actual | 7d/48h |
+  |---|---|---|
+  | turnover | 199x | 65x |
+  | carry Sharpe (neto real) | −0.41 | +0.35 |
+  | combinado %/mes (costo plano motor) | 3.52 | **4.11** |
+  | combinado %/mes (slip real) | 2.70 | **3.51** |
+  | corr con otros / maxDD | 0.15 / −10% | 0.08 / −10% |
+- **Mejora bajo AMBOS modelos de costo** (plano +0.59, real +0.82) → pasa la regla de oro (mejora
+  rentabilidad incluso con la contabilidad actual del motor). Cambio mínimo: 1 línea en
+  `engine.carry_sleeve` (rankear sobre `F.rolling(21).mean()` en vez de la lectura instantánea).
+- **PENDIENTE: decisión de Oscar para implementar** en el motor + validar en DEMO (regla dura #2).
+  Cambiará ligeramente el leverage del ancla. Alternativa de menor turnover: 7d/168h (42x, 3.42%/mes).
+
 ## CHANGELOG 2026-05-31 (mañana — FIX logging de señales/trades + export de análisis + gráfico)
 **Motivo:** Oscar descargó "log de hoy" del dashboard y salió vacío (`trades/signals/audit/report` = []).
 Diagnóstico (2 causas):
