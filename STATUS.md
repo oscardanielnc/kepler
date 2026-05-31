@@ -57,9 +57,15 @@ la ventana de 24h → reintenta en el próximo heartbeat (15min). En DRY_RUN no 
 fue pérdida = artefacto del fallback (ver fix). 8 ciclos el 05-30 = reinicios del servicio (dev/deploy),
 no cadencia 24h; próximo rebal real ≈18:03 UTC. **Conclusión: operativamente sano; de edge no se
 concluye nada (1 período de tenencia + wallet no ve PnL no realizado).** Es el E1 del ROADMAP (tiempo).
-- **PENDIENTE DEPLOY** (lo hace Oscar): push a origin/main → en la VM `bash /opt/kepler-app/kepler/deploy.sh`
-  + reiniciar `kepler` y `kepler-api`. El logging empieza a llenar a partir del próximo ciclo (~18:02).
-  Para análisis de los 2 días YA corridos: Oscar trae `kepler.db` de la VM (`/opt/kepler-app/kepler.db`).
+- **DEPLOY HECHO + VERIFICADO EN PRODUCCIÓN (2026-05-31 12:05 UTC):** commit `d87eed3` desplegado.
+  El ciclo del reinicio registró 21 señales (con desglose por sleeve), 13 fills reales y snapshot con
+  22 posiciones + PnL. El export "Histórico completo" trae todo. **Logging confirmado funcionando.**
+  - **Primer análisis con datos finos:** PnL no realizado del libro = **+$9.92 (+0.20%)** (el wallet no
+    lo veía). Ganadores TRX +9.11 / BNB +7.4; mayor lastre NEAR −10.02 / ATOM −3.49. Net ≈ cero-positivo
+    = ruido de 1 día (esperado, market-neutral). **Concentración en TRX** ($720 notional ≈15%, la empuja
+    `trend`). **Tracking error visible:** BTC target SHORT pero libro aún LONG (maker GTX no llenó el giro).
+    backtest auto bajó a Sharpe 1.89/ann 41.2 (datos nuevos). Edge aún NO concluible (E1: tiempo).
+  - Posible mejora futura: `beta` del snapshot está hardcodeado a 0.0 → calcular β real del libro (ROADMAP D1).
 
 ## CHANGELOG 2026-05-30 (tarde-5 — A1 ampliar universo: VALIDADO con estrés → NO conviene)
 - `research/e17_expand_universe.py` (greedy 1-a-1, criterio: retorno@−10% + OOS + no recorta panel)
