@@ -162,7 +162,10 @@ def trend_sleeve(C):
     vol = ret.rolling(30).std()
     scal = (0.20/np.sqrt(365) / vol).clip(0, 3)
     pos = (sig.shift(1) * scal).fillna(0)
-    pnl = (pos * ret).mean(axis=1)
+    # COSTO de turnover (faltaba: trend pagaba 0; rota ~57x/año). Maker plano, consistente con
+    # xs/carry → contabilidad de costos uniforme. Impacto pequeño (~−0.01%/mes) pero honesto (e18).
+    turn = (pos - pos.shift(1)).abs().fillna(0.0)
+    pnl = (pos * ret).mean(axis=1) - (turn * config.MAKER_FEE).mean(axis=1)
     pv = pnl.rolling(30).std().shift(1); lev = (0.15/np.sqrt(365)/pv).clip(0, 4).fillna(1)
     series = (pnl*lev).dropna()
     w_now = (pos.iloc[-1] / pos.iloc[-1].abs().sum()) if pos.iloc[-1].abs().sum() > 0 else pos.iloc[-1]

@@ -39,6 +39,17 @@ flat reproduce el 1.94 exacto.
   pesos; puede recuperar buena parte del −0.82%/mes → posible MEJORA real. Luego cobrar costo a trend
   y calibrar slippage con fills reales de DEMO (C3).
 
+## CHANGELOG 2026-05-31 (mediodía-3 — costo a trend (honestidad) + workflow: Claude no hace push)
+- **Costo a `trend` IMPLEMENTADO:** `engine.trend_sleeve` ahora resta `MAKER_FEE` plano sobre su
+  turnover (antes pagaba 0; rota ~57x/año). Contabilidad de costos ya UNIFORME en los 7 sleeves.
+  Impacto insignificante (e18 lo predijo): Sharpe **2.07** · %/mes **4.11** · lev **2.02x** · maxDD −10%
+  (idéntico a 2 decimales). Honestidad, no daño.
+- **WORKFLOW (preferencia de Oscar):** Claude NO ejecuta `git push/pull/fetch` (cada uno le pide a
+  Oscar confirmar cuenta GitHub). Claude hace SOLO commits locales; Oscar pushea/despliega cuando
+  quiere subir versión. Ver memoria `kepler-no-git-push`.
+- **PENDIENTE PUSH+DEPLOY (Oscar):** commits de hoy aún en local algunos. Próximo: validar B en demo,
+  C3 (calibrar slippage con fills reales), B3 (Deflated Sharpe), A4 (cross-exchange basis).
+
 ## CHANGELOG 2026-05-31 (mediodía-2 — B: suavizar funding de carry = WIN limpio, pendiente implementar)
 `research/e19_carry_turnover.py`. El carry rankeaba sobre funding INSTANTÁNEO (1 lectura 8h, ruidoso)
 → 199x turnover → con costos reales Sharpe NETO **−0.41** (perdedor). El funding persiste días, así
