@@ -1,5 +1,5 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche-3, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche-4, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 
 ---
@@ -36,21 +36,34 @@ información pagada". Lo GRATIS y per-símbolo que sí existe: **TVL por cadena*
   - **Estrés PASA (≠ e17):** leave-one-out robusto (quitar cualquier token deja Δ **+0.78..+1.24%/mes**,
     NO concentrado en 1 nombre); cuartiles Q1 −0.34 / Q2 +1.32 / Q3 +1.42 / Q4 +1.41 (3/4 fuertes; débil
     solo el arranque 2022). `tvl_mom_7d` marginal (+0.10); el resto no pasa.
-- **PRIMER candidato de la sesión que pasa chequeo barato + estrés.** Y con dato GRATIS. PERO caveats
-  antes de creerlo producción: (1) cross-section delgado (10 nombres); (2) coste taker no modelado (hold
-  14d = turnover bajo, impacto pequeño esperado, confirmar como e24); (3) **RIESGO CLAVE: el TVL histórico
-  de DefiLlama es RECONSTRUIDO** — al añadir protocolos con el tiempo, el TVL pasado se revisa al alza →
-  posible look-ahead por revisión de datos. Hay que validar point-in-time (o acotar a cobertura estable).
-- **PRÓXIMO si se sigue:** build serio — ampliar cobertura (protocol-TVL de AAVE/UNI/ONDO/ENA → más
-  nombres) + walk-forward con purga (B1) + coste taker + atacar el point-in-time. No se toca prod aún.
+### BUILD SERIO `research/e27_onchain_tvl_build.py` (CIERRE de A3) — edge REAL pero MODESTO/frágil
+Cobertura ampliada a **12 tokens** (10 chain-TVL + protocol-TVL AAVE/UNI). Rango horizontes + coste
+(maker/taker) + turnover + ataque point-in-time (clip de saltos por alta de protocolos + split 2022/2023+).
+- **Candidato de registro: `tvl_pxdiv_14d`** (raw): corr **0.11**, OOS 1.27, **Δtaker +0.63%/mes**, turnover 42x.
+- ✅ **POINT-IN-TIME (la duda clave) — PASA:** el edge vive en **2023+ (Sharpe +0.97/+1.11**, cobertura
+  madura) y es plano/negativo en 2022 → NO es artefacto de backfill. El CLIP (±15%/día) no lo mata,
+  lo mejora levemente → no son saltos artificiales. Era mi mayor preocupación y la supera.
+- ⚠️ **Banderas amarillas (no es slam-dunk como taker_flow/hlpos):** (1) horizonte ESTRECHO — 10-14d bien,
+  **21d se va a −1.09**, 30d flojo (no es plateau ancho); (2) cuartiles desiguales (Q dispares); (3) el 10d
+  está concentrado en pocas chains chicas (TRX/NEAR/HBAR en LOO; el 14d más robusto); (4) **negativo en
+  2022** (no ayuda en el peor régimen); (5) cross-section delgado (12) = techo estructural de A3 aquí.
+- **T4 combinado 8 sleeves: Sharpe 2.07→2.14 · Δtaker +0.64%/mes** (peso vp ~0.10). El 7d daba más (+0.77)
+  pero descartado (turnover alto + AAVE-dependiente).
+- **VEREDICTO A3:** edge on-chain **REAL, ortogonal y +0.6%/mes taker** (el mejor de la sesión; ≠ order-book
+  +0.00 / Deribit nada), pero **modesto y con suficientes banderas para NO precipitar a producción.** El
+  free-TVL es un PROXY: prueba que el on-chain TIENE edge → **justifica evaluar el netflow per-token de PAGO**
+  (más limpio, point-in-time honesto, cubre los 32). Dos caminos (decisión de Oscar): (A) validar el
+  free-TVL 14d con walk-forward+purga (B1) + demo antes de prod; (B) saltar al netflow pagado (ahora justificado).
 
 ### 📋 REVISAR INFORMACIÓN PAGADA (política Oscar 2026-05-31: fuente prometedora de pago NO se descarta)
 Fuentes prometedoras cuya ÚNICA vía (tras agotar lo gratis) es pago. Priorizar por aporte vs costo:
 - **Liquidaciones** (Coinglass / Coinalyze): cascadas → señal contrarian. Binance retiró el feed gratis.
   Su edge además es intradía → ver `INTRADAY.md`. Doble bloqueo (pago + intradía).
 - **Netflows de exchange POR TOKEN** (Glassnode / CryptoQuant / Santiment): el on-chain cross-seccional
-  ideal (cuánto de cada alt entra/sale de exchanges). El TVL gratis (e26) es un proxy parcial; el netflow
-  directo es mejor pero de pago. ← la más prometedora de pago si el on-chain (e26) confirma edge.
+  ideal (cuánto de cada alt entra/sale de exchanges). **JUSTIFICADO: e26/e27 confirmaron que el on-chain
+  TIENE edge** (TVL proxy gratis: +0.6%/mes taker, ortogonal, sólido en 2023+). El netflow directo sería
+  más limpio (point-in-time honesto, sin backfill) y cubriría los **32** nombres (no 12). ← la candidata
+  de PAGO más prometedora. Evaluar costo de Glassnode/CryptoQuant vs el +0.6%/mes (o más) que podría dar.
 
 ## CHANGELOG 2026-05-31 (noche-2 — A6 OPCIONES Deribit/DVOL: DESCARTADO, BTC/ETH-only + gate régimen)
 `research/e25_deribit_check.py`. Chequeo barato de la siguiente fuente del menú diario (opciones).
@@ -441,11 +454,11 @@ intradía), vs **(B)** seguir el menú de fuentes que aún podrían dar señal D
    Data bajada en `data/bookdepth_daily/` (reutilizable si se ataca el intradía). Edge = intradía → (A).
 3. ~~**Opciones (Deribit)**~~ — **DESCARTADO (e25):** BTC/ETH-only (no cross-seccional) + overlay de
    timing inestable (IS −1.15 / OOS +0.43%/mes) = gate de régimen ya descartado. DVOL 0.74 redundante con lowvol.
-4. **A3 — On-chain** → **EN CURSO, PROMETEDOR (e26):** TVL por cadena (DefiLlama GRATIS) → `tvl_pxdiv_14d`
-   pasa chequeo+estrés (corr 0.10, OOS 1.27, Δ+1.03%/mes, LOO robusto). Falta: build serio (ampliar
-   cobertura protocol-TVL + walk-forward + coste + point-in-time de revisión DefiLlama). Netflow per-token
-   = de pago (en "revisar información pagada"). ← **el hilo vivo más prometedor.**
-5. **A5 — Estacionalidad / calendario**: no necesita datos nuevos, barato; incierto.
+4. **A3 — On-chain** → **CERRADO (e26+e27): edge REAL pero MODESTO.** TVL gratis (DefiLlama): `tvl_pxdiv_14d`
+   da +0.6%/mes taker, ortogonal (corr 0.11), sólido en 2023+ (point-in-time PASA), pero con banderas
+   (horizonte estrecho, cross-section 12, neg en 2022) → NO precipitar a prod. Decisión de Oscar: (A) validar
+   con walk-forward+purga+demo, o (B) saltar al netflow per-token de PAGO (justificado, en lista pagada).
+5. **A5 — Estacionalidad / calendario**: no necesita datos nuevos, barato; incierto. ← **SIGUIENTE chequeo barato (recordatorio de Oscar).**
    *LECCIÓN e25: fuentes BTC/ETH-only (basis, opciones) NO sirven (no cross-seccional); señales
    market-wide caen en el gate-de-régimen descartado. Lo viable debe ser per-símbolo + ortogonal.
    Método: chequeo barato de ortogonalidad (e22/e23/e25) ANTES de bajar histórico. Y e16d/e24: con el
