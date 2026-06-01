@@ -29,6 +29,17 @@
 
 ---
 
+## CHANGELOG 2026-05-31 (noche-7 — FIX zona horaria: días/horas en Lima, no UTC)
+Bug reportado por Oscar: el dashboard marcaba el **día siguiente** (01-jun) a las ~19:00 Lima y el
+"log de hoy" descargaba un día vacío (UTC), porque el bucketing de día usaba UTC. **Fix de raíz:**
+- `config.py`: zona `TZ` (Lima UTC-5) + helpers `now_local`/`today_local`/`fmt_local`/`day_bounds_ms`.
+- `db.py`: `upsert_equity_daily` y `export_daily_log`/`export_log` bucketean por **día LOCAL (Lima)**.
+- `api/app.py`: `/api/download` "hoy" = día Lima; `/api/logs`, `/api/equity`, `last_cycle` formatean en Lima.
+- `fetch.py` se deja en UTC a propósito (los datos de Binance son UTC). Verificado: a las 23:05 Lima del
+  31, `today_local=2026-05-31`, el tick de ahora bucketea al **31** y el export "de hoy" trae el día 31.
+- ⚠️ Tras deploy puede quedar una fila `equity_daily` "2026-06-01" creada ANTES del fix (UTC); es
+  cosmética, se puede ignorar/borrar. **PENDIENTE DEPLOY (Oscar)** junto con el resto.
+
 ## CHANGELOG 2026-05-31 (noche-6 — TRABAJO GRATIS: sleeve TVL en SOMBRA + B1/B2 walk-forward)
 Avance de lo gratis-hoy (instrucción de Oscar): dejar correr la demo + B1/B2 + free-TVL en modo sombra.
 

@@ -61,8 +61,7 @@ def status():
         "n_positions": s.get("n_positions", 0),
         "total_return": round(total_ret, 2), "today_return": round(today_ret, 2),
         "cb_halted": halted,
-        "last_cycle": datetime.fromtimestamp((cyc[0]["ts"] if cyc else (s.get("ts") or 0))/1000,
-                                             tz=timezone.utc).isoformat() if (cyc or s) else None,
+        "last_cycle": config.fmt_local((cyc[0]["ts"] if cyc else (s.get("ts") or 0))) if (cyc or s) else None,
         # backtest real del último ciclo (lo guarda el orquestador con el leverage anclado);
         # fallback al sistema actual de 7 sleeves @maxDD−10% si el snapshot aún no lo trae.
         "backtest": det.get("backtest", {"sharpe": 2.07, "ann": 49.3, "maxdd": -10.0, "n_sleeves": 7}),
@@ -109,7 +108,7 @@ def logs(limit: int = 150, level: str = ""):
     sql += "ORDER BY ts DESC LIMIT ?"; args = args + (limit,)
     rows = _q(sql, args)
     for r in rows:
-        r["time"] = datetime.fromtimestamp(r["ts"]/1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        r["time"] = config.fmt_local(r["ts"], "%Y-%m-%d %H:%M:%S")   # hora Lima
     return rows
 
 
@@ -119,7 +118,7 @@ def equity():
     if not rows:   # DB antigua sin ticks → usar snapshots
         rows = _q("SELECT ts,equity FROM portfolio_snapshot ORDER BY ts ASC")
     for r in rows:
-        r["time"] = datetime.fromtimestamp(r["ts"]/1000, tz=timezone.utc).strftime("%m-%d %H:%M")
+        r["time"] = config.fmt_local(r["ts"], "%m-%d %H:%M")        # hora Lima
     return rows
 
 
@@ -130,7 +129,7 @@ def download(date: str = "", start: str = "", end: str = "", full: bool = False)
     if full or start or end:
         path = _DB.export_log(start or None, end or None)
     else:
-        date = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        date = date or config.today_local()     # "hoy" en hora de Lima (no UTC)
         path = _DB.export_daily_log(date)
     if not os.path.exists(path):
         return JSONResponse({"error": "no hay log"}, status_code=404)

@@ -58,5 +58,34 @@ NET_NEUTRAL_TOL    = 0.10      # |beta neta| tolerada (market-neutral por defect
 TARGET_MAXDD       = 0.10      # maxDD objetivo del tier ESTABLE (10%)
 MAX_STRAT_LEVERAGE = 4.0       # tope duro del multiplicador de estrategia (seguridad)
 
-# ─── Timezone ─────────────────────────────────────────────────────────────────
-TZ_OFFSET_H = -5   # Lima
+# ─── Timezone (Lima, UTC-5) ──────────────────────────────────────────────────
+# El sistema bucketea y MUESTRA los días/horas en hora de Lima (no UTC). Así "hoy" en el
+# dashboard y en el log diario coincide con el día local de Oscar (evita el desfase que hacía
+# que a las 19:00 Lima ya marcara el día siguiente UTC). El almacenamiento de ts sigue en epoch
+# (TZ-agnóstico); la TZ solo se aplica al convertir epoch↔día/hora para bucketear o mostrar.
+from datetime import datetime as _dt, timezone as _tz, timedelta as _td  # noqa: E402
+
+TZ_OFFSET_H = -5                       # Lima
+TZ = _tz(_td(hours=TZ_OFFSET_H))       # zona horaria local (Lima)
+
+
+def now_local() -> "_dt":
+    """Ahora en hora de Lima."""
+    return _dt.now(TZ)
+
+
+def today_local() -> str:
+    """Día local (Lima) actual, 'YYYY-MM-DD'. Es el 'hoy' del dashboard y del log diario."""
+    return now_local().strftime("%Y-%m-%d")
+
+
+def fmt_local(ts_ms: int, fmt: str = "%Y-%m-%d %H:%M:%S") -> str:
+    """Formatea un epoch (ms) en hora de Lima."""
+    return _dt.fromtimestamp(ts_ms / 1000, TZ).strftime(fmt)
+
+
+def day_bounds_ms(day_str: str) -> tuple[int, int]:
+    """[inicio, fin) en epoch ms del día LOCAL (Lima) 'YYYY-MM-DD'. Para filtrar el log del día."""
+    d0 = _dt.strptime(day_str, "%Y-%m-%d").replace(tzinfo=TZ)
+    s = int(d0.timestamp() * 1000)
+    return s, s + 86_400_000

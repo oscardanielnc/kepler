@@ -162,7 +162,7 @@ class DB:
         if equity is None:
             return
         equity = float(equity)
-        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        day = config.today_local()      # día LOCAL (Lima), no UTC → "hoy" coincide con Oscar
         prev = self.conn.execute(
             "SELECT equity FROM equity_daily WHERE day<? ORDER BY day DESC LIMIT 1", (day,)).fetchone()
         prev_eq = prev[0] if prev and prev[0] else equity
@@ -200,10 +200,9 @@ class DB:
 
     # ── exportación de log diario (descargable) ──────────────────────────────
     def export_daily_log(self, day: str | None = None) -> str:
-        day = day or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        day = day or config.today_local()          # "hoy" en hora de Lima (no UTC)
         path = os.path.join(config.LOGS_DIR, f"kepler_{day}.json")
-        d0 = int(datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp()*1000)
-        d1 = d0 + 86_400_000
+        d0, d1 = config.day_bounds_ms(day)         # fronteras del día LOCAL (Lima)
         def rows(q, a): return [dict(zip([c[0] for c in cur.description], r))
                                 for cur in [self.conn.execute(q, a)] for r in cur.fetchall()]
         payload = {
@@ -221,10 +220,8 @@ class DB:
         """Export para ANÁLISIS: rango de días (o histórico completo si start/end=None).
         Incluye TODO lo que se persiste — señales, fills, snapshots de cartera (con posiciones
         y PnL), curva de equity (ticks + diaria), auditoría y reportes. Un solo archivo."""
-        def day_ms(d):
-            return int(datetime.strptime(d, "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp()*1000)
-        d0 = day_ms(start) if start else 0
-        d1 = (day_ms(end) + 86_400_000) if end else _now_ms() + 86_400_000
+        d0 = config.day_bounds_ms(start)[0] if start else 0       # rango en días LOCALES (Lima)
+        d1 = config.day_bounds_ms(end)[1] if end else _now_ms() + 86_400_000
         tag = f"{start or 'inicio'}_a_{end or 'ahora'}"
         path = os.path.join(config.LOGS_DIR, f"kepler_{tag}.json")
         def rows(q, a=()): return [dict(zip([c[0] for c in cur.description], r))
