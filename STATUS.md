@@ -62,8 +62,17 @@ Directiva de Oscar: agotar vías GRATIS (foros/blogs/datasets públicos) antes d
   mejor `trend×breadth` +0.42 (match teoría) pero no supera barra ni folds. Los 7 ya son robustos (6/6).
 - **📚 APRENDIZAJE:** barrer 70 combos sube la barra deflactada → destruye la detección de edges modestos. La vía
   correcta = **POCAS hipótesis pre-registradas** (N chico). Se aplica en R3.
-- **PENDIENTE (ruta de hoy):** **R3** = rescatar DESCARTADOS con régimen (order-book e24, OI/ls e16f, TVL) usando
-  hipótesis pre-registradas (N chico, ojo overlap 2023+); **C1** = factores académicos nuevos (size/CTREND) sobre datos propios.
+- **R3 (e32): ¿rescatar DESCARTADOS con régimen? → NINGUNO se rescata.** Hipótesis pre-registradas sobre
+  `ls_crowd_rev` (OI/LS, el descartado "por régimen") y `tvl_pxdiv_14d` (on-chain). Hallazgo independiente de la
+  barra: **condicionar NUNCA superó al raw** (ls_crowd raw +0.10/5-6 → con régimen −0.12/−0.39/−0.22; TVL raw
+  +0.30/4-6 = lo mejor). **CONCLUSIÓN workstream régimen** (3 confirmaciones: e30d illiq, R2 actuales, R3
+  descartados): el **conditional factor timing DISCRETO no sobrevive OOS honesto aquí** = callejón sin salida,
+  probado a fondo. **Lab montado para futuros candidatos con split limpio.**
+- 🎁 **BONUS (no-régimen):** `tvl_pxdiv_14d` RAW **sobrevive el walk-forward purgado** (+0.30 Sharpe OOS, 4/6
+  folds; 6/6 condicionado-bull) → **refuerza al TVL (ya en SOMBRA) como candidato a sleeve #8**, más sólido que
+  la iliquidez. Caveat: a coste maker (+2.74%/mes inflado); el real era +0.6%/mes taker (e27). Falta confirmar sombra+taker.
+- **PENDIENTE (ruta):** **C1** = factores académicos nuevos (size/market-cap, CTREND multi-horizonte) sobre datos
+  propios; y decidir sobre el TVL (sombra→sleeve #8) cuando acumule validación forward.
 
 
 - **Análisis de los logs del 31 (DEMO):** 3 ciclos (=reinicios por deploys; carry-suavizado confirmado
