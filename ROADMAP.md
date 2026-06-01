@@ -49,7 +49,14 @@ Fuentes por explorar (en orden de promesa, la OHLCV y positioning ya están agot
 - [x] ~~**A2. Order-book imbalance / profundidad**~~ → DESCARTADO como sleeve DIARIO 2026-05-31
       (e23/e24): real y ortogonal (corr 0.06–0.10), pero Δ al ancla maxDD −10% = **+0.00%/mes** (taker).
       Su edge genuino es **INTRADÍA** → movido a §F. Data en `data/bookdepth_daily/`. Ver STATUS noche.
-- [ ] **A3. On-chain** (flujos de exchange, stablecoin supply, activos en wallets). Fuente nueva.
+- [x] ~~**A6. Opciones (Deribit / DVOL)**~~ → DESCARTADO 2026-05-31 (e25): Deribit solo BTC/ETH líquido
+      → no cross-seccional (muro del basis); como overlay de timing es inestable (IS −1.15 / OOS +0.43%/mes)
+      = gate de régimen ya descartado; DVOL 0.74 redundante con vol realizada (lowvol). VRP/short-vol sería
+      otra estrategia (pila de opciones), no este sistema de perps. Ver STATUS noche-2.
+- [ ] **A3. On-chain** (flujos de exchange POR ACTIVO, stablecoin supply, activos en wallets). Fuente nueva.
+      **La única viva con potencial CROSS-SECCIONAL** (per-símbolo). Lección e25: fuentes BTC/ETH-only
+      (basis, opciones) NO valen; lo viable debe ser per-símbolo del universo + ortogonal. ⚠️ histórico
+      gratis es dudoso (Glassnode/CryptoQuant suelen ser de pago) — el chequeo barato debe empezar por ahí.
 - [x] ~~**A4. Cross-exchange basis** (perp vs spot)~~ → PARADO 2026-05-31 (e22): basis ≈ funding/carry
       (corr 0.74 nivel · 0.53 cross-seccional · 0.70 predice funding) → duplicaría el sleeve #4, no
       diversifica. NO bajar spot del universo. Único ángulo vivo: el RESIDUAL (dislocaciones que el
@@ -110,10 +117,16 @@ Estos NO dependen de tiempo en mercado, son research puro sobre datos que ya ten
 microestructura están agotadas o descartadas.
 
 **Foco DIARIO vivo (orden sugerido), cada uno con chequeo de ortogonalidad barato ANTES de bajar histórico:**
-1. **A6 — Opciones (Deribit):** IV, skew, put/call, risk-reversal → prima de riesgo de vol. ← mejor candidata viva.
-2. **A3 — On-chain:** flujos exchange, stablecoin supply. Más lift de datos.
+1. ~~A6 Opciones (Deribit)~~ → DESCARTADO (e25: BTC/ETH-only + timing inestable). 
+2. **A3 — On-chain:** flujos exchange POR ACTIVO, stablecoin supply. **Única con potencial cross-seccional**;
+   ⚠️ histórico gratis dudoso (Glassnode/CryptoQuant de pago) → el chequeo barato empieza por "¿hay dato gratis?".
 3. **A5 — Estacionalidad / calendario:** barato, no necesita datos nuevos; incierto.
 4. **B1/B2 — Purga+embargo / CPCV** en el walk-forward: no sube el número, lo hace más creíble.
+
+**Lección de la tanda 2026-05-31 (acota la búsqueda):** fuentes BTC/ETH-only (basis e22, opciones e25)
+NO sirven (no cross-seccional); señales market-wide caen en el gate-de-régimen descartado; sleeves orto
+pero débiles (order-book e24, Sharpe ~1.3) DILUYEN al ancla. Lo que queda debe ser **per-símbolo del
+universo + ortogonal + lo bastante fuerte para subir el retorno al maxDD fijo con costos taker**.
 
 ⚠️ **Recordar el criterio (e16d/e24):** corr<0.35 + IS/OOS>0.10 **NO basta** — el sleeve debe subir el
 retorno al **maxDD fijo con costos taker**. Un Sharpe orto pero bajo (~1.3) solo DILUYE el combinado.

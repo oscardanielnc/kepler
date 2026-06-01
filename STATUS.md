@@ -1,5 +1,5 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche-2, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 
 ---
@@ -24,6 +24,24 @@
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-05-31 (noche-2 — A6 OPCIONES Deribit/DVOL: DESCARTADO, BTC/ETH-only + gate régimen)
+`research/e25_deribit_check.py`. Chequeo barato de la siguiente fuente del menú diario (opciones).
+DVOL (índice de vol implícita de Deribit, gratis API pública, BTC/ETH 2021-03→hoy).
+- **Muro estructural:** Deribit solo tiene opciones líquidas de **BTC/ETH** → una señal de opciones NO
+  puede ser cross-seccional (no rankea los 32 alts). Mismo muro que el basis (e22). Único uso posible:
+  overlay de timing de mercado — y los gates de régimen YA están descartados (empeoran maxDD, CLAUDE.md).
+- **T1 redundancia:** corr(DVOL, vol realizada 30d BTC) = **0.74** → el 74% ya lo ve lowvol.
+- **T2 overlays:** el mejor (de-risk cuando la vol sube) daba +0.21%/mes PERO con Sharpe 2.07→1.93
+  (sube vía leverage del ancla, no por mejor ride). **T2b IS/OOS lo mata: IS −1.15%/mes · OOS +0.43**
+  → cambia de signo entre mitades = ruido, no edge. Reconfirma la fragilidad del gate de régimen.
+- **T3:** corr(DVOL, retorno fwd del combinado) = +0.05 (no predice dirección).
+- **VEREDICTO: DESCARTADO** para el sistema diario. La info genuina de opciones (VRP/short-vol) sería
+  OTRA estrategia (pila de opciones), no este sistema de perps. No se toca prod.
+- **LECCIÓN DE FONDO (acota el menú):** toda fuente BTC/ETH-only (basis, opciones) choca con el mismo
+  muro (no cross-seccional); toda señal market-wide cae en el gate-de-régimen descartado. Lo que queda
+  viable en el menú diario debe ser **(a) per-símbolo del universo Y (b) ortogonal** → **A3 on-chain**
+  (flujos exchange por activo) es la única con potencial cross-seccional; A5 estacionalidad (barato/incierto).
 
 ## CHANGELOG 2026-05-31 (noche — A2 ORDER-BOOK: real+ortogonal pero NO aporta al ancla → DESCARTADO)
 Foco de Oscar: nuevas fuentes de datos. **Liquidaciones (la candidata #1) NO tiene histórico gratis:**
@@ -394,11 +412,15 @@ intradía), vs **(B)** seguir el menú de fuentes que aún podrían dar señal D
    Solo de pago (Coinglass) o capturando WS hacia adelante. Su edge además es intradía → ver (A).
 2. ~~A2 Order-book diario~~ — **DESCARTADO (e24):** real+ortogonal pero Δ+0.00%/mes al ancla (taker).
    Data bajada en `data/bookdepth_daily/` (reutilizable si se ataca el intradía). Edge = intradía → (A).
-3. **Opciones (Deribit)** — IV, skew, put/call, risk-reversal: prima de riesgo de vol. ← mejor candidata DIARIA viva.
-4. **A3 — On-chain** (flujos exchange, stablecoin supply): macro-cripto, más lift de datos.
+3. ~~**Opciones (Deribit)**~~ — **DESCARTADO (e25):** BTC/ETH-only (no cross-seccional) + overlay de
+   timing inestable (IS −1.15 / OOS +0.43%/mes) = gate de régimen ya descartado. DVOL 0.74 redundante con lowvol.
+4. **A3 — On-chain** (flujos exchange POR ACTIVO, stablecoin supply): la **única viva con potencial
+   CROSS-SECCIONAL** (per-símbolo del universo). Más lift de datos / probablemente de pago para histórico. ← siguiente.
 5. **A5 — Estacionalidad / calendario**: no necesita datos nuevos, barato; incierto.
-   *Método: chequeo barato de ORTOGONALIDAD (e22/e23) ANTES de bajar histórico. Y recordar e16d: con
-   el ancla, corr~0 + IS/OOS NO basta — debe subir el retorno a maxDD fijo, costos taker incluidos.*
+   *LECCIÓN e25: fuentes BTC/ETH-only (basis, opciones) NO sirven (no cross-seccional); señales
+   market-wide caen en el gate-de-régimen descartado. Lo viable debe ser per-símbolo + ortogonal.
+   Método: chequeo barato de ortogonalidad (e22/e23/e25) ANTES de bajar histórico. Y e16d/e24: con el
+   ancla, corr~0 + IS/OOS NO basta — debe subir el retorno a maxDD fijo, costos taker incluidos.*
 
 ### EN PARALELO — DEJAR CORRER LA DEMO (el foso real = tiempo, E1)
 - Validar en vivo que el carry suavizado baja el turnover; medir Sharpe REAL vs 2.07; alimentar C3.
