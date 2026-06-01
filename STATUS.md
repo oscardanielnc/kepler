@@ -1,5 +1,5 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche-5, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche-6, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 
 ---
@@ -17,6 +17,10 @@
   de análisis (histórico completo). Curva de equity full-width.
 - ✅ **DESPLEGADO Y CORRIENDO (Oscar confirmó 2026-05-31 ~09:28 Lima):** la versión actual está en la
   VM operando en DEMO, se deja corriendo. **Confirmar al arrancar** (ver "VERIFICAR AL ARRANCAR").
+- 🌓 **Sleeve on-chain TVL en MODO SOMBRA (noche-6, PENDIENTE DEPLOY):** `kepler/onchain.py` registra
+  cada ciclo los pesos que tendría (sin operar) → validación forward del +0.6%/mes. No afecta lo que opera.
+- 🔬 **B1/B2 (e29): edge ROBUSTO** (Sharpe OOS 2.29 ≈ IS 2.21, 6/6 folds+) pero **el ancla −10% es
+  optimista** — en walk-forward el maxDD OOS llega a −13.5%; **el −10% puede excederse en vivo** (riesgo, ROADMAP D).
 
 ### Estado del código vs producción
 - Commits de hoy (carry 2.07, costo trend, B3, C3, A4, dashboard explicativo) desplegados por Oscar.
@@ -24,6 +28,34 @@
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-05-31 (noche-6 — TRABAJO GRATIS: sleeve TVL en SOMBRA + B1/B2 walk-forward)
+Avance de lo gratis-hoy (instrucción de Oscar): dejar correr la demo + B1/B2 + free-TVL en modo sombra.
+
+### 🌓 Free-TVL `tvl_pxdiv_14d` en MODO SOMBRA (no opera) — `kepler/onchain.py`
+La única forma de despejar el riesgo point-in-time del TVL (DefiLlama reconstruye su histórico) es
+validación FORWARD. Implementado SIN tocar lo que opera:
+- `kepler/onchain.py`: fetcher DefiLlama (chain+protocol TVL, 12 tokens) + `shadow_weights()` (pesos
+  β-neutral del sleeve vía la maquinaria del motor) + `run_shadow()` (registra, no opera).
+- `db.py`: tabla `shadow_signal` (migración idempotente) + `log_shadow()`; incluida en `export_log`.
+- `orchestrator.cycle`: hook AISLADO (try/except) tras el snapshot → cada ciclo 24h registra los pesos
+  que el sleeve TVL tendría. **NO afecta el target que se opera.** Probado end-to-end (12 señales,
+  β-neutral, gross 1.12). Acumulando semanas → se mide su retorno real point-in-time honesto.
+- **PENDIENTE DEPLOY (Oscar):** al desplegar, el ciclo empezará a loguear `shadow_signal`. Promoverlo a
+  sleeve #8 real (alphas.py + engine.SLEEVES) SOLO si la sombra confirma el +0.6%/mes en vivo.
+
+### 🔬 B1/B2 walk-forward con purga+embargo + CPCV-lite — `research/e29_purged_walkforward.py`
+Dos conclusiones HONESTAS (no suben el número, lo hacen creíble):
+- **ⓐ EDGE ROBUSTO:** Sharpe OOS (vp+leverage ajustados solo-pasado, embargo 10d) **2.29 ≈ IS 2.21**;
+  CPCV **6/6 folds positivos** (media +2.08, min +1.19). La combinación de 7 sleeves NO es overfit de
+  selección de pesos. El número de Sharpe sobrevive el walk-forward honesto.
+- **ⓑ ANCLA OPTIMISTA (hallazgo accionable de RIESGO):** fijar el leverage con el maxDD pasado
+  **sobre-apalanca** cuando el futuro es más volátil → en el walk-forward lev medio 3.0x y **maxDD OOS
+  −13.5% (excede el −10% objetivo)**. ⇒ **el −10% del backtest PUEDE EXCEDERSE en vivo.** Acción:
+  considerar haircut de leverage o calibrar sobre el peor tramo (no todo el historial). → ROADMAP D.
+  (B1/B2 NO ataca el gap por costos/microestructura; eso lo da la DEMO, E1.)
+
+### Demo: sigue corriendo (E1). El foso real = tiempo. Nada que codear; medir periódicamente.
 
 ## CHANGELOG 2026-05-31 (noche-5 — A5 ESTACIONALIDAD: DESCARTADO (artefacto del ancla) + menú diario AGOTADO)
 `research/e28_seasonality_check.py`. Último ítem barato del menú (gratis, del panel). Día-de-semana,
@@ -459,8 +491,8 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
 
 | Fuente | Qué da (edge) | Vía gratis (agotada) | Proveedor pago | Costo aprox | Dónde retomar / qué falta | Prioridad |
 |---|---|---|---|---|---|---|
-| **Netflows exchange por token** | on-chain cross-seccional ideal: cuánto de cada alt entra/sale de exchanges. **Edge on-chain CONFIRMADO** por el proxy TVL gratis (e26/e27: +0.6%/mes taker, ortogonal, sólido 2023+) | DefiLlama TVL = proxy parcial (solo 12 cadenas/protocolos, point-in-time imperfecto). Netflow directo NO hay gratis | Glassnode, CryptoQuant, Santiment (SanAPI) | ~$30–800/mes según plan/tier | Conseguir netflow per-token (32 nombres) → construir sleeve cross-seccional como e26/e27 pero con dato limpio (point-in-time honesto). Comparar Δ@−10% vs el +0.6% del proxy | **ALTA** (la veta diaria viva más prometedora) |
-| **Liquidaciones** | cascadas de liquidación → señal contrarian/mean-reversion | Binance retiró `allForceOrders`+`liquidationSnapshot` (no hay histórico gratis). WS `@forceOrder` solo hacia adelante | Coinglass, Coinalyze | free-tier limitado / API de pago | DOBLE bloqueo: además su edge es **intradía** → requiere el backtester horario (`INTRADAY.md`). Retomar solo si se ataca intradía | MEDIA (gated por intradía) |
+| **Netflows exchange por token** | on-chain cross-seccional ideal: cuánto de cada alt entra/sale de exchanges. **Edge on-chain CONFIRMADO** por el proxy TVL gratis (e26/e27: +0.6%/mes taker, ortogonal, sólido 2023+) | DefiLlama TVL = proxy parcial (solo 12 cadenas/protocolos, point-in-time imperfecto). Netflow directo NO hay gratis | **CryptoQuant Pro ~$99/mo (anual)** = mejor fit (Data API 24H incl.) · Santiment Pro ~$50/mo · Glassnode $999/mo+API = overkill | **~$99/mo** (verificado may-2026) | Suscribir CryptoQuant Pro → netflow per-token (32 nombres) → sleeve cross-seccional como e26/e27 con dato limpio (point-in-time honesto). **BONUS:** la sub abre un menú entero (reservas, ballenas, SOPR, stablecoins, mineros…) = varios candidatos a sleeve (camino RenTech §A) | **ALTA** (la veta diaria viva más prometedora; ROI alto si valida) |
+| **Liquidaciones** | cascadas de liquidación → señal contrarian/mean-reversion | Binance retiró `allForceOrders`+`liquidationSnapshot`. **⚠️ NO agotado lo gratis: Coinalyze tiene API gratis con histórico de liquidaciones** — CHEQUEAR profundidad histórica antes de marcar pago | Coinglass (si Coinalyze gratis no alcanza) | ~$29-79/mo Coinglass | (1) probar Coinalyze gratis a fondo; (2) su edge es **intradía** → requiere backtester horario (`INTRADAY.md`) igual | MEDIA (gated por intradía; quizá gratis) |
 
 ### 🎯 FOCO PRÓXIMA SESIÓN: el MENÚ DIARIO BARATO está AGOTADO → 4 caminos (decisión de Oscar)
 Directiva de Oscar (2026-05-31): "más fuentes para mejorar rentabilidad." **Recorrido COMPLETO esta

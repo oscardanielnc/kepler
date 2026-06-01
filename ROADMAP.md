@@ -73,10 +73,10 @@ Fuentes por explorar (en orden de promesa, la OHLCV y positioning ya están agot
 
 ### B. ROBUSTEZ DE VALIDACIÓN  ← para que el backtest mienta MENOS
 El objetivo no es subir el número, es que el número sea creíble (menos gap backtest↔vivo).
-- [ ] **B1. Purga + embargo** en el walk-forward (gap entre train y test para evitar fuga por solापe
-      de ventanas rolling). Hace el OOS más honesto.
-- [ ] **B2. Validación combinatoria (CPCV)** o múltiples cortes IS/OOS, no uno solo. Reduce el riesgo
-      de elegir un sleeve que funcionó por suerte en un corte.
+- [x] **B1. Purga + embargo** en el walk-forward → HECHO 2026-05-31 (e29). vp+leverage ajustados
+      solo-pasado con embargo 10d, curva 100% OOS. **Resultado: edge ROBUSTO** (Sharpe OOS 2.29 ≈ IS 2.21).
+- [x] **B2. CPCV-lite** (6 folds) → HECHO (e29): **6/6 folds OOS positivos** (media +2.08, min +1.19).
+      El Sharpe del sistema NO es overfit de selección de pesos.
 - [ ] **B3. Deflated Sharpe Ratio** — penalizar el Sharpe por el nº de configuraciones probadas
       (evita el sesgo de "probé 100 cosas y elegí la mejor"). Honestidad estadística pura RenTech.
 - [ ] **B4. Test de capacidad:** ¿cuánto capital aguanta cada sleeve antes de mover el mercado?
@@ -90,6 +90,11 @@ El objetivo no es subir el número, es que el número sea creíble (menos gap ba
 - [ ] **C3. Análisis de fills reales en DEMO** vs target: medir el slippage REAL y recalibrar C1.
 
 ### D. GESTIÓN DE RIESGO / RÉGIMEN
+- [ ] **D0. Ancla de leverage robusta (NUEVO, hallazgo e29 2026-05-31).** El walk-forward mostró que
+      fijar el leverage con el maxDD pasado SOBRE-APALANCA out-of-sample (lev 3.0x, maxDD OOS −13.5% vs
+      −10% objetivo) → **el −10% del backtest puede excederse en vivo.** Opciones: haircut de leverage,
+      calibrar sobre el peor tramo histórico (no todo), o usar un cuantil conservador del maxDD. La DEMO
+      lo confirmará (E1). Es lo opuesto a la misión bajo-DD → atacar antes de subir de tier.
 - [ ] **D1. Validación del β en vivo** (no solo backtest): confirmar que el libro real mantiene β≈0.
 - [ ] **D2. Monitor de correlación entre sleeves en vivo:** si dos sleeves empiezan a correlacionar
       (su diversificación se rompe), avisar. La diversificación es nuestro control de riesgo nº1.

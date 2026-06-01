@@ -147,6 +147,14 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     db.audit("INFO", "orchestrator", f"Ciclo {tier} ok ({time.time()-t0:.0f}s)",
              detail={"equity": equity, "n_target": n_target, "operate": operate})
     db.export_daily_log()   # JSON descargable del día
+    # 8. SOMBRA: registra la señal del sleeve on-chain TVL SIN operar (validación forward
+    #    point-in-time, e26/e27). Totalmente aislado: si falla, no afecta el ciclo que opera.
+    try:
+        from kepler import onchain
+        sh = onchain.run_shadow(db)
+        _log.info(f"[orq] sombra on-chain TVL: {sh.get('logged', 0)} señales registradas")
+    except Exception as e:
+        _log.warning(f"[orq] sombra on-chain omitida: {e}")
     notify.alert_cycle(equity, n_target, float(target.abs().sum()), operate, mode)
     return {"equity": equity, "n_target": n_target, "operate": operate, "mode": mode}
 

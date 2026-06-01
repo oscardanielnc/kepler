@@ -66,6 +66,13 @@ CREATE TABLE IF NOT EXISTS audit_event (
 );
 CREATE INDEX IF NOT EXISTS ix_audit_ts ON audit_event(ts);
 CREATE INDEX IF NOT EXISTS ix_audit_cat ON audit_event(category);
+
+CREATE TABLE IF NOT EXISTS shadow_signal (   -- sleeve en MODO SOMBRA (NO opera): registra la señal
+    id INTEGER PRIMARY KEY, ts INTEGER NOT NULL, sleeve TEXT NOT NULL, symbol TEXT NOT NULL,
+    weight REAL, score REAL, detail TEXT      -- validación FORWARD point-in-time (p.ej. on-chain TVL)
+);
+CREATE INDEX IF NOT EXISTS ix_shadow_ts ON shadow_signal(ts);
+CREATE INDEX IF NOT EXISTS ix_shadow_sleeve ON shadow_signal(sleeve);
 """
 
 
@@ -169,6 +176,15 @@ class DB:
             (day, equity, ret, dd))
         self.conn.commit()
 
+    def log_shadow(self, sleeve, symbol, weight, score=None, detail: dict | None = None,
+                   ts: int | None = None) -> int:
+        """Registra el peso que un sleeve en MODO SOMBRA tendría (sin operar). Para validación
+        FORWARD point-in-time: cada ciclo guarda la señal viva → luego se mide su retorno real."""
+        cur = self.conn.execute(
+            "INSERT INTO shadow_signal (ts,sleeve,symbol,weight,score,detail) VALUES (?,?,?,?,?,?)",
+            (ts or _now_ms(), sleeve, symbol, weight, score, json.dumps(detail or {})))
+        self.conn.commit(); return cur.lastrowid
+
     def audit(self, level, category, title, symbol=None, detail: dict | None = None):
         self.conn.execute(
             "INSERT INTO audit_event (ts,level,category,symbol,title,detail) VALUES (?,?,?,?,?,?)",
@@ -221,6 +237,7 @@ class DB:
             "portfolio_snapshot": rows("SELECT * FROM portfolio_snapshot WHERE ts BETWEEN ? AND ? ORDER BY ts", (d0,d1)),
             "equity_tick":        rows("SELECT * FROM equity_tick WHERE ts BETWEEN ? AND ? ORDER BY ts", (d0,d1)),
             "equity_daily":       rows("SELECT * FROM equity_daily ORDER BY day"),
+            "shadow_signal":      rows("SELECT * FROM shadow_signal WHERE ts BETWEEN ? AND ? ORDER BY ts", (d0,d1)),
             "audit":              rows("SELECT * FROM audit_event WHERE ts BETWEEN ? AND ? ORDER BY ts", (d0,d1)),
             "daily_report":       rows("SELECT * FROM daily_report ORDER BY day"),
         }
