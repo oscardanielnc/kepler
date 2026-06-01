@@ -84,6 +84,50 @@ def _log_fills(db: DB, before: dict, after: dict, lev, target, t0_ms):
                     prev_amt=b, new_amt=a, ref_px=ref, slip_bps=slip_bps)
 
 
+def _save_daily_report(db: DB, tier, mode, equity, target, lev, bt, operate):
+    """Genera el REPORTE DIARIO (metrics JSON + narrativa) para monitoreo y descarga. Pensado para
+    vigilar avance y detectar problemas: retorno/dd del día, exposición, leverage, CONCENTRACIÓN
+    (top posición), SLIPPAGE REAL del día (C3), nº de ciclos (detecta tormentas de reinicios) y CB.
+    Ver `MONITOREO.md` para cómo leerlo y los umbrales de alerta."""
+    day = config.today_local()
+    d0, d1 = config.day_bounds_ms(day)
+    row = db.conn.execute("SELECT ret_pct,dd_pct FROM equity_daily WHERE day=?", (day,)).fetchone()
+    ret_pct, dd_pct = (row[0] or 0.0, row[1] or 0.0) if row else (0.0, 0.0)
+    # slippage REAL de los fills de hoy (C3)
+    fills = db.conn.execute(
+        "SELECT symbol,slip_bps FROM trades WHERE reason='rebalance_fill' AND slip_bps IS NOT NULL "
+        "AND open_ts BETWEEN ? AND ?", (d0, d1)).fetchall()
+    slip = {}
+    if fills:
+        v = sorted(f[1] for f in fills); n = len(v)
+        worst = max(fills, key=lambda f: f[1])
+        slip = {"n": n, "mean_bps": round(sum(v)/n, 2), "median_bps": round(v[n//2], 2),
+                "worst_bps": round(worst[1], 2), "worst_sym": worst[0]}
+    cycles = db.conn.execute(
+        "SELECT COUNT(*) FROM audit_event WHERE category='orchestrator' AND title LIKE 'Ciclo%ok%' "
+        "AND ts BETWEEN ? AND ?", (d0, d1)).fetchone()[0]
+    top = None
+    if target is not None and len(target) and target.abs().sum() > 0:
+        sym = target.abs().idxmax(); top = {"symbol": sym, "weight": round(float(target[sym]), 4)}
+    gross = float(target.abs().sum()) if target is not None else 0.0
+    net = float(target.sum()) if target is not None else 0.0
+    npos = int((target.abs() > 0.005).sum()) if target is not None else 0
+    metrics = {"day": day, "mode": mode, "tier": tier, "equity": round(float(equity), 2),
+               "today_return_pct": round(ret_pct, 3), "drawdown_pct": round(dd_pct, 3),
+               "n_positions": npos, "gross": round(gross, 3), "net": round(net, 3),
+               "leverage": round(float(lev), 3), "top_position": top, "cycles_today": int(cycles),
+               "slippage_real": slip, "cb_operate": bool(operate),
+               "backtest": {"sharpe": round(bt.get("sharpe", 0), 2), "ann": round(bt.get("ann", 0), 1),
+                            "maxdd": round(bt.get("maxdd", 0), 1)}}
+    narr = (f"{mode} {tier} · ${float(equity):.0f} ({ret_pct:+.2f}% hoy, dd {dd_pct:.2f}%) · "
+            f"{npos} pos gross {gross:.2f} net {net:+.2f} lev {lev:.2f}x · "
+            + (f"slip med {slip['median_bps']}bps (peor {slip['worst_sym']} {slip['worst_bps']}) · " if slip else "slip s/d · ")
+            + (f"top {top['symbol']} {top['weight']*100:.0f}% · " if top else "")
+            + f"{cycles} ciclos hoy · CB {'OK' if operate else 'HALT'}")
+    db.save_daily_report(day, metrics, narr)
+    return narr
+
+
 def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     db = db or DB()
     t0 = time.time()
@@ -146,7 +190,13 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     db.upsert_equity_daily(equity)     # retorno del día
     db.audit("INFO", "orchestrator", f"Ciclo {tier} ok ({time.time()-t0:.0f}s)",
              detail={"equity": equity, "n_target": n_target, "operate": operate})
-    db.export_daily_log()   # JSON descargable del día
+    # 7b. REPORTE DIARIO (metrics + narrativa) para monitoreo/descarga (ver MONITOREO.md)
+    try:
+        narr = _save_daily_report(db, tier, mode, equity, target, lev, bt, operate)
+        _log.info(f"[orq] reporte diario: {narr}")
+    except Exception as e:
+        _log.warning(f"[orq] no se pudo guardar el reporte diario: {e}")
+    db.export_daily_log()   # JSON descargable del día (incluye el reporte recién guardado)
     # 8. SOMBRA: registra la señal del sleeve on-chain TVL SIN operar (validación forward
     #    point-in-time, e26/e27). Totalmente aislado: si falla, no afecta el ciclo que opera.
     try:

@@ -209,6 +209,7 @@ class DB:
             "day": day,
             "trades":  rows("SELECT * FROM trades WHERE (close_ts BETWEEN ? AND ?) OR (open_ts BETWEEN ? AND ?)", (d0,d1,d0,d1)),
             "signals": rows("SELECT * FROM signals WHERE ts BETWEEN ? AND ?", (d0,d1)),
+            "shadow":  rows("SELECT * FROM shadow_signal WHERE ts BETWEEN ? AND ?", (d0,d1)),
             "audit":   rows("SELECT * FROM audit_event WHERE ts BETWEEN ? AND ?", (d0,d1)),
             "report":  rows("SELECT * FROM daily_report WHERE day=?", (day,)),
         }

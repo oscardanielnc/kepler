@@ -1,5 +1,5 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche-6, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche-8, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 
 ---
@@ -28,6 +28,20 @@
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-05-31 (noche-8 — reporte diario wired + shadow en export + MONITOREO.md + análisis logs)
+- **Análisis de los logs del 31 (DEMO):** 3 ciclos (=reinicios por deploys; carry-suavizado confirmado
+  en vivo, leverage 1.905→2.006), equity 4939→4942 (+0.06%, sano), **primeros slippage reales (C3):
+  media ~1.3 bps / mediana ~1.5** (< e18 ~4 bps → ejecución barata; peor en thin coins ZEC/XLM),
+  concentración TRX ~18% vía trend, β-hedge funcionando, fix TZ confirmado en vivo, sin errores ni CB.
+- **Reporte diario WIRED:** `orchestrator._save_daily_report` (se llama cada ciclo) → `daily_report`
+  con metrics (retorno/dd, exposición, leverage, **top posición**, **slippage real del día**, **nº
+  ciclos**, CB) + narrativa. Arregla el `report:[]` que veíamos vacío. Probado end-to-end.
+- **`shadow_signal` añadido al export DIARIO** (antes solo en el histórico).
+- **`MONITOREO.md` creado** (bitácora operativa persistente, pedido de Oscar): cómo leer el reporte
+  diario + umbrales de alerta, criterios a vigilar (concentración, slippage, ancla/maxDD e29, reinicios,
+  β), bitácora por día (sembrada con el 31), bugs/TODOs, y qué afinar/eliminar/potenciar. En CLAUDE.md.
+- PENDIENTE DEPLOY (Oscar): estos cambios + sombra + TZ van juntos.
 
 ## CHANGELOG 2026-05-31 (noche-7 — FIX zona horaria: días/horas en Lima, no UTC)
 Bug reportado por Oscar: el dashboard marcaba el **día siguiente** (01-jun) a las ~19:00 Lima y el
