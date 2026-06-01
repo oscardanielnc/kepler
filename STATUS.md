@@ -19,6 +19,11 @@
   VM operando en DEMO, se deja corriendo. **Confirmar al arrancar** (ver "VERIFICAR AL ARRANCAR").
 - 🌓 **Sleeve on-chain TVL en MODO SOMBRA (noche-6, PENDIENTE DEPLOY):** `kepler/onchain.py` registra
   cada ciclo los pesos que tendría (sin operar) → validación forward del +0.6%/mes. No afecta lo que opera.
+- 🌗 **BLEND candidato a sleeve #8 en MODO SOMBRA (2026-06-01, PENDIENTE DEPLOY):** blend cross-family
+  {lotería(max_60d) + tvl_pxdiv + iliquidez(Amihud)} — **el mejor candidato de la sesión**: OOS purgado
+  **+0.34 Sharpe / 6-6 folds**, sobrevive taker (**+1.55%/mes** ADV central), full-history (sin punto ciego
+  2022), cuartiles parejos, LOO robusto. Caveat: lotería-60d es pico (no plateau) + TVL revisable → sombra
+  valida forward. `onchain.run_blend_shadow` loguea `shadow_signal` sleeve=`blend_lottery_tvl_illiq_v1`.
 - 🔬 **B1/B2 (e29): edge ROBUSTO** (Sharpe OOS 2.29 ≈ IS 2.21, 6/6 folds+) pero **el ancla −10% es
   optimista** — en walk-forward el maxDD OOS llega a −13.5%; **el −10% puede excederse en vivo** (riesgo, ROADMAP D).
 
@@ -28,6 +33,26 @@
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-06-01 (tarde — DOCTRINA MEDALLION + BLEND cross-family validado → sombra (mejor candidato))
+Doctrina nueva (Oscar): Medallion gana con **muchas señales pequeñas uncorr combinadas**, no un edge grande.
+Memorias: `kepler-many-small-signals-blend`, `kepler-conditional-signals-open`.
+- **Vías gratis NO agotadas:** familia DefiLlama (sin key) tiene más que TVL. `e36` stablecoin supply
+  (proxy del netflow) → `stbl_pxdiv_14d` ortogonal (0.12), IS/OOS balanceado, +0.22 OOS/3-6. `e37` fees
+  por cadena → muerto. Blend MISMA-familia (TVL+stbl+fees) NO diversifica (correlados entre sí ~0.5).
+- **`e38` blend CROSS-FAMILY** (TVL+order-book+OI+iliquidez, re-evaluando descartados como COMPONENTES):
+  +0.34 Sharpe pero 4/6 + 2023+. Matriz corr: solo order-book uncorr (~0); TVL/OI/illiq cluster ~0.5.
+- **`e39` señal diaria, 1 intento más → GANÓ:** familia DISTRIBUCIÓN/COLA. **`max_60d` (efecto lotería**,
+  short high-MAX) **ORTOGONAL (corr 0.11), Sharpe 1.14, IS 1.40/OOS 1.06, full-history.** El 2º componente
+  uncorr (tras order-book) y SIN punto ciego 2022. ⚠️ es pico a 60d (no plateau) → posible leve overfit.
+- **`e40` BLEND FULL-HISTORY {lotería+tvl+illiq}: +0.34 Sharpe OOS · 6-6 folds · SIN blindspot 2022.**
+  La lotería (uncorr) era el ancla que faltaba. Primer candidato robusto (6/6) de la sesión. La versión
+  2023+ de 5 componentes daba +0.46 pero solo 3/6 → la de 3 full-history es MEJOR.
+- **`e41` VALIDACIÓN:** TAKER +1.55%/mes (ADV central, sobrevive fuerte) · cuartiles parejos (sin hueco) ·
+  LOO robusto (lotería imprescindible para 6/6; illiq el menos crítico). Bandera: lotería-60d window-specific.
+- **`e34/e35` C1 SIZE archivado** (universo comprimido + solapa lowvol; CoinGecko cerró API → CoinPaprika gratis).
+- **→ SOMBRA:** `onchain.run_blend_shadow` (sleeve `blend_lottery_tvl_illiq_v1`) montado + wired al orquestador
+  + `e33` generalizado. **PENDIENTE DEPLOY (Oscar).** Acumular ~60-90d → `e33` → decidir promoción a sleeve #8.
 
 ## CHANGELOG 2026-06-01 (mañana — investigación web GRATIS + iliquidez ARCHIVADA + LABORATORIO DE RÉGIMEN)
 Directiva de Oscar: agotar vías GRATIS (foros/blogs/datasets públicos) antes de pagar; y explorar
@@ -573,8 +598,15 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
    mom/trend/hlpos, overfit). 📚 **Aprendizaje:** los factores de precio/mcap ya están cubiertos; el
    edge nuevo exige FUENTES nuevas (on-chain), no más precio. (Datos: CoinGecko cerró API pública sin
    key; se usó CoinPaprika gratis sin key + aproximación mcap·ratio-de-precio.)
-4. **Dune/Flipside netflow reconstruction** — proxy GRATIS antes de pagar CryptoQuant (proyecto data-eng).
-   ⬅️ **SIGUIENTE** (reforzado por el aprendizaje de C1: el edge nuevo viene de datos nuevos, no de precio).
+2b. **BLEND on-chain+cola+liquidez → MEJOR CANDIDATO, en SOMBRA (2026-06-01).** {lotería+tvl+illiq}:
+   OOS +0.34/6-6, taker +1.55%/mes, full-history, validado (e40/e41). Montado en sombra (`run_blend_shadow`,
+   PENDIENTE DEPLOY). → Acumular ≥60-90d → `python -m research.e33_shadow_tvl_analyze <db> blend_lottery_tvl_illiq_v1`
+   → si el Sharpe forward confirma (y la lotería-60d no fue overfit) → promover a sleeve #8.
+4. **Dune/Flipside netflow reconstruction** — proxy GRATIS (signup key) antes de pagar CryptoQuant. DESPRIORIZADO:
+   el blend on-chain ya captura buena parte del edge on-chain gratis y sin la ingeniería cross-chain.
+5. **Backtester horario (#2 de la ruta de Oscar)** ⬅️ **SIGUIENTE BLOQUE.** El blend mostró que la veta uncorr
+   restante es MICROESTRUCTURA (order-book uncorr ~0, pero intradía/2023+) → el backtester horario es la llave:
+   desbloquea order-book intradía, liquidaciones (Coinalyze), CME gap y el monitor de riesgo (e15). Proyecto.
 
 ### 📌 RECORDATORIO — MENÚ DE CONDICIONES (hacer DESPUÉS de #2 y #4) — vía `regime_lab`, con disciplina
 > Pedido de Oscar (2026-06-01): mantener abierto el rescate por condición específica. Probar cada una
