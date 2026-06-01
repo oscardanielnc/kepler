@@ -62,7 +62,9 @@ Memorias: `kepler-many-small-signals-blend`, `kepler-conditional-signals-open`.
   Validado: mom a 1h → Sh maker 0.59 / taker+ADV **−0.59** (coste destruye holds cortos), recupera al
   alargar (24h +0.52, 168h +0.86). Confirma e19. Motor de Fase 2 listo.
 - **`e43` descarga bookDepth 30s** (imb1/imb2/imb5 nativo 30s por símbolo) → `data/bookdepth_30s/`.
-  **CORRIENDO EN BACKGROUND** (~2h, ~2.3GB; BTC ✓ 3.5M snaps/72MB). Incremental/reanudable. Insumo Fase 2.
+  ✅ **COMPLETA (2026-06-01, 2.16GB, 32/32 símbolos, ~92min).** Integridad verificada: 0% NaN, resamplea a
+  horario limpio, alinea con el panel C (2023-01→2026-05, 29.9k barras 1h). Coins nuevos desde su listing.
+  Incremental/reanudable. **Insumo de Fase 2 LISTO.**
 - **PRÓXIMA SESIÓN = Fase 2:** cuando termine la descarga → imbalance 30s→horario → score=−imb → `eval_intraday`
   a holds {1,2,4,6,12}h con `cost_vector('taker_adv')` → ¿sube el retorno al maxDD −10% con coste real? +
   walk-forward purgado + estrés. Si sí → primer sleeve INTRADÍA. Receta completa en `INTRADAY.md` §5 Fase 2.
