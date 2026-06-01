@@ -566,10 +566,15 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
    research.e33_shadow_tvl_analyze <ruta_db>` → (b) chequear coste taker (e30b-style) → (c) promover a
    sleeve #8 (alphas.py + engine.SLEEVES) SOLO si el Sharpe realizado confirma. Bonus e32: el TVL raw
    sobrevive el walk-forward purgado (+0.30 Sharpe OOS) → más sólido que la iliquidez.
-2. **C1 — factores académicos nuevos** (datos propios/free): **size/market-cap** (⚠️ necesita fetch de
-   market caps, ej. CoinGecko gratis) y **CTREND** (⚠️ chequear solape con mom/trend antes). Evaluar
-   también su versión CONDICIONAL vía el lab (doctrina).
+2. **C1 — factores académicos** → **AGOTADO (2026-06-01).** **SIZE archivado** (e34/e35): universo de
+   perps líquidos comprime la dispersión de tamaño (premium SMB vive en microcaps que no operamos) +
+   solapa con lowvol (corr 0.61) → OOS purgado ΔSharpe −0.50, 1/6 folds; el régimen no lo rescata.
+   **CTREND desaconsejado** (28 indicadores precio/volumen + ML = "más precio", alto solape con
+   mom/trend/hlpos, overfit). 📚 **Aprendizaje:** los factores de precio/mcap ya están cubiertos; el
+   edge nuevo exige FUENTES nuevas (on-chain), no más precio. (Datos: CoinGecko cerró API pública sin
+   key; se usó CoinPaprika gratis sin key + aproximación mcap·ratio-de-precio.)
 4. **Dune/Flipside netflow reconstruction** — proxy GRATIS antes de pagar CryptoQuant (proyecto data-eng).
+   ⬅️ **SIGUIENTE** (reforzado por el aprendizaje de C1: el edge nuevo viene de datos nuevos, no de precio).
 
 ### 📌 RECORDATORIO — MENÚ DE CONDICIONES (hacer DESPUÉS de #2 y #4) — vía `regime_lab`, con disciplina
 > Pedido de Oscar (2026-06-01): mantener abierto el rescate por condición específica. Probar cada una
