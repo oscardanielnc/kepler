@@ -554,6 +554,35 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
   `kepler.db` de la VM si ya pasaron días → correr `python -m research.e21_fill_slippage <ruta_db>`.
 - **0c. Estado esperado:** **32 perps · 7 sleeves · ancla −10% · lev ~2.02x · carry suavizado 7d.**
 
+### 🧭 RUTA ACORDADA (2026-06-01, orden de evaluación) — reemplaza el "menú agotado" de abajo
+> Workstream de régimen CERRADO a fondo (R0+R1 lab + R2 actuales + R3 descartados → el conditional
+> timing DISCRETO no sobrevive OOS honesto aquí; lab `research/regime_lab.py` queda reutilizable).
+> Doctrina permanente (memoria `kepler-conditional-signals-open`): **núcleo fijo + satélites
+> condicionales**; evaluar SIEMPRE la versión condicional de cada candidato nuevo, con disciplina.
+
+1. **TVL → decisión sleeve #8** (lo más maduro). Analizador **LISTO**: `research/e33_shadow_tvl_analyze.py`.
+   Logging de sombra **verificado suficiente** (pesos+hedge BTC+asof; nada que implementar en la VM).
+   → Cuando Oscar traiga la `kepler.db` de la VM con **≥60-90 días** de sombra: `python -m
+   research.e33_shadow_tvl_analyze <ruta_db>` → (b) chequear coste taker (e30b-style) → (c) promover a
+   sleeve #8 (alphas.py + engine.SLEEVES) SOLO si el Sharpe realizado confirma. Bonus e32: el TVL raw
+   sobrevive el walk-forward purgado (+0.30 Sharpe OOS) → más sólido que la iliquidez.
+2. **C1 — factores académicos nuevos** (datos propios/free): **size/market-cap** (⚠️ necesita fetch de
+   market caps, ej. CoinGecko gratis) y **CTREND** (⚠️ chequear solape con mom/trend antes). Evaluar
+   también su versión CONDICIONAL vía el lab (doctrina).
+4. **Dune/Flipside netflow reconstruction** — proxy GRATIS antes de pagar CryptoQuant (proyecto data-eng).
+
+### 📌 RECORDATORIO — MENÚ DE CONDICIONES (hacer DESPUÉS de #2 y #4) — vía `regime_lab`, con disciplina
+> Pedido de Oscar (2026-06-01): mantener abierto el rescate por condición específica. Probar cada una
+> con PRE-REGISTRO + deflación + walk-forward purgado + validación forward (no sweeps masivos).
+- **CME gap** (gap del futuro CME de BTC fin de semana). ⚠️ Es BTC-direccional/intradía → choca con
+  β-neutral (se hedgea BTC) y/o requiere el backtester horario; evaluable como overlay con ese caveat.
+- **Fechas macro** (FOMC/CPI), **funding extremo**, **vencimiento de opciones** (ojo: e28 ya lo halló artefacto).
+- Cualquier "pista" nueva de señal que rinda **solo en condiciones específicas** → directo al lab.
+
+5. **Backtester horario** — AL FINAL, cuando no quede nada en el nivel diario (decisión de Oscar). Llave
+   común de intradía: order-book (e24), liquidaciones (Coinalyze, gated), CME gap, monitor de riesgo (e15).
+
+
 ### 📋 REVISAR INFORMACIÓN PAGADA (lista viva — política Oscar 2026-05-31)
 > Regla (memoria `kepler-free-data-first-policy`): NO descartar una fuente prometedora por ser de pago.
 > Primero agotar lo gratis (sondear varios sitios, registrarse si hace falta); si la única vía es pago,
