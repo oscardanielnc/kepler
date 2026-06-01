@@ -9,7 +9,8 @@ Este script lee shadow_signal + precios de klines (NO revisados) y calcula el re
 → Sharpe / retorno realizado vs el backtest (e26/e27: standalone Sharpe ~0.94, corr 0.11, +0.6%/mes
 taker al ancla). Decisión de promoción a sleeve #8 cuando haya muestra suficiente (≥~60-90 días).
 
-USO:  python -m research.e33_shadow_tvl_analyze [ruta_a_kepler.db]
+USO:  python -m research.e33_shadow_tvl_analyze [ruta_a_kepler.db] [sleeve]
+  sleeve: 'onchain_tvl_pxdiv_14d' (default) o 'blend_lottery_tvl_illiq_v1' (el blend candidato e40/e41).
 (la sombra corre en la VM → traer su kepler.db. Sin argumento usa la DB local, que puede estar vacía.)
 """
 from __future__ import annotations
@@ -28,15 +29,15 @@ MIN_DAYS_TENTATIVE = 60     # lectura tentativa
 MIN_DAYS_DECISION = 120     # decisión de promoción
 
 
-def read_shadow(db_path: str) -> pd.DataFrame:
-    """Lee shadow_signal del sleeve TVL → DataFrame [day, symbol, weight]. day = día del `asof`."""
+def read_shadow(db_path: str, sleeve: str = SLEEVE) -> pd.DataFrame:
+    """Lee shadow_signal de un sleeve → DataFrame [day, symbol, weight]. day = día del `asof`."""
     if not os.path.exists(db_path):
         return pd.DataFrame()
     con = sqlite3.connect(db_path)
     try:
         rows = con.execute(
             "SELECT ts, symbol, weight, score, detail FROM shadow_signal WHERE sleeve=? ORDER BY ts",
-            (SLEEVE,)).fetchall()
+            (sleeve,)).fetchall()
     except Exception:
         return pd.DataFrame()
     finally:
@@ -83,11 +84,12 @@ def main():
     try: sys.stdout.reconfigure(encoding="utf-8")
     except Exception: pass
     db_path = sys.argv[1] if len(sys.argv) > 1 else config.DB_PATH
-    print(f"E33 — Analizador de sombra TVL · DB: {db_path}\n" + "="*64)
+    sleeve = sys.argv[2] if len(sys.argv) > 2 else SLEEVE
+    print(f"E33 — Analizador de sombra · sleeve={sleeve} · DB: {db_path}\n" + "="*64)
 
-    sh = read_shadow(db_path)
+    sh = read_shadow(db_path, sleeve)
     if sh.empty:
-        print("No hay filas de shadow_signal para el sleeve TVL en esta DB.")
+        print(f"No hay filas de shadow_signal para el sleeve '{sleeve}' en esta DB.")
         print("→ La sombra corre en la VM. Traer su kepler.db y pasarla como argumento:")
         print("   python -m research.e33_shadow_tvl_analyze /ruta/a/kepler.db")
         print("\n(El script está LISTO; solo espera datos. Logging verificado suficiente: pesos+hedge+asof.)")

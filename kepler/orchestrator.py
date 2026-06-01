@@ -203,6 +203,9 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
         from kepler import onchain
         sh = onchain.run_shadow(db)
         _log.info(f"[orq] sombra on-chain TVL: {sh.get('logged', 0)} señales registradas")
+        # blend candidato a sleeve #8 (lotería+tvl+illiq, e40/e41): valida forward antes de promover
+        shb = onchain.run_blend_shadow(db)
+        _log.info(f"[orq] sombra BLEND: {shb.get('logged', 0)} señales registradas")
     except Exception as e:
         _log.warning(f"[orq] sombra on-chain omitida: {e}")
     notify.alert_cycle(equity, n_target, float(target.abs().sum()), operate, mode)

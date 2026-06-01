@@ -25,6 +25,12 @@ import config  # noqa: E402
 CACHE = os.path.join(config.DATA_DIR, "defillama"); os.makedirs(CACHE, exist_ok=True)
 LOOKBACK_DAYS = 14
 SLEEVE = "onchain_tvl_pxdiv_14d"
+# Blend cross-family candidato a sleeve #8 (research e38/e40/e41): lotería(max_60d) + tvl_pxdiv +
+# iliquidez(Amihud). Validado: OOS purgado +0.34 Sharpe / 6-6 folds, sobrevive taker (+1.55%/mes
+# ADV central), full-history (sin punto ciego 2022). En SOMBRA por: TVL revisable + lotería 60d pico.
+# Signos FIJOS de la validación (NO re-orientar cada ciclo): lotería −1, tvl −1, illiq +1.
+BLEND_SLEEVE = "blend_lottery_tvl_illiq_v1"
+BLEND_SIGNS = {"lottery": -1.0, "tvl": -1.0, "illiq": 1.0}
 # token del universo → cadena (chain-TVL) o protocolo (protocol-TVL) en DefiLlama
 CHAINS = {"ETHUSDT": "Ethereum", "BNBUSDT": "BSC", "SOLUSDT": "Solana", "AVAXUSDT": "Avalanche",
           "TRXUSDT": "Tron", "NEARUSDT": "Near", "ADAUSDT": "Cardano", "HBARUSDT": "Hedera",
@@ -127,8 +133,68 @@ def run_shadow(db=None) -> dict:
     return {"logged": n, "asof": str(asof)}
 
 
+def _blend_target_weights():
+    """Pesos combinados ACTUALES del blend {lotería + tvl + illiq} (vol-parity de los 3 mini-sleeves
+    β-neutral, signos fijos de la validación). NO opera. Devuelve (pesos_por_símbolo, asof)."""
+    from kepler.engine import load, _beta, xs_sleeve, load_panel
+    from kepler.portfolio import vol_parity_weights
+    C = load(); ret = np.log(C).diff(); beta = _beta(ret); cols = list(C.columns)
+    h = LOOKBACK_DAYS * 24
+    # tvl_pxdiv (acumulación on-chain), signo fijo
+    dl = _daily_logtvl(cols)
+    if dl.empty:
+        return None, C.index[-1]
+    logtvl = _to_hourly(dl, C)
+    tvl_score = (logtvl.diff(h) - ret.reindex(columns=cols).rolling(h).sum()) * BLEND_SIGNS["tvl"]
+    s_tvl, w_tvl = xs_sleeve(C, ret, beta, tvl_score, h)
+    # iliquidez de Amihud, signo fijo (long ilíquido)
+    dvol = load_panel(["quote_volume"], C)["quote_volume"]
+    ilq_score = np.log((ret.abs() / dvol.replace(0, np.nan)).rolling(h).mean().replace(0, np.nan)) * BLEND_SIGNS["illiq"]
+    s_ilq, w_ilq = xs_sleeve(C, ret, beta, ilq_score, h)
+    # lotería (max de retornos diarios 60d → short high-MAX), signo fijo
+    rd = C.resample("1D").last().pct_change(); rd.index = rd.index.normalize()
+    lot_score = _to_hourly(rd.rolling(60).max(), C) * BLEND_SIGNS["lottery"]
+    s_lot, w_lot = xs_sleeve(C, ret, beta, lot_score, 60 * 24)
+    # vol-parity de los 3 → pesos combinados por símbolo (incl. hedge BTC de cada componente)
+    df = pd.concat({"lottery": s_lot, "tvl": s_tvl, "illiq": s_ilq}, axis=1).dropna()
+    if df.empty:
+        return None, C.index[-1]
+    vp = vol_parity_weights(df)
+    combined = pd.Series(0.0, index=cols)
+    for name, w in (("lottery", w_lot), ("tvl", w_tvl), ("illiq", w_ilq)):
+        combined = combined.add(float(vp[name]) * w.reindex(cols).fillna(0), fill_value=0)
+    return combined, C.index[-1]
+
+
+def run_blend_shadow(db=None) -> dict:
+    """Registra (sin operar) los pesos del BLEND candidato a sleeve #8. Idempotente/aislado."""
+    from kepler.db import DB
+    db = db or DB()
+    update_tvl()
+    try:
+        w, asof = _blend_target_weights()
+    except Exception as e:
+        db.audit("WARNING", "shadow_blend", f"Blend omitido: {str(e)[:80]}")
+        return {"logged": 0}
+    if w is None:
+        db.audit("WARNING", "shadow_blend", "Sin datos para el blend — sombra omitida")
+        return {"logged": 0}
+    n = 0
+    for sym, wt in w.items():
+        if abs(float(wt)) <= 1e-6:
+            continue
+        db.log_shadow(sleeve=BLEND_SLEEVE, symbol=sym, weight=round(float(wt), 4),
+                      score=None, detail={"asof": str(asof)})
+        n += 1
+    db.audit("INFO", "shadow_blend", f"Sombra BLEND registrada ({n} posiciones)",
+             detail={"sleeve": BLEND_SLEEVE, "asof": str(asof)})
+    return {"logged": n, "asof": str(asof)}
+
+
 if __name__ == "__main__":
     try: sys.stdout.reconfigure(encoding="utf-8")
     except Exception: pass
     r = run_shadow()
     print(f"Sombra on-chain TVL registrada: {r}")
+    rb = run_blend_shadow()
+    print(f"Sombra BLEND registrada: {rb}")
