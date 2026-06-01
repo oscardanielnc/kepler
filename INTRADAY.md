@@ -83,9 +83,12 @@ microsegundos/market-making. Mantener la misión: bajo maxDD, supervivencia, no 
 ---
 
 ## 5. PLAN POR FASES (cuando se decida atacar intradía)
-1. **Fase 0 — Decisión y alcance.** ¿Vale el mini-proyecto del backtester horario? (impacto: desbloquea
-   3 cosas; coste: semanas). Decisión de Oscar.
-2. **Fase 1 — Backtester horario** con los 5 requisitos de §3. Test de sanidad: reproduce el diario @24h.
+1. **Fase 0 — Decisión y alcance.** ✅ Oscar dio luz verde (2026-06-01); el blend cross-family mostró que
+   la veta uncorr restante es microestructura (intradía) → justifica el backtester.
+2. **Fase 1 — Backtester horario.** ✅ **HECHA (2026-06-01, `research/e42_hourly_backtester.py`).** MTM
+   horario buy-and-hold (deja driftar dentro del bloque = forward del motor) **RECONCILIA con el motor
+   diario: corr de bloque 1.000** en mom/rev/lowvol/hlpos, Sharpe ≈ motor. **Supera el fallo de e15.**
+   (Falta sumar el modelo de ejecución intradía §3.2 — costo de cruzar el spread — antes de Fase 2.)
 3. **Fase 2 — Re-evaluar order-book** a horizontes 1h–12h con costos de spread reales (la data diaria ya
    está; bajar el raw 30s). Si el Sharpe sobrevive al coste intradía → primer sleeve intradía.
 4. **Fase 3 — Liquidaciones:** montar colector WS `@forceOrder` (o evaluar Coinglass) → señal de cascada.
