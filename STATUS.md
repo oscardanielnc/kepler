@@ -54,6 +54,19 @@ Memorias: `kepler-many-small-signals-blend`, `kepler-conditional-signals-open`.
 - **→ SOMBRA:** `onchain.run_blend_shadow` (sleeve `blend_lottery_tvl_illiq_v1`) montado + wired al orquestador
   + `e33` generalizado. **PENDIENTE DEPLOY (Oscar).** Acumular ~60-90d → `e33` → decidir promoción a sleeve #8.
 
+## CHANGELOG 2026-06-01 (tarde-2 — BACKTESTER HORARIO desbloqueado + Fase 2 intradía PREPARADA)
+- **🔓 `e42` Backtester horario Fase 1 — RECONCILIA con el motor (corr de bloque 1.000)** en mom/rev/
+  lowvol/hlpos, Sharpe ≈ motor. MTM buy-and-hold (deja driftar dentro del bloque = forward del motor).
+  **Supera el fallo de e15** (que daba −0.28 vs +1.04). Base intradía LISTA. `INTRADAY.md` §5 Fase 0+1 ✅.
+- **`e44` modelo de coste intradía** (`eval_intraday`): MTM horario + coste por símbolo (taker+slip ADV).
+  Validado: mom a 1h → Sh maker 0.59 / taker+ADV **−0.59** (coste destruye holds cortos), recupera al
+  alargar (24h +0.52, 168h +0.86). Confirma e19. Motor de Fase 2 listo.
+- **`e43` descarga bookDepth 30s** (imb1/imb2/imb5 nativo 30s por símbolo) → `data/bookdepth_30s/`.
+  **CORRIENDO EN BACKGROUND** (~2h, ~2.3GB; BTC ✓ 3.5M snaps/72MB). Incremental/reanudable. Insumo Fase 2.
+- **PRÓXIMA SESIÓN = Fase 2:** cuando termine la descarga → imbalance 30s→horario → score=−imb → `eval_intraday`
+  a holds {1,2,4,6,12}h con `cost_vector('taker_adv')` → ¿sube el retorno al maxDD −10% con coste real? +
+  walk-forward purgado + estrés. Si sí → primer sleeve INTRADÍA. Receta completa en `INTRADAY.md` §5 Fase 2.
+
 ## CHANGELOG 2026-06-01 (mañana — investigación web GRATIS + iliquidez ARCHIVADA + LABORATORIO DE RÉGIMEN)
 Directiva de Oscar: agotar vías GRATIS (foros/blogs/datasets públicos) antes de pagar; y explorar
 **condicionar sleeves por RÉGIMEN** (idea de Oscar, estilo Sentinel) para rescatar descartados / potenciar actuales.

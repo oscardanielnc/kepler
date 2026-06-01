@@ -89,8 +89,15 @@ microsegundos/market-making. Mantener la misión: bajo maxDD, supervivencia, no 
    horario buy-and-hold (deja driftar dentro del bloque = forward del motor) **RECONCILIA con el motor
    diario: corr de bloque 1.000** en mom/rev/lowvol/hlpos, Sharpe ≈ motor. **Supera el fallo de e15.**
    (Falta sumar el modelo de ejecución intradía §3.2 — costo de cruzar el spread — antes de Fase 2.)
-3. **Fase 2 — Re-evaluar order-book** a horizontes 1h–12h con costos de spread reales (la data diaria ya
-   está; bajar el raw 30s). Si el Sharpe sobrevive al coste intradía → primer sleeve intradía.
+3. **Fase 2 — Re-evaluar order-book** a horizontes 1h–12h con costos reales. **PREPARADA (2026-06-01):**
+   - **Datos:** `research/e43_download_bookdepth_raw.py` baja el bookDepth a resolución 30s (imb1/imb2/imb5)
+     → `data/bookdepth_30s/{SYM}.parquet`. Corriendo en background (~2h, ~2.3GB). Incremental/reanudable.
+   - **Motor de coste:** `research/e44_intraday_cost.py::eval_intraday(C,beta,score,hold,cost_vec)` = MTM
+     horario reconciliado (e42) + coste por símbolo (taker + slippage ADV). Validado: el coste hunde los
+     holds cortos (mom 1h: Sh maker 0.59 → taker+ADV −0.59), recupera al alargar. `cost_vector('taker_adv')`.
+   - **RECETA próxima sesión:** cargar `bookdepth_30s` → resamplear imbalance a horario (media) → score =
+     −imb (contrarian, e23/e24) → `eval_intraday` a holds {1,2,4,6,12}h con `taker_adv` → ¿sube el retorno
+     al maxDD −10% con coste real? + walk-forward purgado (regime_lab) + estrés. Si sí → primer sleeve intradía.
 4. **Fase 3 — Liquidaciones:** montar colector WS `@forceOrder` (o evaluar Coinglass) → señal de cascada.
 5. **Fase 4 — Monitor de riesgo intradía (e15)** sobre el mismo backtester.
 
