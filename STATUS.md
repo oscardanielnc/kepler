@@ -1,10 +1,24 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-01** (mañana, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-01** (tarde-3, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
+>
+> **⏭️ PRÓXIMA EJECUCIÓN (indicación de Oscar 2026-06-01):** agotar **B) INTRADÍA** — el backtester
+> horario (e42/e44) ya está montado; cerramos hoy la rama order-book (DESCARTADO, e45) y quedan
+> **liquidaciones** (Coinalyze, chequeo barato del histórico gratis estilo e23), **CME gap** (vía
+> regime_lab, con caveat β-neutral) y el **monitor de riesgo e15**. Empezar SOLO cuando Oscar lo indique.
+> **⏰ RECORDATORIO PROGRAMADO ~2026-07-31 (60d):** cerrar el ciclo de las sombras (≥60-90d acumulados →
+> `e33_shadow_tvl_analyze` → ¿promover blend a sleeve #8?). Requiere que Oscar DESPLIEGUE primero las sombras.
 
 ---
 
-## ESTADO ACTUAL (2026-05-31)
+## ESTADO ACTUAL (2026-06-01)
+- 🟢 **DEPLOY-READY VERIFICADO (2026-06-01 tarde-3):** smoke-test del camino de producción sin bugs →
+  imports OK · motor ESTABLE **Sharpe 2.07 / lev 2.02x / maxDD −10.0% / 4.11%/mes** · ambas sombras
+  end-to-end (TVL 13 señales, BLEND 23) · **ciclo orquestador DRY_RUN completo** (datos→target 19 pos→
+  exec dry→reporte diario→sombras logueadas dentro del ciclo). El bundle pendiente de deploy está limpio.
+- ❌ **FASE 2 INTRADÍA order-book → DESCARTADO (e45):** a coste real (taker+ADV 8.6bps) TODAS las celdas
+  negativas; el muro es coste×turnover (1h→4313x), no la señal. Rama order-book intradía CERRADA. Detalle
+  en changelog tarde-3 e `INTRADAY.md §5`. Backtester horario queda montado/reusable para las otras ramas.
 - ✅ Sistema **desplegado y operando en DEMO** en la VM (Oracle, `opc@oscar-cripto-sentinel-b26`).
   Dashboard http://213.35.121.9:8080. Circuit breaker −20% activo. Alertas ntfy OK.
 - ✅ **7 sleeves + ancla maxDD −10%.** Tras mejoras de hoy (carry suavizado 7d):
@@ -26,6 +40,16 @@
   valida forward. `onchain.run_blend_shadow` loguea `shadow_signal` sleeve=`blend_lottery_tvl_illiq_v1`.
 - 🔬 **B1/B2 (e29): edge ROBUSTO** (Sharpe OOS 2.29 ≈ IS 2.21, 6/6 folds+) pero **el ancla −10% es
   optimista** — en walk-forward el maxDD OOS llega a −13.5%; **el −10% puede excederse en vivo** (riesgo, ROADMAP D).
+
+### 🗂️ INVENTARIO DE SLEEVES (referencia rápida)
+**OFICIALES (7, todos DIARIOS · rebal 24h · `engine.SLEEVES`):** 1.`mom_30d` (720h) · 2.`rev_60d` (1440h) ·
+3.`lowvol_14d` (336h) · 4.`carry` (funding suav.7d, hold 48h) · 5.`trend` (EMA20/100 long-only) ·
+6.`takerflow_5d` (120h) · 7.`hlpos_14d` (336h). Combinado: Sharpe 2.07 · maxDD −10% · 4.1%/mes · β +0.05.
+**EN SOMBRA (candidatos #8, DIARIOS, PENDIENTE DEPLOY → 0 logs aún):** `blend_lottery_tvl_illiq_v1` (el
+mejor: lotería max_60d + TVL + iliquidez Amihud) y `tvl_pxdiv_14d` (control; el blend ya lo absorbe).
+**INTRADÍA:** ninguno operable. Order-book DESCARTADO (e45). Backtester horario (e42/e44) montado.
+**Frecuencia del sistema HOY = 100% diaria.** No hay sleeve intradía en producción ni en sombra
+(la sombra solo registra señales diarias cada ciclo; lo intradía no es sombreable en el sistema diario).
 
 ### Estado del código vs producción
 - Commits de hoy (carry 2.07, costo trend, B3, C3, A4, dashboard explicativo) desplegados por Oscar.
