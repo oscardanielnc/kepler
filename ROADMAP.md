@@ -53,10 +53,13 @@ Fuentes por explorar (en orden de promesa, la OHLCV y positioning ya están agot
       → no cross-seccional (muro del basis); como overlay de timing es inestable (IS −1.15 / OOS +0.43%/mes)
       = gate de régimen ya descartado; DVOL 0.74 redundante con vol realizada (lowvol). VRP/short-vol sería
       otra estrategia (pila de opciones), no este sistema de perps. Ver STATUS noche-2.
-- [ ] **A3. On-chain** (flujos de exchange POR ACTIVO, stablecoin supply, activos en wallets). Fuente nueva.
-      **La única viva con potencial CROSS-SECCIONAL** (per-símbolo). Lección e25: fuentes BTC/ETH-only
-      (basis, opciones) NO valen; lo viable debe ser per-símbolo del universo + ortogonal. ⚠️ histórico
-      gratis es dudoso (Glassnode/CryptoQuant suelen ser de pago) — el chequeo barato debe empezar por ahí.
+- [~] **A3. On-chain** → **EN CURSO, PROMETEDOR (e26, 2026-05-31).** Netflows per-token = de pago →
+      "revisar información pagada". Lo GRATIS: **TVL por cadena (DefiLlama)**. `tvl_pxdiv_14d` (acumulación
+      = TVL sube más que precio) pasa chequeo+estrés: corr 0.10, OOS 1.27, **Δ+1.03%/mes**, leave-one-out
+      robusto (+0.78..+1.24), 3/4 cuartiles fuertes. ⚠️ caveats: cross-section delgado (10 nombres), coste
+      sin modelar, y RIESGO point-in-time (TVL histórico de DefiLlama es reconstruido → revisión al alza).
+      **Próximo:** build serio (ampliar cobertura protocol-TVL AAVE/UNI/ONDO/ENA + walk-forward+purga +
+      coste taker + point-in-time). Es el primer candidato que sobrevive el estrés esta tanda.
 - [x] ~~**A4. Cross-exchange basis** (perp vs spot)~~ → PARADO 2026-05-31 (e22): basis ≈ funding/carry
       (corr 0.74 nivel · 0.53 cross-seccional · 0.70 predice funding) → duplicaría el sleeve #4, no
       diversifica. NO bajar spot del universo. Único ángulo vivo: el RESIDUAL (dislocaciones que el

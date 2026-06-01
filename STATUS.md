@@ -1,5 +1,5 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche-2, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche-3, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 
 ---
@@ -24,6 +24,33 @@
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-05-31 (noche-3 — A3 ON-CHAIN TVL (DefiLlama, GRATIS): PROMETEDOR, pasa estrés)
+`research/e26_onchain_tvl_check.py`. Política gratis-primero (instrucción de Oscar): sondeé varias
+fuentes; netflows de exchange POR TOKEN son de pago (Glassnode/CryptoQuant/Santiment) → a "revisar
+información pagada". Lo GRATIS y per-símbolo que sí existe: **TVL por cadena** (DefiLlama API pública).
+- Cobertura: 10 tokens del universo que son cadenas con TVL largo (ETH/BNB/SOL/AVAX/TRX/NEAR/ADA/HBAR/
+  FIL/XLM). Cross-section DELGADO. Señal: Δlog(TVL) y Δlog(TVL)−retorno (acumulación, neto de precio).
+- **GANADOR: `tvl_pxdiv_14d`** (TVL sube más que el precio = acumulación, contrarian/fundamental):
+  Sharpe 0.94 (**IS 0.63 / OOS 1.27** → aguanta OOS), corr **0.10** (máx, con hlpos), **Δ+1.03%/mes** al ancla.
+  - **Estrés PASA (≠ e17):** leave-one-out robusto (quitar cualquier token deja Δ **+0.78..+1.24%/mes**,
+    NO concentrado en 1 nombre); cuartiles Q1 −0.34 / Q2 +1.32 / Q3 +1.42 / Q4 +1.41 (3/4 fuertes; débil
+    solo el arranque 2022). `tvl_mom_7d` marginal (+0.10); el resto no pasa.
+- **PRIMER candidato de la sesión que pasa chequeo barato + estrés.** Y con dato GRATIS. PERO caveats
+  antes de creerlo producción: (1) cross-section delgado (10 nombres); (2) coste taker no modelado (hold
+  14d = turnover bajo, impacto pequeño esperado, confirmar como e24); (3) **RIESGO CLAVE: el TVL histórico
+  de DefiLlama es RECONSTRUIDO** — al añadir protocolos con el tiempo, el TVL pasado se revisa al alza →
+  posible look-ahead por revisión de datos. Hay que validar point-in-time (o acotar a cobertura estable).
+- **PRÓXIMO si se sigue:** build serio — ampliar cobertura (protocol-TVL de AAVE/UNI/ONDO/ENA → más
+  nombres) + walk-forward con purga (B1) + coste taker + atacar el point-in-time. No se toca prod aún.
+
+### 📋 REVISAR INFORMACIÓN PAGADA (política Oscar 2026-05-31: fuente prometedora de pago NO se descarta)
+Fuentes prometedoras cuya ÚNICA vía (tras agotar lo gratis) es pago. Priorizar por aporte vs costo:
+- **Liquidaciones** (Coinglass / Coinalyze): cascadas → señal contrarian. Binance retiró el feed gratis.
+  Su edge además es intradía → ver `INTRADAY.md`. Doble bloqueo (pago + intradía).
+- **Netflows de exchange POR TOKEN** (Glassnode / CryptoQuant / Santiment): el on-chain cross-seccional
+  ideal (cuánto de cada alt entra/sale de exchanges). El TVL gratis (e26) es un proxy parcial; el netflow
+  directo es mejor pero de pago. ← la más prometedora de pago si el on-chain (e26) confirma edge.
 
 ## CHANGELOG 2026-05-31 (noche-2 — A6 OPCIONES Deribit/DVOL: DESCARTADO, BTC/ETH-only + gate régimen)
 `research/e25_deribit_check.py`. Chequeo barato de la siguiente fuente del menú diario (opciones).
@@ -414,8 +441,10 @@ intradía), vs **(B)** seguir el menú de fuentes que aún podrían dar señal D
    Data bajada en `data/bookdepth_daily/` (reutilizable si se ataca el intradía). Edge = intradía → (A).
 3. ~~**Opciones (Deribit)**~~ — **DESCARTADO (e25):** BTC/ETH-only (no cross-seccional) + overlay de
    timing inestable (IS −1.15 / OOS +0.43%/mes) = gate de régimen ya descartado. DVOL 0.74 redundante con lowvol.
-4. **A3 — On-chain** (flujos exchange POR ACTIVO, stablecoin supply): la **única viva con potencial
-   CROSS-SECCIONAL** (per-símbolo del universo). Más lift de datos / probablemente de pago para histórico. ← siguiente.
+4. **A3 — On-chain** → **EN CURSO, PROMETEDOR (e26):** TVL por cadena (DefiLlama GRATIS) → `tvl_pxdiv_14d`
+   pasa chequeo+estrés (corr 0.10, OOS 1.27, Δ+1.03%/mes, LOO robusto). Falta: build serio (ampliar
+   cobertura protocol-TVL + walk-forward + coste + point-in-time de revisión DefiLlama). Netflow per-token
+   = de pago (en "revisar información pagada"). ← **el hilo vivo más prometedor.**
 5. **A5 — Estacionalidad / calendario**: no necesita datos nuevos, barato; incierto.
    *LECCIÓN e25: fuentes BTC/ETH-only (basis, opciones) NO sirven (no cross-seccional); señales
    market-wide caen en el gate-de-régimen descartado. Lo viable debe ser per-símbolo + ortogonal.
