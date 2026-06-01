@@ -65,7 +65,10 @@ Fuentes por explorar (en orden de promesa, la OHLCV y positioning ya están agot
       (corr 0.74 nivel · 0.53 cross-seccional · 0.70 predice funding) → duplicaría el sleeve #4, no
       diversifica. NO bajar spot del universo. Único ángulo vivo: el RESIDUAL (dislocaciones que el
       funding no ve), especulativo + necesita spot del universo. Ver STATUS tarde-2.
-- [ ] **A5. Estacionalidad / efectos calendario** (hora del día, día de semana, vencimientos).
+- [x] ~~**A5. Estacionalidad / efectos calendario**~~ → DESCARTADO 2026-05-31 (e28): día-de-semana falla
+      OOS (overfit); turn-of-month/vencimiento PARECÍAN pasar OOS pero es ARTEFACTO del ancla (de-risk →
+      clip drawdown → más leverage), no estacionalidad — smoking gun: vencimiento ±0d = +0.04 (nada), solo
+      crece al ensanchar la ventana. = gate de régimen ya descartado. **Con esto el menú diario gratis queda AGOTADO.**
 - [x] ~~OHLCV derivados~~ agotado (e16: precio→correlado). ~~Open Interest / long-short~~ no aporta (e16f).
 
 ### B. ROBUSTEZ DE VALIDACIÓN  ← para que el backtest mienta MENOS

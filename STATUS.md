@@ -1,5 +1,5 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche-4, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche-5, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 
 ---
@@ -24,6 +24,26 @@
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-05-31 (noche-5 — A5 ESTACIONALIDAD: DESCARTADO (artefacto del ancla) + menú diario AGOTADO)
+`research/e28_seasonality_check.py`. Último ítem barato del menú (gratis, del panel). Día-de-semana,
+turn-of-month, vencimiento (último viernes), + overlays al ancla.
+- **Día de semana:** el combinado gana más Jue/Lun/Mié, pero el overlay "skip peor día" FALLA OOS
+  (skip Mar: full +0.30 / **OOS −0.21**) → overfit. ✗
+- **Turn-of-month / vencimiento:** el de-risk PARECÍA pasar OOS (Δfull +0.57/+1.41, OOS +1.06/+2.96)
+  → escrutado con T5 (sensibilidad + cuartiles): **es ARTEFACTO del ancla, no estacionalidad.**
+  - **Smoking gun:** vencimiento **±0d (el viernes) = Δ+0.04 (nada)**; solo crece al ensanchar la ventana
+    (±1d +1.41, ±2d +2.08 sobre 17% de la muestra). El "edge" escala con CUÁNTO de-riskeas, no con la
+    cercanía al vencimiento → es recortar drawdown para que el ancla suba el leverage (= gate de régimen).
+  - Cuartiles del de-risk: +0.04 / −0.18 / +0.02 / +0.03 → no repartido, clip de 1-2 eventos.
+  - Coste de turnover del de-risk (~12x/año × gross × fee) ni siquiera modelado → recortaría más.
+- **VEREDICTO: A5 DESCARTADO.** Calendario = market-wide → gate de régimen ya descartado; lo que parecía
+  edge era el mecanismo leverage-al-ancla clipeando drawdowns. No se toca prod.
+- **🏁 MENÚ DIARIO BARATO AGOTADO.** Recorrido completo (todas las vetas gratis de señal diaria):
+  precio/OHLCV ✗, positioning ✗, basis ✗, universo ✗, order-book diario ✗ (edge intradía), opciones ✗
+  (BTC/ETH-only), on-chain TVL ~ (real pero modesto +0.6%/mes), estacionalidad ✗. **Lo que queda NO es
+  gratis-diario:** (1) netflow on-chain de PAGO (justificado), (2) backtester horario (intradía), (3)
+  endurecer validación B1/B2, (4) **dejar correr la DEMO = el foso real (E1).** Ver FOCO actualizado.
 
 ## CHANGELOG 2026-05-31 (noche-3 — A3 ON-CHAIN TVL (DefiLlama, GRATIS): PROMETEDOR, pasa estrés)
 `research/e26_onchain_tvl_check.py`. Política gratis-primero (instrucción de Oscar): sondeé varias
@@ -55,15 +75,8 @@ Cobertura ampliada a **12 tokens** (10 chain-TVL + protocol-TVL AAVE/UNI). Rango
   (más limpio, point-in-time honesto, cubre los 32). Dos caminos (decisión de Oscar): (A) validar el
   free-TVL 14d con walk-forward+purga (B1) + demo antes de prod; (B) saltar al netflow pagado (ahora justificado).
 
-### 📋 REVISAR INFORMACIÓN PAGADA (política Oscar 2026-05-31: fuente prometedora de pago NO se descarta)
-Fuentes prometedoras cuya ÚNICA vía (tras agotar lo gratis) es pago. Priorizar por aporte vs costo:
-- **Liquidaciones** (Coinglass / Coinalyze): cascadas → señal contrarian. Binance retiró el feed gratis.
-  Su edge además es intradía → ver `INTRADAY.md`. Doble bloqueo (pago + intradía).
-- **Netflows de exchange POR TOKEN** (Glassnode / CryptoQuant / Santiment): el on-chain cross-seccional
-  ideal (cuánto de cada alt entra/sale de exchanges). **JUSTIFICADO: e26/e27 confirmaron que el on-chain
-  TIENE edge** (TVL proxy gratis: +0.6%/mes taker, ortogonal, sólido en 2023+). El netflow directo sería
-  más limpio (point-in-time honesto, sin backfill) y cubriría los **32** nombres (no 12). ← la candidata
-  de PAGO más prometedora. Evaluar costo de Glassnode/CryptoQuant vs el +0.6%/mes (o más) que podría dar.
+> 📋 Las fuentes de PAGO descubiertas hoy (netflows per-token, liquidaciones) están en la lista viva
+> **"REVISAR INFORMACIÓN PAGADA"** de la sección PENDIENTES (con costo, prioridad y dónde retomar).
 
 ## CHANGELOG 2026-05-31 (noche-2 — A6 OPCIONES Deribit/DVOL: DESCARTADO, BTC/ETH-only + gate régimen)
 `research/e25_deribit_check.py`. Chequeo barato de la siguiente fuente del menú diario (opciones).
@@ -439,30 +452,38 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
   `kepler.db` de la VM si ya pasaron días → correr `python -m research.e21_fill_slippage <ruta_db>`.
 - **0c. Estado esperado:** **32 perps · 7 sleeves · ancla −10% · lev ~2.02x · carry suavizado 7d.**
 
-### 🎯 FOCO PRÓXIMA SESIÓN: ¿BACKTESTER HORARIO o seguir el menú de fuentes?
-Directiva de Oscar (2026-05-31): "más fuentes de información para mejorar rentabilidad." Estado tras
-esta sesión: las vetas baratas DIARIAS están agotadas (precio/OHLCV ✗, positioning ✗, basis ✗,
-universo ✗, **order-book diario ✗ e24**). **HALLAZGO QUE REORDENA EL PLAN:** el order-book imbalance
-tiene edge fuerte INTRADÍA (Sharpe 7–9 a 24h sin-lag) pero ~0 a resolución diaria; lo mismo valdría
-para liquidaciones. **El siguiente salto real exige operar INTRADÍA → construir el BACKTESTER HORARIO**
-(el prerequisito que también desbloquea el monitor de riesgo e15). Es un mini-proyecto, no un sleeve.
-Decisión de Oscar para la próxima: **(A)** atacar el backtester horario (abre order-book/liquidaciones
-intradía), vs **(B)** seguir el menú de fuentes que aún podrían dar señal DIARIA:
-1. ~~Liquidaciones~~ — **SIN histórico gratis** (Binance retiró allForceOrders + liquidationSnapshot).
-   Solo de pago (Coinglass) o capturando WS hacia adelante. Su edge además es intradía → ver (A).
-2. ~~A2 Order-book diario~~ — **DESCARTADO (e24):** real+ortogonal pero Δ+0.00%/mes al ancla (taker).
-   Data bajada en `data/bookdepth_daily/` (reutilizable si se ataca el intradía). Edge = intradía → (A).
-3. ~~**Opciones (Deribit)**~~ — **DESCARTADO (e25):** BTC/ETH-only (no cross-seccional) + overlay de
-   timing inestable (IS −1.15 / OOS +0.43%/mes) = gate de régimen ya descartado. DVOL 0.74 redundante con lowvol.
-4. **A3 — On-chain** → **CERRADO (e26+e27): edge REAL pero MODESTO.** TVL gratis (DefiLlama): `tvl_pxdiv_14d`
-   da +0.6%/mes taker, ortogonal (corr 0.11), sólido en 2023+ (point-in-time PASA), pero con banderas
-   (horizonte estrecho, cross-section 12, neg en 2022) → NO precipitar a prod. Decisión de Oscar: (A) validar
-   con walk-forward+purga+demo, o (B) saltar al netflow per-token de PAGO (justificado, en lista pagada).
-5. **A5 — Estacionalidad / calendario**: no necesita datos nuevos, barato; incierto. ← **SIGUIENTE chequeo barato (recordatorio de Oscar).**
-   *LECCIÓN e25: fuentes BTC/ETH-only (basis, opciones) NO sirven (no cross-seccional); señales
-   market-wide caen en el gate-de-régimen descartado. Lo viable debe ser per-símbolo + ortogonal.
-   Método: chequeo barato de ortogonalidad (e22/e23/e25) ANTES de bajar histórico. Y e16d/e24: con el
-   ancla, corr~0 + IS/OOS NO basta — debe subir el retorno a maxDD fijo, costos taker incluidos.*
+### 📋 REVISAR INFORMACIÓN PAGADA (lista viva — política Oscar 2026-05-31)
+> Regla (memoria `kepler-free-data-first-policy`): NO descartar una fuente prometedora por ser de pago.
+> Primero agotar lo gratis (sondear varios sitios, registrarse si hace falta); si la única vía es pago,
+> registrar aquí CON dónde nos quedamos y qué falta, para retomar sin re-investigar. Priorizar por aporte/costo.
+
+| Fuente | Qué da (edge) | Vía gratis (agotada) | Proveedor pago | Costo aprox | Dónde retomar / qué falta | Prioridad |
+|---|---|---|---|---|---|---|
+| **Netflows exchange por token** | on-chain cross-seccional ideal: cuánto de cada alt entra/sale de exchanges. **Edge on-chain CONFIRMADO** por el proxy TVL gratis (e26/e27: +0.6%/mes taker, ortogonal, sólido 2023+) | DefiLlama TVL = proxy parcial (solo 12 cadenas/protocolos, point-in-time imperfecto). Netflow directo NO hay gratis | Glassnode, CryptoQuant, Santiment (SanAPI) | ~$30–800/mes según plan/tier | Conseguir netflow per-token (32 nombres) → construir sleeve cross-seccional como e26/e27 pero con dato limpio (point-in-time honesto). Comparar Δ@−10% vs el +0.6% del proxy | **ALTA** (la veta diaria viva más prometedora) |
+| **Liquidaciones** | cascadas de liquidación → señal contrarian/mean-reversion | Binance retiró `allForceOrders`+`liquidationSnapshot` (no hay histórico gratis). WS `@forceOrder` solo hacia adelante | Coinglass, Coinalyze | free-tier limitado / API de pago | DOBLE bloqueo: además su edge es **intradía** → requiere el backtester horario (`INTRADAY.md`). Retomar solo si se ataca intradía | MEDIA (gated por intradía) |
+
+### 🎯 FOCO PRÓXIMA SESIÓN: el MENÚ DIARIO BARATO está AGOTADO → 4 caminos (decisión de Oscar)
+Directiva de Oscar (2026-05-31): "más fuentes para mejorar rentabilidad." **Recorrido COMPLETO esta
+sesión** — todas las vetas de señal DIARIA gratis evaluadas: precio/OHLCV ✗, positioning ✗, basis ✗
+(e22), universo ✗ (e17), **order-book diario ✗ (e24, edge intradía)**, **opciones Deribit ✗ (e25,
+BTC/ETH-only)**, **on-chain TVL ~ (e26/e27: real pero modesto +0.6%/mes)**, **estacionalidad ✗ (e28)**.
+No queda fruta diaria barata. Los 4 caminos REALES que quedan:
+
+1. **Netflow on-chain de PAGO** (Glassnode/CryptoQuant) — JUSTIFICADO: el TVL gratis probó que el on-chain
+   tiene edge (+0.6%/mes ortogonal); el netflow sería más limpio (point-in-time honesto) y para los 32
+   nombres. Requiere suscripción de Oscar. Ver lista "REVISAR INFORMACIÓN PAGADA" arriba. ← mayor upside diario.
+2. **Backtester horario (intradía)** — mini-proyecto que desbloquea order-book intradía (Sharpe 7-9 sin-lag),
+   liquidaciones intradía y el monitor de riesgo (e15). Llave común. Ver `INTRADAY.md`. ← mayor upside total.
+3. **A3 free-TVL a producción** — validar `tvl_pxdiv_14d` con walk-forward+purga (B1) + demo y, si aguanta,
+   meterlo como sleeve #8 (+0.6%/mes). Es modesto pero real y GRATIS. ← el upside seguro/barato.
+4. **B1/B2 endurecer validación + dejar correr la DEMO (E1)** — no suben el número pero lo hacen creíble;
+   la demo es el foso real (tiempo). ← lo que más valor de producto da aunque no sea "nuevo edge".
+
+*LECCIONES de la tanda (criba para futuras fuentes): fuentes BTC/ETH-only (basis, opciones) NO sirven
+(no cross-seccional); señales market-wide caen en el gate-de-régimen descartado (DVOL, estacionalidad);
+sleeves orto pero débiles (order-book Sharpe 1.3) DILUYEN al ancla. Lo viable = per-símbolo del universo
++ ortogonal + fuerte para subir el retorno a maxDD fijo con costos taker. Chequeo barato de ortogonalidad
+(e22/e23/e25/e26/e28) ANTES de bajar histórico. Y siempre: gratis primero, pago a la lista (no descartar).*
 
 ### EN PARALELO — DEJAR CORRER LA DEMO (el foso real = tiempo, E1)
 - Validar en vivo que el carry suavizado baja el turnover; medir Sharpe REAL vs 2.07; alimentar C3.
@@ -472,7 +493,8 @@ intradía), vs **(B)** seguir el menú de fuentes que aún podrían dar señal D
 - Monitor riesgo intradía → BLOQUEADO (e15: falta backtester horario). **Mismo prerequisito que
   desbloquearía el order-book/liquidaciones intradía** → el backtester horario es la llave común.
 - Ampliar universo (e17/e17b), OHLCV derivados (e16), OI/long-short (e16f), **basis≈carry (e22)**,
-  **order-book diario (e23/e24)** → no aportan al ancla. Liquidaciones → sin histórico gratis.
+  **order-book diario (e23/e24)**, **opciones Deribit (e25)**, **estacionalidad (e28)** → no aportan al
+  ancla. Liquidaciones → sin histórico gratis. On-chain TVL (e26/e27) → real pero modesto (+0.6%/mes).
 
 ### MENOR
 - heartbeat a 5min si se quiere curva más fina (ahora 15min).
