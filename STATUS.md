@@ -1,5 +1,5 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-05-31** (noche-8, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-01** (mañana, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 
 ---
@@ -29,7 +29,43 @@
 
 ---
 
-## CHANGELOG 2026-05-31 (noche-8 — reporte diario wired + shadow en export + MONITOREO.md + análisis logs)
+## CHANGELOG 2026-06-01 (mañana — investigación web GRATIS + iliquidez ARCHIVADA + LABORATORIO DE RÉGIMEN)
+Directiva de Oscar: agotar vías GRATIS (foros/blogs/datasets públicos) antes de pagar; y explorar
+**condicionar sleeves por RÉGIMEN** (idea de Oscar, estilo Sentinel) para rescatar descartados / potenciar actuales.
+
+### 1) Investigación web "gratis primero" — el netflow de PAGO quedó MENOS justificado
+- **Hallazgo que cambia prioridad:** paper arXiv 2411.06327 → el poder predictivo del **netflow on-chain es
+  intradía/débil en majors** (BTC no; ETH mixto; la señal fuerte USDT→mercado es market-wide = gate de régimen
+  descartado). ⇒ CryptoQuant (~$99/mo) **baja de prioridad**; antes hay que validar el proxy GRATIS.
+- **Rutas GRATIS identificadas** (no agotadas): **Dune Analytics** (SQL público forkeable de CEX inflow/outflow;
+  metodología de CryptoQuant es pública, el "secreto" es el etiquetado de wallets, cada vez más abierto) y
+  **Flipside** (SQL/API gratis). Reconstruir netflow per-token nosotros = point-in-time honesto (como TVL).
+  ⚠️ Ingeniería pesada (universo cross-chain). **Coinalyze** liquidaciones: gratis, diario retenido, pero edge intradía.
+- **Candidato académico GRATIS destapado:** factor de **iliquidez de Amihud** (datos propios) → se evaluó (abajo).
+
+### 2) Factor de iliquidez (Amihud) — REAL pero MARGINAL → **ARCHIVADO** (e30/e30b/e30c/e30d)
+- e30 (chequeo): `illiq_mean_14d` Sharpe 0.50, corr 0.25 (lowvol), **+0.98%/mes @−10% MAKER**, signo + (premium académico).
+- e30b (estrés/coste): turnover 6x (baratísimo, slip más bajo del sistema) PERO con **coste realista ADV el aporte
+  cae a +0.18%/mes** (positivo, no muere; el +0.98 era ilusión de maker). Q2 negativo. Plateau 14–45d, acantilado <14d.
+- e30c (B1 walk-forward purgado): Sharpe OOS +0.14 (= IS) pero **CPCV solo 3/6 folds**, un fold −0.43 = dependiente de régimen.
+- e30d (régimen pre-registrado): hipótesis (premium en calma) **REFUTADA** — illiq gana en ALTA vol; el gate ON/OFF
+  **empeora** OOS. No se invierte el signo sobre la misma muestra (= trampa e25). **VEREDICTO: archivado** (más débil
+  que el TVL, que sigue en sombra). Sistema **sigue 7 sleeves** (no toca prod).
+
+### 3) 🌀 LABORATORIO DE RÉGIMEN (R0+R1) — montado, validado, reutilizable (`research/regime_lab.py`)
+- **R0 protocolo anti-overfit:** menú FIJO de 5 régimenes ex-ante (vol mercado, tendencia BTC, dispersión XS, funding,
+  breadth); umbral mediana-expanding solo-pasado SIN tunear; **solo Sharpe en walk-forward purgado + CPCV** (esquiva
+  trampa del ancla e28); **deflación por multiple-testing**; lo espiado se valida forward, no aquí.
+- **R1 evaluador** reutilizable + cache. **VALIDADO:** reproduce baseline OOS 2.27/6-folds y raw-illiq +0.14/3-folds; y
+  **RECHAZA en OOS la señal alta-vol que e30d insinuó in-sample** (−0.09) → el harness tiene integridad.
+- **R2 (e31): ¿potenciar los 7 actuales con régimen? → NINGÚN superviviente.** 70 combos, barra deflactada +0.67;
+  mejor `trend×breadth` +0.42 (match teoría) pero no supera barra ni folds. Los 7 ya son robustos (6/6).
+- **📚 APRENDIZAJE:** barrer 70 combos sube la barra deflactada → destruye la detección de edges modestos. La vía
+  correcta = **POCAS hipótesis pre-registradas** (N chico). Se aplica en R3.
+- **PENDIENTE (ruta de hoy):** **R3** = rescatar DESCARTADOS con régimen (order-book e24, OI/ls e16f, TVL) usando
+  hipótesis pre-registradas (N chico, ojo overlap 2023+); **C1** = factores académicos nuevos (size/CTREND) sobre datos propios.
+
+
 - **Análisis de los logs del 31 (DEMO):** 3 ciclos (=reinicios por deploys; carry-suavizado confirmado
   en vivo, leverage 1.905→2.006), equity 4939→4942 (+0.06%, sano), **primeros slippage reales (C3):
   media ~1.3 bps / mediana ~1.5** (< e18 ~4 bps → ejecución barata; peor en thin coins ZEC/XLM),
