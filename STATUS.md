@@ -34,6 +34,31 @@
 
 ---
 
+## CHANGELOG 2026-06-01 (tarde-3 — FASE 2 INTRADÍA order-book: edge REAL pero COSTE manda → DESCARTADO)
+`research/e45_intraday_orderbook.py`. Primera aplicación real del backtester horario (e42) + motor de
+coste (e44): imbalance NATIVO 30s (e43) → horario → score=±imb → `eval_intraday` a holds {1,2,4,6,12,24}h
+con `cost_vector('taker_adv')`. Ventana overlap 2023+ (bookDepth no existe antes; cobertura 96-100%/año,
+23 símbolos de historia larga). Probé **ambos signos** (contrarian −imb y momentum +imb) y 3 bandas
+(imb1/imb2/imb5). Caché del panel horario en `data/bookdepth_30s/_hourly_{band}.parquet` (reusable).
+- **VEREDICTO: NO hay sleeve intradía de order-book operable. DESCARTADO.** A coste real (taker+ADV,
+  mediana **8.6 bps**) **TODAS** las celdas (banda × signo × hold) son **negativas**. Mejor = imb2
+  contrarian 24h → **Sharpe −0.89 · −0.24%/mes** anclado; walk-forward **IS −1.03 / OOS −0.82**, los 4
+  cuartiles negativos (−1.58/−0.66/−0.41/−1.23) → perdedor ROBUSTO, no ruido.
+- **El muro es el COSTE × turnover, no la señal.** Turnover explota al acortar el hold: 24h→360x,
+  1h→4313x. Drag maker (1.8bps) ya es ~78%/año a 1h; taker+ADV (~4.8× maker) ~370%/año. Monótono:
+  cuanto más corto el hold (donde vive el edge de microestructura), más brutal el coste. = tesis
+  `INTRADAY.md §1` + e19 (coste domina holds cortos) + e24 (+0.00 al ancla a diario).
+- **Signo (matiz honesto):** el ÚNICO Sharpe maker positivo es **contrarian a 24h** (imb2 +0.52 /
+  +0.42%/mes maker) = básicamente el caso DIARIO ya rechazado (e24). A holds cortos el coste maker ya
+  domina → ambos signos negativos incluso a maker (no se distingue el signo bruto). No hay momentum
+  intradía explotable. El Sharpe 7-9 de e23 era estructura CONTEMPORÁNEA (look-ahead), no operable —
+  confirmado: rezagado limpio al horizonte de decisión, el edge operable es débil y caro.
+- **Para monetizarlo haría falta** fills MAKER que llenen con fiabilidad contra la presión del libro
+  (dudoso por selección adversa) y/o costes HFT → fuera de la misión (CLAUDE.md). **No se toca prod.**
+- **CIERRE de la rama order-book intradía.** El backtester horario (e42/e44/e45) queda montado y
+  reusable. Lo que sigue en intradía (`INTRADAY.md §5`): liquidaciones (Coinalyze, gated por dato) y el
+  monitor de riesgo e15 — ramas separadas, NO desbloqueadas por este resultado.
+
 ## CHANGELOG 2026-06-01 (tarde — DOCTRINA MEDALLION + BLEND cross-family validado → sombra (mejor candidato))
 Doctrina nueva (Oscar): Medallion gana con **muchas señales pequeñas uncorr combinadas**, no un edge grande.
 Memorias: `kepler-many-small-signals-blend`, `kepler-conditional-signals-open`.
@@ -619,9 +644,12 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
    → si el Sharpe forward confirma (y la lotería-60d no fue overfit) → promover a sleeve #8.
 4. **Dune/Flipside netflow reconstruction** — proxy GRATIS (signup key) antes de pagar CryptoQuant. DESPRIORIZADO:
    el blend on-chain ya captura buena parte del edge on-chain gratis y sin la ingeniería cross-chain.
-5. **Backtester horario (#2 de la ruta de Oscar)** ⬅️ **SIGUIENTE BLOQUE.** El blend mostró que la veta uncorr
-   restante es MICROESTRUCTURA (order-book uncorr ~0, pero intradía/2023+) → el backtester horario es la llave:
-   desbloquea order-book intradía, liquidaciones (Coinalyze), CME gap y el monitor de riesgo (e15). Proyecto.
+5. **Backtester horario (#2 de la ruta de Oscar)** — ✅ **MONTADO (e42/e44) y APLICADO (e45).** Primera
+   aplicación: **order-book intradía → DESCARTADO** (e45, tarde-3): edge real pero coste×turnover lo
+   mata a todo hold/signo/banda (mejor −0.89 Sharpe a taker+ADV). El backtester queda reusable. **Lo que
+   QUEDA en intradía** (ramas separadas, NO desbloqueadas por order-book): liquidaciones (Coinalyze,
+   gated por dato) y el monitor de riesgo e15. Evaluar solo si aparece dato/idea nueva — la veta
+   order-book intradía está cerrada con números.
 
 ### 📌 RECORDATORIO — MENÚ DE CONDICIONES (hacer DESPUÉS de #2 y #4) — vía `regime_lab`, con disciplina
 > Pedido de Oscar (2026-06-01): mantener abierto el rescate por condición específica. Probar cada una

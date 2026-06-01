@@ -89,15 +89,21 @@ microsegundos/market-making. Mantener la misión: bajo maxDD, supervivencia, no 
    horario buy-and-hold (deja driftar dentro del bloque = forward del motor) **RECONCILIA con el motor
    diario: corr de bloque 1.000** en mom/rev/lowvol/hlpos, Sharpe ≈ motor. **Supera el fallo de e15.**
    (Falta sumar el modelo de ejecución intradía §3.2 — costo de cruzar el spread — antes de Fase 2.)
-3. **Fase 2 — Re-evaluar order-book** a horizontes 1h–12h con costos reales. **PREPARADA (2026-06-01):**
-   - **Datos:** `research/e43_download_bookdepth_raw.py` baja el bookDepth a resolución 30s (imb1/imb2/imb5)
-     → `data/bookdepth_30s/{SYM}.parquet`. Corriendo en background (~2h, ~2.3GB). Incremental/reanudable.
+3. **Fase 2 — Re-evaluar order-book** a horizontes 1h–12h con costos reales. ✅ **HECHA (2026-06-01,
+   `research/e45_intraday_orderbook.py`) → DESCARTADO (edge real pero el coste manda).**
+   - **Datos:** `research/e43_download_bookdepth_raw.py` bajó el bookDepth a 30s (imb1/imb2/imb5) →
+     `data/bookdepth_30s/{SYM}.parquet`. **COMPLETO (2.16GB, 32/32).** Panel horario cacheado en
+     `data/bookdepth_30s/_hourly_{band}.parquet` (reusable).
    - **Motor de coste:** `research/e44_intraday_cost.py::eval_intraday(C,beta,score,hold,cost_vec)` = MTM
-     horario reconciliado (e42) + coste por símbolo (taker + slippage ADV). Validado: el coste hunde los
-     holds cortos (mom 1h: Sh maker 0.59 → taker+ADV −0.59), recupera al alargar. `cost_vector('taker_adv')`.
-   - **RECETA próxima sesión:** cargar `bookdepth_30s` → resamplear imbalance a horario (media) → score =
-     −imb (contrarian, e23/e24) → `eval_intraday` a holds {1,2,4,6,12}h con `taker_adv` → ¿sube el retorno
-     al maxDD −10% con coste real? + walk-forward purgado (regime_lab) + estrés. Si sí → primer sleeve intradía.
+     horario reconciliado (e42) + coste por símbolo (taker + slippage ADV). `cost_vector('taker_adv')`.
+   - **RESULTADO:** imbalance 30s→horario → score=±imb → `eval_intraday` a holds {1,2,4,6,12,24}h a coste
+     real (taker+ADV mediana **8.6 bps**), ambos signos, 3 bandas, overlap 2023+. **TODAS las celdas
+     negativas.** Mejor imb2 contrarian 24h = **Sharpe −0.89 / −0.24%/mes** (IS −1.03 / OOS −0.82, 4
+     cuartiles <0). **El muro es coste×turnover** (24h→360x, 1h→4313x; drag taker ~370%/año a 1h),
+     monótono con el hold. El único maker>0 es contrarian-24h (≈ caso diario ya rechazado, e24). El
+     Sharpe 7-9 de e23 era contemporáneo (look-ahead), no operable. **No hay sleeve order-book intradía**
+     para la estructura de coste de Kepler; monetizarlo exigiría maker-fills fiables (selección adversa)
+     y/o costes HFT → fuera de la misión. Backtester horario queda montado/reusable.
 4. **Fase 3 — Liquidaciones:** montar colector WS `@forceOrder` (o evaluar Coinglass) → señal de cascada.
 5. **Fase 4 — Monitor de riesgo intradía (e15)** sobre el mismo backtester.
 
