@@ -87,11 +87,14 @@ def _daily_logtvl(symbols):
 
 
 def _to_hourly(daily_df, C):
-    """log-TVL diario → índice horario de C, REZAGADO 1 día (anti-look-ahead: usar el día D-1 completo)."""
+    """log-TVL diario → índice horario de C, REZAGADO 1 día (anti-look-ahead: usar el día D-1 completo).
+    ffill al reindexar: DefiLlama publica con 1-2 días de retraso → si C es más fresco que el TVL, sin
+    ffill las últimas filas quedaban NaN (score NaN → pesos 0 → sombra logueaba 0). El shift(1) ya evita
+    el look-ahead; usar el último TVL conocido es lo point-in-time correcto."""
     d = daily_df.shift(1)
     cidx_date = pd.Index(C.index.tz_convert("UTC").normalize())
     uniq = pd.to_datetime(sorted(set(cidx_date)), utc=True)
-    return d.reindex(uniq).reindex(cidx_date).set_axis(C.index).reindex(columns=C.columns)
+    return d.reindex(uniq, method="ffill").reindex(cidx_date).set_axis(C.index).reindex(columns=C.columns)
 
 
 def shadow_weights():

@@ -13,10 +13,10 @@
 ---
 
 ## ESTADO ACTUAL (2026-06-01)
-- 🟢 **DEPLOY-READY VERIFICADO (2026-06-01 tarde-3):** smoke-test del camino de producción sin bugs →
-  imports OK · motor ESTABLE **Sharpe 2.07 / lev 2.02x / maxDD −10.0% / 4.11%/mes** · ambas sombras
-  end-to-end (TVL 13 señales, BLEND 23) · **ciclo orquestador DRY_RUN completo** (datos→target 19 pos→
-  exec dry→reporte diario→sombras logueadas dentro del ciclo). El bundle pendiente de deploy está limpio.
+- 🟢 **DEPLOY-READY VERIFICADO (2026-06-01 noche-2):** motor ESTABLE **Sharpe 2.07 / lev 2.02x / maxDD
+  −10.0% / 4.11%/mes** · ciclo orquestador DRY_RUN completo y limpio · sombras logueando bien (TVL 13,
+  BLEND 23, **tras el fix ffill**). ⚠️ **PENDIENTE DE DEPLOY: 1 cambio de prod** = `kepler/onchain.py`
+  (fix ffill de la sombra TVL, noche-2). El resto (e45-e50, docs) es research/local. Nada más cambió en prod.
 - ❌ **FASE 2 INTRADÍA order-book → DESCARTADO (e45):** a coste real (taker+ADV 8.6bps) TODAS las celdas
   negativas; el muro es coste×turnover (1h→4313x), no la señal. Rama order-book intradía CERRADA. Detalle
   en changelog tarde-3 e `INTRADAY.md §5`. Backtester horario queda montado/reusable para las otras ramas.
@@ -58,6 +58,18 @@ mejor: lotería max_60d + TVL + iliquidez Amihud) y `tvl_pxdiv_14d` (control; el
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-06-01 (noche-2 — FIX sombra TVL (ffill) → ⚠️ ÚNICO cambio de prod pendiente de deploy)
+Al verificar deploy-readiness cacé un bug en la sombra: la TVL standalone logueaba **0** (antes 13)
+mientras el BLEND daba 23. Causa: `onchain._to_hourly` reindexaba el TVL diario **sin ffill**; DefiLlama
+publica con 1-2 días de retraso → cuando el panel de precios `C` es más fresco que el TVL, las últimas
+filas quedaban NaN → score NaN → pesos 0 → sombra 0. El blend lo enmascaraba (lo cargan lotería+iliquidez),
+pero su componente TVL también se anulaba esos días → **afectaba la fidelidad de la sombra que valida en 60d**.
+- **FIX (1 línea):** `_to_hourly` reindexar con `method="ffill"` (usar el último TVL conocido; el shift(1)
+  ya evita look-ahead = point-in-time correcto). Verificado: TVL 0→**13**, BLEND 23, ciclo orquestador
+  DRY_RUN limpio. **Solo toca la ruta de SOMBRA** (no el trading; engine.compute_target no usa onchain).
+- ⚠️ **ESTE es el único cambio de PRODUCCIÓN de la sesión** (`kepler/onchain.py`) → **pendiente de deploy
+  (Oscar)**. El resto de la sesión fue research/docs. Confirmar antes de desplegar (regla).
 
 ## CHANGELOG 2026-06-01 (noche — RUTA B intradía: LIQUIDACIONES descartadas (edge=ZEC) + REGLA universo por-sleeve)
 Arranque de la ruta B (intradía). #1 = liquidaciones (Coinalyze, gratis con API key en `data/.coinalyze_key`).
@@ -699,12 +711,23 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
    → si el Sharpe forward confirma (y la lotería-60d no fue overfit) → promover a sleeve #8.
 4. **Dune/Flipside netflow reconstruction** — proxy GRATIS (signup key) antes de pagar CryptoQuant. DESPRIORIZADO:
    el blend on-chain ya captura buena parte del edge on-chain gratis y sin la ingeniería cross-chain.
-5. **Backtester horario (#2 de la ruta de Oscar)** — ✅ **MONTADO (e42/e44) y APLICADO (e45).** Primera
-   aplicación: **order-book intradía → DESCARTADO** (e45, tarde-3): edge real pero coste×turnover lo
-   mata a todo hold/signo/banda (mejor −0.89 Sharpe a taker+ADV). El backtester queda reusable. **Lo que
-   QUEDA en intradía** (ramas separadas, NO desbloqueadas por order-book): liquidaciones (Coinalyze,
-   gated por dato) y el monitor de riesgo e15. Evaluar solo si aparece dato/idea nueva — la veta
-   order-book intradía está cerrada con números.
+5. **🌃 RUTA B INTRADÍA — avance 2026-06-01 noche (backtester horario e42/e44 MONTADO y aplicado):**
+   - ✅ **Order-book intradía → DESCARTADO** (e45): edge real pero coste×turnover lo mata a todo hold/
+     signo/banda (mejor −0.89 Sharpe a taker+ADV). Rama cerrada con números.
+   - ✅ **Liquidaciones → DESCARTADO** (e46-49, Coinalyze gratis): intradía bloqueado por dato; diario
+     gratis completo pero el edge era **ZEC (1 coin)** → sin ZEC nada (precedente e17/AXS). Rama cerrada.
+   - ✅ **Regla universo por-sleeve aplicada a los 7** (e50) → **ningún cambio** (los 7 ya usan bien todas
+     las monedas; excluir empeora OOS). Regla queda como diagnóstico permanente (`kepler-per-sleeve-universe-rule`).
+   - **⏭️ PRÓXIMA SESIÓN (cuando Oscar indique), lo que QUEDA de la ruta B:**
+     a) **CME gap** (#2) — gap del futuro CME de BTC fin de semana, vía `regime_lab` con pre-registro/
+        deflación; caveat: BTC-direccional/intradía choca con β-neutral → evaluable como overlay. NO
+        necesita dato externo nuevo (CME de BTC es accesible).
+     b) **Monitor de riesgo e15** (#3) — reduce maxDD intradía (misión copy-lead), NO añade retorno;
+        re-correr sobre el backtester e42 ya funcional. Criterio: ¿baja el DD sin matar Sharpe?
+     c) **Idea abierta de Oscar:** RETIRAR monedas del universo GLOBAL (no por-sleeve; ampliar ya se
+        descartó e17, pero achicar a un universo más limpio está MENOS explorado) → posible workstream.
+     d) **Colector intradía hacia adelante** (liquidaciones reales 1h / WS @forceOrder) — solo si se
+        decide invertir meses en acumular el dato intradía que no existe gratis.
 
 ### 📌 RECORDATORIO — MENÚ DE CONDICIONES (hacer DESPUÉS de #2 y #4) — vía `regime_lab`, con disciplina
 > Pedido de Oscar (2026-06-01): mantener abierto el rescate por condición específica. Probar cada una
