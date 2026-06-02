@@ -74,6 +74,19 @@ mejor: lotería max_60d + TVL + iliquidez Amihud) y `tvl_pxdiv_14d` (control; el
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde — barrido de recetas de factores: Tier 3 (data propia) → todo redundante)
+Tras el barrido web (factor zoo cripto + GitHub + Coinalyze), Oscar dio luz verde a probar los factores
+computables con NUESTRA data (`research/e57_tier3_factors.py`), por el harness brutal (corr<0.35 + IS/OOS):
+- **turnover-volatility** (vol del log-volumen): corr **0.48 con hlpos** → ya lo captura el sleeve de
+  posición-en-canal; además signo inestable IS/OOS. ✗
+- **low-price (nominal)**: standalone ~0, no generaliza OOS (0.28/0.01) → proxy estático de size. ✗
+- **residual-momentum** (ret − β·retBTC): standalone bueno (Sh 0.81) PERO **corr 0.98 con mom_30d** →
+  ES nuestro momentum. CONFIRMA que la β-neutralización ya residualiza el momentum (operamos el
+  idiosincrático). ✗ como sleeve nuevo (pero buena señal de que el motor está bien construido).
+- **VEREDICTO:** los 7 sleeves YA cubren el espacio de factores precio/volumen (consistente con el factor
+  zoo: 2-3 factores capturan la sección cruzada). El edge nuevo exige **DATO NUEVO** → siguiente = **Tier 1
+  on-chain (new-address-to-price, Coin Metrics Community gratis)** + Coinalyze (predicted funding, basis).
+
 ## CHANGELOG 2026-06-02 (mañana — SESIÓN RIESGO/CALIDAD: D0 + D1 + concentración TRX + monedas finas)
 Oscar pidió cerrar D0 y D1 (riesgos prioritarios de MONITOREO §4), luego concentración TRX, luego finas.
 Resultado: libro más limpio/barato/menos concentrado y mejor número honesto. **Config final: haircut 0.95,
