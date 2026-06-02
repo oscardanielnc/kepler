@@ -93,7 +93,12 @@ execution_id). Free tier: 0 queries privadas (solo públicas), créditos limitad
   limitado = build de **varias sesiones**. ERC-20 solo = 3 coins (muy fino para rankear). Pregunta: invertir
   sesiones en el build Dune gratis vs **CryptoQuant pago** (~$99/mo, netflow per-token limpio instantáneo).
   Dado que on-chain ya dio 2 ganadores (tx, mvrv) y netflow es la misma familia, evaluar ROI esfuerzo.
-  PENDIENTE: decisión de Oscar. Memoria `kepler-sentiment-trends-marginal` (actualizar con netflow).
+- **DECISIÓN OSCAR (2026-06-02): PARAR netflow.** La familia on-chain ya rinde (tx+mvrv en sombra) y
+  netflow = más de lo mismo. Pipeline Dune queda montado/reusable (`dune_util.py` + `e72`) por si se
+  retoma o se va a CryptoQuant pago. **FOCO ahora: validar lo que hay (sombras → sleeve #8 ~jul-31).**
+- **🏁 CIERRE FUENTES GRATIS:** sentiment (Trends frágil / Santiment free 1y+lag) y netflow (Dune cross-chain
+  pesado) → explorados. Lo gratis-fácil está AGOTADO. Saltos reales restantes = PAGO (Santiment Pro ~$50/mo,
+  CryptoQuant ~$99/mo) o ruta B intradía (CME gap / universo limpio, no necesita fuentes nuevas).
 
 ## CHANGELOG 2026-06-02 (tarde-5 — SANTIMENT social (e71) + Flipside MUERTO → Dune para netflow)
 Oscar consiguió API key de Santiment (gratis, en `data/.santiment_key`). Probada y funcional (`sanpy`).
