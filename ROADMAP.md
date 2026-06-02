@@ -6,6 +6,66 @@
 
 ---
 
+# 🧭 RUTA MAESTRA 2026-06 — Operación → Producto → Escala  ← EMPEZAR AQUÍ
+> **Reescrita 2026-06-02.** Cambio de fase: la **caza de alfa GRATIS está agotada** (verificado a fondo:
+> precio/derivados/on-chain-CM/DefiLlama/sentiment/netflow/intradía/régimen → todo cosechado o descartado
+> con números). La doctrina Medallion (muchas señales chicas uncorr) ya está aplicada; el techo de alfa
+> nuevo gratis está tocado. **La PALANCA ahora NO es otro sleeve de +0.3%/mes — es OPERACIÓN + PRODUCTO +
+> ESCALA.** IA = herramienta operativa (NO alfa: caja-negra=overfit). Negocio = copy-lead (NO market-making
+> tipo Hummingbot, que es el juego HFT que rechazamos). Ver memoria `kepler-news-ia-bots-decision`.
+> **Atacar EN ORDEN. Regla de oro sigue vigente:** nada a prod sin backtest/validación que confirme mejora.
+
+## FASE 0 — EN CURSO (el FOSO REAL = tiempo; solo vigilar, no hay que "hacer")
+- **F0.1 · Validación E1 (DEMO en el tiempo):** medir Sharpe/maxDD/β REALES vs backtest. Es el 80% del
+  valor del producto (track record). Solo correr. Vigilar con MONITOREO.md.
+- **F0.2 · Sombras → sleeve #8 (~2026-07-31):** tx_pxdiv + mvrv + blend acumulando en vivo. Cuando tengan
+  60-90d → `python -m research.e33_shadow_tvl_analyze <db> <sleeve>` → promover si el Sharpe forward confirma.
+  **Único "edge nuevo" en cola, y ya está montado/gratis.**
+- **F0.3 · C3 slippage real:** telemetría ya limpia (winsor ZEC). Recalibrar el modelo de coste con fills
+  reales cuando se acumulen (`e21_fill_slippage <db>`).
+
+## FASE 1 — ROBUSTEZ OPERATIVA  ← PRIORIDAD ALTA (barato, protege TODO; el riesgo #1 hoy es operativo)
+> Motivo: el incidente 2026-06-02 (VM sobre-apalancada 2.93x por backfill faltante) probó que el riesgo
+> real ya NO es de alfa sino OPERATIVO. Aquí la IA aporta de verdad (anomalías/integridad), sin overfit.
+- **F1.1 · Guardas de sanity en el engine (pre-trade):** si leverage fuera de banda esperada, datos <N
+  días / panel truncado, concentración > cap, o N posiciones ≠ esperado → ALERTAR y/o no operar.
+- **F1.2 · Health-check diario + alertas ntfy proactivas:** datos frescos, sin huérfanas, CB OK, lev en
+  rango, β en banda, slippage normal, equity sin saltos. (Hoy el reporte es pasivo; falta el rail de alerta.)
+- **F1.3 · Monitor de integridad de datos en la VM:** verificar que el histórico cubre desde HIST_START y
+  el panel no se acorta (el bug de hoy); alertar si el backfill se pierde o un símbolo deja de actualizarse.
+- **F1.4 · IA operativa en el reporte:** narrativa diaria con DETECCIÓN DE ANOMALÍAS en lenguaje claro
+  (señalar desviaciones del día). Base ya existe (`report`/narrativa); añadir el módulo de anomalías.
+- **F1.5 · Monitor de correlación entre sleeves en vivo (ROADMAP D2):** si la diversificación se rompe
+  (dos sleeves correlacionan), avisar. La diversificación es el control de riesgo nº1.
+
+## FASE 2 — PRODUCTO / TRACK RECORD  ← capta AUM (depende de que Fase 0 acumule semanas)
+- **F2.1 · Reporte de transparencia para inversor:** curva equity, maxDD, Sharpe, meses+, β, exposición.
+  Auto-generado; **IA escribe el resumen mensual/semanal legible** (uso operativo válido de IA).
+- **F2.2 · Track record verificable / presentable:** exponer el dashboard actual de forma pública/limpia
+  (o página dedicada). Honestidad cruda = nuestro diferenciador vs los martingala (Btc-Panda/Flowerence).
+- **F2.3 · Preparar copy-lead:** investigar requisitos de Binance/Bybit copy-trading (cómo se publica y
+  verifica el track, profit-share, mínimos). Checklist para cuando el track real lo respalde. ← el negocio.
+
+## FASE 3 — CAPITAL / ESCALA  ← cuando el track record real lo respalde (decisión de Oscar)
+- **F3.1 · Tier ESTABLE→BALANCEADO:** subir el presupuesto de maxDD solo con track real que lo justifique.
+- **F3.2 · Capacidad/AUM:** slicing pasivo (e55, diferido) + cap de tamaño por liquidez (ROADMAP B4)
+  cuando el AUM lo exija (cruce ~$1-4M en coins finos). Hoy a tamaño DEMO no aporta.
+- **F3.3 · Retirar $1800 de Brayan/Btc-Panda** (martingala, ruina probada e13). Recordatorio persistente.
+
+## ⏸️ PARKED — requiere $ o meses (NO ahora, decisión consciente)
+- **Datos de pago** (si se quiere más alfa): CryptoQuant netflow ~$99/mo (per-token limpio) · Santiment Pro
+  ~$50/mo (social sin lag+historia). Pipeline Dune montado (`dune_util.py`) por si se retoma gratis.
+- **Backtester horario / colector intradía:** solo si se decide invertir meses (dato intradía no existe gratis).
+
+## ✅ CERRADO — NO re-litigar sin algo nuevo
+Ampliar universo (e17) · order-book diario+intradía (e23/24/45) · liquidaciones (e46-49, =ZEC) · CME gap
+(e73) · monitor intradía e15 · universo-limpio (e74, ya limpio) · basis (e22) · opciones (e25) ·
+estacionalidad (e28) · OI/LS (e16f) · régimen condicional (R0-R3) · size (e34/35) · on-chain Coin Metrics
+(agotado, 2 ganadores tx+mvrv en sombra) · sentiment gratis (Trends frágil / Santiment free limitado) ·
+netflow Dune (parado por Oscar) · noticias/conviction-override (muerto por diseño) · IA-como-alfa · Hummingbot/MM.
+
+---
+
 ## FILOSOFÍA (qué copiar de Medallion y qué NO)
 
 Medallion (Renaissance) = ~39% neto/año, Sharpe ~2.5+, 30+ años. Cerrado a externos desde 1993.

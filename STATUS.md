@@ -1,18 +1,21 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-02** (tarde, hora Lima).
-> Sesión maratónica: D0/D1/concentración/finas/ejecución/monitor/Sharpe/huérfanas + barrido de fuentes →
-> 2 edges on-chain nuevos (`tx_pxdiv`, `mvrv_lvl`) en sombra. Deploy-ready (único prod nuevo: sombra mvrv `b7d086c`).
-> **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-02** (noche, hora Lima).
 >
-> **⏭️ PRÓXIMA EJECUCIÓN:** ✅ Sesión 2026-06-02 cerrada y **DESPLEGADA** (D0+D1, cap TRX, finas, pin de
-> hora 14 UTC, chequeo CB intradía). Frontera intradía evaluada COMPLETA (ejecución ✅, slicing diferido,
-> monitor ✅, resto descartado). **AHORA = VALIDAR EN DEMO (E1, el foso real = tiempo):** confirmar maxDD
-> real bajo −10%, Sharpe/slippage reales, β realizada (≥20d). **NO apilar cambios sobre el deploy fresco.**
-> Pendientes en cola (ver §PENDIENTES): sombras→sleeve #8 (~2026-07-31, e33), C3 calibrar slippage con
-> fills reales. ✅ Sharpe reconciliado (e56): el 2.07 NO está inflado (honesto 2.34). ✅ Fix de huérfanas
-> (execution cierra coins fuera del target). Ambos pendientes de PUSH+deploy (research/exec local).
-> **⏰ RECORDATORIO PROGRAMADO ~2026-07-31 (60d):** cerrar el ciclo de las sombras (≥60-90d acumulados →
-> `e33_shadow_tvl_analyze` → ¿promover blend a sleeve #8?). Sombras YA registrando en vivo (desde 06-01).
+> **🧭 PLAN A SEGUIR = `ROADMAP.md` §RUTA MAESTRA 2026-06 (Operación → Producto → Escala).** Cambio de
+> fase: la caza de alfa GRATIS está AGOTADA (verificado a fondo); la palanca ahora es OPERACIÓN + PRODUCTO
+> + ESCALA, no más sleeves marginales. Atacar EN ORDEN: Fase 0 (correr DEMO/sombras = tiempo) · **Fase 1
+> ROBUSTEZ OPERATIVA (prioridad, el incidente de hoy probó que es el riesgo #1)** · Fase 2 producto/track
+> · Fase 3 escala. IA = herramienta operativa, NO alfa. Negocio = copy-lead. (Memorias `kepler-news-ia-bots-decision`.)
+>
+> **⏭️ PRÓXIMA EJECUCIÓN:** arrancar **Fase 1 (robustez operativa)** del ROADMAP — empezar por F1.1/F1.2
+> (guardas de sanity pre-trade + health-check con alertas ntfy). Confirmar primero con Oscar el alcance.
+> En paralelo corre solo: Fase 0 (E1 DEMO + sombras→sleeve #8 ~2026-07-31).
+>
+> **Estado del sistema (todo DESPLEGADO y verificado en vivo 2026-06-02):** 7 sleeves · ancla −10% · **lev
+> 2.23x** (vol-anchor e68, tras incidente sobre-leverage 2.93x→2.23x) · haircut 0.95 · **cap 15%/nombre**
+> (e69) · trend cap 0.25 · universo 20 long (−XLM/HBAR/LIT) · rebal 14 UTC · CB en heartbeat · slippage
+> telemetría limpia (e70 winsor). 4 sombras registrando (tx/mvrv/tvl/blend).
+> **⏰ RECORDATORIO ~2026-07-31:** cerrar ciclo sombras (≥60-90d → `e33_shadow_tvl_analyze` → ¿sleeve #8?).
 
 ---
 
@@ -78,6 +81,19 @@
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-06-02 (noche — RUTA MAESTRA: cambio de fase a Operación→Producto→Escala)
+Tras agotar la caza de alfa gratis, Oscar pidió consolidar TODO lo que sí aporta valor en una ruta
+ordenada. Evaluadas y respondidas sus preguntas (memoria `kepler-news-ia-bots-decision`):
+- **Plan base (noticias/IA/Medallion):** módulo noticias+conviction-override NUNCA se construyó y está
+  MUERTO POR DISEÑO (apostaba 100% a 1 nombre → choca con bajo-DD; hoy capamos 15%). IA = "auxiliar, no
+  núcleo" (PLAN §9.5): como ALFA no (overfit/alucina), como OPERATIVA sí (anomalías/integridad/reportes).
+  Medallion = sin métrica secreta; doctrina ya aplicada (muchas señales uncorr, neutralidad, Deflated Sharpe).
+- **Hummingbot / bots:** Hummingbot = market-making/HFT = el juego que rechazamos (e45). Ni estrategia ni
+  infra ni negocio nos sirve. Grid/DCA SaaS = primos del martingala. **Negocio real = copy-lead** (Binance/
+  Bybit), que ya es la misión → el trabajo es producto/track-record/operación, no un bot.
+- **→ ESCRITA `ROADMAP.md` §RUTA MAESTRA 2026-06** (Fase 0 tiempo · Fase 1 robustez operativa ← prioridad ·
+  Fase 2 producto/track · Fase 3 escala · Parked pago/intradía · Cerrado). **Es el plan a seguir en orden.**
 
 ## CHANGELOG 2026-06-02 (tarde-8 — UNIVERSO LIMPIO barrido LOO (e74) → universo YA limpio, NO retirar)
 Barrido LOO sistemático sobre las 20 coins operadas (reúsa e53: turnover + slippage ADV + ancla haircut).
