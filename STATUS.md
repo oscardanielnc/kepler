@@ -6,8 +6,9 @@
 > hora 14 UTC, chequeo CB intradía). Frontera intradía evaluada COMPLETA (ejecución ✅, slicing diferido,
 > monitor ✅, resto descartado). **AHORA = VALIDAR EN DEMO (E1, el foso real = tiempo):** confirmar maxDD
 > real bajo −10%, Sharpe/slippage reales, β realizada (≥20d). **NO apilar cambios sobre el deploy fresco.**
-> Pendientes en cola (ver §PENDIENTES): sombras→sleeve #8 (~2026-07-31, e33), fix de huérfanas, C3 calibrar
-> slippage con fills reales. ✅ Sharpe reconciliado (e56): el 2.07 NO está inflado (honesto 2.34 ≥ motor 2.20).
+> Pendientes en cola (ver §PENDIENTES): sombras→sleeve #8 (~2026-07-31, e33), C3 calibrar slippage con
+> fills reales. ✅ Sharpe reconciliado (e56): el 2.07 NO está inflado (honesto 2.34). ✅ Fix de huérfanas
+> (execution cierra coins fuera del target). Ambos pendientes de PUSH+deploy (research/exec local).
 > **⏰ RECORDATORIO PROGRAMADO ~2026-07-31 (60d):** cerrar el ciclo de las sombras (≥60-90d acumulados →
 > `e33_shadow_tvl_analyze` → ¿promover blend a sleeve #8?). Sombras YA registrando en vivo (desde 06-01).
 
@@ -28,8 +29,11 @@
   ✅ **DESPLEGADO 2026-06-02 (Oscar)** — 2 commits: `e2f0505` (riesgo: haircut 0.95, β real, cap 0.25,
   universo −{XLM,HBAR,LIT}, fix ffill sombra) + `55a429a` (ejecución: pin rebal 14 UTC e54, chequeo CB
   intradía en heartbeat e15). **🔎 AHORA: validar el sizing en DEMO** (que el maxDD real quede cómodo
-  bajo −10%; el lev 2.16x sale del ancla sobre datos recientes calmos). Recordatorio operativo: cerrar a
-  mano posiciones huérfanas de XLM/HBAR/LIT si quedaron (el rebal no cierra coins fuera del universo).
+  bajo −10%; el lev 2.16x sale del ancla sobre datos recientes calmos).
+  - ⚠️ **NUEVO cambio de prod pendiente de deploy:** `execution.rebalance` ahora **cierra automáticamente
+    posiciones huérfanas** (coins fuera del target/universo, p.ej. XLM/HBAR/LIT). Al desplegar esto, se
+    cierran solas en el primer ciclo — ya no hay que cerrarlas a mano. (Commits locales post-deploy:
+    `edfd33d` docs, `81797d7` e56, + este fix de huérfanas + e56 research.)
 - ❌ **FASE 2 INTRADÍA order-book → DESCARTADO (e45):** a coste real (taker+ADV 8.6bps) TODAS las celdas
   negativas; el muro es coste×turnover (1h→4313x), no la señal. Rama order-book intradía CERRADA. Detalle
   en changelog tarde-3 e `INTRADAY.md §5`. Backtester horario queda montado/reusable para las otras ramas.

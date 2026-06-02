@@ -72,7 +72,8 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
 Desplegados 2 commits (`e2f0505` + `55a429a`). Cambia el SIZING y CUÁNDO se rebalancea → el primer ciclo y
 los siguientes días son de **validación**. **Checklist a verificar en los primeros ciclos en vivo** (aún sin
 datos; rellenar al revisar logs):
-- [ ] Universo: NO aparecen XLM/HBAR/LIT en señales/posiciones; ZEC sí. (Cerrar a mano huérfanas si quedaron.)
+- [ ] Universo: NO aparecen XLM/HBAR/LIT en señales/posiciones; ZEC sí. (El fix de huérfanas — nuevo,
+      pendiente deploy — las cierra solas en el primer ciclo; hasta desplegarlo, cerrar a mano si molestan.)
 - [ ] Leverage ~2.16x (sube vs 2.02x: haircut 0.95 sobre libro limpio). maxDD objetivo −10%.
 - [ ] `top_position` (TRX) ~12-14% (cap 0.25 lo contiene; antes ~20%). Vigilar que no pase 15%.
 - [ ] `beta` del snapshot = valor REAL (regresión, ~+0.025 modelo hasta ≥20d de equity; luego realizada).

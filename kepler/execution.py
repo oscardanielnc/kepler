@@ -215,7 +215,17 @@ def rebalance(target_weights, equity=None):
                 logging.info(f"[exec] DRY target {sym}: w={w:+.3f} notional={w*equity:+.0f}USD")
         return [("dry_run", len(target_weights))]
     filt = load_filters()
-    syms = set(target_weights.index) | set(get_positions().keys())
+    current = get_positions()
+    # FIX HUÉRFANAS: incluir en el target (peso 0) las posiciones ABIERTAS que ya NO están en él
+    # (coins retiradas del universo como XLM/HBAR/LIT, o cuya señal cayó). _place_deltas las cierra
+    # (delta = 0 − actual) en vez de dejarlas drifteando sin gestión. El guard MIN_ORDER_USD evita
+    # churn de polvo. Antes el motor solo iteraba sobre el target → estas posiciones quedaban huérfanas.
+    orphans = [s for s in current if s not in target_weights.index]
+    if orphans:
+        import pandas as pd
+        target_weights = pd.concat([target_weights, pd.Series(0.0, index=orphans)])
+        logging.info(f"[exec] cerrando {len(orphans)} posición(es) huérfana(s) (fuera del target): {orphans}")
+    syms = set(target_weights.index) | set(current.keys())
     for sym in target_weights.index:      # 0. fijar apalancamiento conservador por símbolo
         if abs(target_weights[sym]) > 1e-4:
             set_leverage(sym, LEVERAGE_SETTING)
