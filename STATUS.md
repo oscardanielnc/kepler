@@ -98,7 +98,15 @@
   e68: status quo da maxDD real −13%/−16% con ventana corta; el híbrido lo mantiene **≤9.5% en TODAS las
   ventanas** y **mismo retorno con historia completa** (2.16x · 4.47%/mes · Sharpe 2.20). Implementado:
   `config.TARGET_VOL_ANCHOR=0.205` + `portfolio.leverage_robust` + `engine.compute_target`. Verificado
-  (2.158x full; 6.5–9.2% maxDD real en ventanas cortas). **PENDIENTE PUSH+DEPLOY (Oscar).**
+  (2.158x full; 6.5–9.2% maxDD real en ventanas cortas).
+- ✅ **DESPLEGADO Y VERIFICADO EN VM (2026-06-02 ~18:30 UTC):** deploy OK + backfill forzado del histórico
+  2022 (`download_klines force=True`, 38.712 velas/símbolo). **Leverage vivo 2.93x → 2.23x.** Diagnóstico
+  clave: con datos completos el **maxDD-anchor sigue dando 3.083x** (el peor drawdown del combinado es
+  genuinamente suave, −3.31% a 1x) → **es el vol-anchor (2.35) el que ata** → el fix de código era
+  IMPRESCINDIBLE (solo backfill habría dejado 2.93x). maxDD real esperado a 2.23x ≈ **−7.4%** (cómodo
+  bajo −10%). Funding fresco (carry OK). El `port` combinado termina ~Feb-21 = horizonte de retorno
+  forward del sleeve rev_60d (NO bug, sin look-ahead; los pesos vivos sí usan datos de hoy).
+  Memorias: `kepler-anchor-window-overleverage`, `oscar-vm-one-line-commands`.
 
 ## CHANGELOG 2026-06-02 (tarde — CIERRE barrido on-chain: fees+issuance ✗ → familia AGOTADA, 2 ganadores)
 `research/e67_fees_supply.py`. Últimas métricas community: **issuance** (−Δlog supply = inflación) corr
