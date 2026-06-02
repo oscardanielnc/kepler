@@ -11,8 +11,12 @@
 > precio/derivados/on-chain-CM/DefiLlama/sentiment/netflow/intradía/régimen → todo cosechado o descartado
 > con números). La doctrina Medallion (muchas señales chicas uncorr) ya está aplicada; el techo de alfa
 > nuevo gratis está tocado. **La PALANCA ahora NO es otro sleeve de +0.3%/mes — es OPERACIÓN + PRODUCTO +
-> ESCALA.** IA = herramienta operativa (NO alfa: caja-negra=overfit). Negocio = copy-lead (NO market-making
-> tipo Hummingbot, que es el juego HFT que rechazamos). Ver memoria `kepler-news-ia-bots-decision`.
+> ESCALA.** Negocio = copy-lead (NO market-making tipo Hummingbot, el juego HFT que rechazamos).
+> **🔑 PRINCIPIO CODE-FIRST (Oscar 2026-06-02): la IA es CARA y se comería el margen → todo lo que se pueda
+> hacer con CÓDIGO determinístico (chequeos, alertas, reportes, anomalías por umbral/z-score) se hace con
+> código. La IA se RESERVA solo para lo que el código no puede: clasificar una situación genuinamente
+> NOVEDOSA que las reglas no contemplan (p.ej. un evento de mercado impredecible). Ni alfa (overfit) ni
+> tareas codeables.** Ver memorias `kepler-news-ia-bots-decision`, `kepler-code-first-no-ia`.
 > **Atacar EN ORDEN. Regla de oro sigue vigente:** nada a prod sin backtest/validación que confirme mejora.
 
 ## FASE 0 — EN CURSO (el FOSO REAL = tiempo; solo vigilar, no hay que "hacer")
@@ -26,17 +30,24 @@
 
 ## FASE 1 — ROBUSTEZ OPERATIVA  ← PRIORIDAD ALTA (barato, protege TODO; el riesgo #1 hoy es operativo)
 > Motivo: el incidente 2026-06-02 (VM sobre-apalancada 2.93x por backfill faltante) probó que el riesgo
-> real ya NO es de alfa sino OPERATIVO. Aquí la IA aporta de verdad (anomalías/integridad), sin overfit.
-- **F1.1 · Guardas de sanity en el engine (pre-trade):** si leverage fuera de banda esperada, datos <N
-  días / panel truncado, concentración > cap, o N posiciones ≠ esperado → ALERTAR y/o no operar.
-- **F1.2 · Health-check diario + alertas ntfy proactivas:** datos frescos, sin huérfanas, CB OK, lev en
-  rango, β en banda, slippage normal, equity sin saltos. (Hoy el reporte es pasivo; falta el rail de alerta.)
-- **F1.3 · Monitor de integridad de datos en la VM:** verificar que el histórico cubre desde HIST_START y
-  el panel no se acorta (el bug de hoy); alertar si el backfill se pierde o un símbolo deja de actualizarse.
-- **F1.4 · IA operativa en el reporte:** narrativa diaria con DETECCIÓN DE ANOMALÍAS en lenguaje claro
-  (señalar desviaciones del día). Base ya existe (`report`/narrativa); añadir el módulo de anomalías.
-- **F1.5 · Monitor de correlación entre sleeves en vivo (ROADMAP D2):** si la diversificación se rompe
-  (dos sleeves correlacionan), avisar. La diversificación es el control de riesgo nº1.
+> real ya NO es de alfa sino OPERATIVO. **TODO ESTO ES CÓDIGO DETERMINÍSTICO — CERO IA** (chequeos por
+> umbral/banda/z-score, alertas ntfy, reportes templados). Diseño: un módulo único `kepler/checks.py`
+> (librería de chequeos puros que devuelven severidad+mensaje), consumido pre-trade (orchestrator) y en
+> heartbeat; `notify.py` manda el push; alertas con estado (solo en transición, no spam).
+- **F1.1 · Guardas de sanity PRE-TRADE (`checks.py` + orchestrator):** antes de rebalancear, si leverage
+  fuera de banda, datos viejos/panel truncado/cobertura < HIST_START, concentración > cap, o N posiciones
+  ≠ esperado → BLOQUEAR el rebalanceo (mantener libro) + ntfy CRÍTICO. **Habría frenado el incidente de hoy.**
+- **F1.2 · Health-check periódico + alertas ntfy (heartbeat):** datos frescos, sin huérfanas, CB OK, lev en
+  rango, β en banda, slippage normal, equity sin saltos anómalos, ciclo corrió a horario. Código puro.
+- **F1.3 · Monitor de integridad de datos (parte de `checks.py`):** histórico cubre desde HIST_START, panel
+  no se acorta, ningún símbolo stale, funding fresco. Es el chequeo que ataca directo el bug de hoy.
+- **F1.4 · Reporte profesional diario (CÓDIGO, templado — NO IA):** mejorar `report.py`/`daily_report` con
+  un resumen claro de métricas + ANOMALÍAS POR REGLA (umbral/z-score sobre retorno/lev/concentración/slip/β).
+  Narrativa por plantilla, no IA.
+- **F1.5 · Monitor de correlación entre sleeves (`checks.py`, ROADMAP D2):** si dos sleeves empiezan a
+  correlacionar (diversificación rota) → ntfy. Control de riesgo nº1, por código.
+- **(Reservado, NO ahora) IA de escalación:** solo si surge una situación NOVEDOSA que las reglas no
+  clasifican (evento de mercado impredecible). Hook futuro, llamada rara/barata. No es parte de esta fase.
 
 ## FASE 2 — PRODUCTO / TRACK RECORD  ← capta AUM (depende de que Fase 0 acumule semanas)
 - **F2.1 · Reporte de transparencia para inversor:** curva equity, maxDD, Sharpe, meses+, β, exposición.
