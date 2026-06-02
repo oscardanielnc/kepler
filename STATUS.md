@@ -76,6 +76,22 @@
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde — COINALYZE Tier 2: predicted-funding + OI → NEGATIVO (familia agotada))
+Inventario API (e62) + harness (e63) + estrés (e64). Coinalyze diario cross-exchange (2020→hoy): predicted
+funding, funding, OI, L/S — todos OHLC, histórico completo. **NO hay endpoint de basis** → ese ángulo (e22)
+no es testeable vía API (sería funding≈carry).
+- **Predicted funding: SIN edge nuevo.** Como señal de precio (short high pred-funding) Sh 0.07, corr 0.28
+  con carry, Δ −1.66. Conceptualmente ≈ funding realizado → no aporta sobre el carry. (Usarlo como "mejor
+  carry" exigiría swap del ranking en `carry_sleeve` con funding cobrado; el diagnóstico no lo justifica.)
+- **OI (flujo de posicionamiento, ≠ ratio L/S de e16f): redundante o frágil.** 18 variantes (oi_pxdiv/
+  oi_mom/oi_dir × {7,14,30d} × signo): casi todas corr alta (hlpos/mom/rev) o IS/OOS con saltos de signo
+  (inestable). Único superviviente del filtro: `oi_dir_7d(+)` (OI confirmando momentum) — sobrevive taker
+  (Δ +0.60) PERO **LOO: depende de ZEC** (sin ZEC Δ→−0.33). Mismo patrón que liquidaciones (1-coin/ZEC) → ✗.
+- **VEREDICTO: Coinalyze Tier 2 NEGATIVO.** La familia DERIVADOS/POSICIONAMIENTO está ya agotada a fondo:
+  L/S ratio (e16f) ✗, liquidaciones (e46-49, ZEC) ✗, OI-delta/dir (e63/64, ZEC) ✗, predicted-funding (≈carry)
+  ✗, basis (n/a). **Contraste claro:** el edge ortogonal nuevo vino de ON-CHAIN (tx_pxdiv, fundamental), NO
+  de posicionamiento (que solapa con momentum/crowding o se concentra en ZEC). ZEC = el 1-coin espurio recurrente.
+
 ## CHANGELOG 2026-06-02 (tarde — SOMBRA `tx_pxdiv_14d` IMPLEMENTADA → lista para deploy)
 Decisión de Oscar: poner YA en sombra todo lo validado (el reloj forward corre desde el deploy → antes
 validamos → antes a real/copytrading, el objetivo). `kepler/onchain.py` + `orchestrator.py`:
