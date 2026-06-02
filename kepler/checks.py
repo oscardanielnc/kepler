@@ -132,6 +132,58 @@ def run_pretrade_checks(C, target, lev, beta_last, prev_lev=None, now=None) -> l
     ]
 
 
+# ── Chequeos RUNTIME (heartbeat, entre rebalanceos) ─────────────────────────
+EQUITY_GAP_WARN = 0.05   # caída entre ticks (15min) que avisa
+EQUITY_GAP_CRIT = 0.10
+CYCLE_RECENCY_BUFFER_H = 6   # si no hay rebalanceo OK en MAX_REBAL_HOURS + esto → orquestador atascado
+
+
+def check_equity_gap(prev_eq, eq) -> CheckResult:
+    """Caída brusca de equity entre dos ticks del heartbeat (el CB ancho −20% es la red dura; esto avisa antes)."""
+    if not prev_eq or prev_eq <= 0 or eq is None:
+        return _r("equity_gap", OK, "sin referencia previa")
+    chg = eq / prev_eq - 1
+    if chg <= -EQUITY_GAP_CRIT:
+        return _r("equity_gap", CRIT, f"equity {chg*100:.1f}% entre ticks", chg)
+    if chg <= -EQUITY_GAP_WARN:
+        return _r("equity_gap", WARN, f"equity {chg*100:.1f}% entre ticks", chg)
+    return _r("equity_gap", OK, f"equity Δ {chg*100:+.1f}%", chg)
+
+
+def check_cycle_recency(last_ok_ts_ms, now_ms, max_h) -> CheckResult:
+    """¿Hace cuánto del último rebalanceo OK? Si supera el máximo → el orquestador no está rebalanceando."""
+    if not last_ok_ts_ms:
+        return _r("cycle_recency", OK, "sin ciclos previos")
+    age_h = (now_ms - last_ok_ts_ms) / 3.6e6
+    if age_h > max_h:
+        return _r("cycle_recency", WARN, f"último rebalanceo hace {age_h:.0f}h (>{max_h:.0f}h) — ¿atascado?", age_h)
+    return _r("cycle_recency", OK, f"último rebalanceo hace {age_h:.0f}h", age_h)
+
+
+def check_orphans(positions, universe) -> CheckResult:
+    """Posiciones abiertas fuera del universo operado (deberían cerrarse solas; si persisten = aviso)."""
+    if positions is None or universe is None:
+        return _r("orphans", OK, "n/a")
+    orph = [s for s in positions if s not in universe]
+    if orph:
+        return _r("orphans", WARN, f"posiciones fuera del universo: {orph}", len(orph))
+    return _r("orphans", OK, "sin huérfanas", 0)
+
+
+def run_heartbeat_checks(prev_eq, eq, last_ok_ts_ms, now_ms, max_cycle_h,
+                         positions=None, universe=None) -> list[CheckResult]:
+    """Chequeos RUNTIME (entre rebalanceos). Solo avisan (no bloquean nada; el CB es la red dura)."""
+    res = [check_equity_gap(prev_eq, eq), check_cycle_recency(last_ok_ts_ms, now_ms, max_cycle_h)]
+    if positions is not None and universe is not None:
+        res.append(check_orphans(positions, universe))
+    return res
+
+
+def data_healthy(C, now=None) -> bool:
+    """True si los datos están sanos (cobertura + frescura) — para la REANUDACIÓN RÁPIDA tras un bloqueo."""
+    return not should_block([check_data_coverage(C), check_data_freshness(C, now=now)])
+
+
 def worst(results) -> str:
     return max((r.severity for r in results), key=_RANK.get, default=OK)
 

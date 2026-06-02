@@ -94,8 +94,14 @@ Arranque de la Fase 1 (ROADMAP §RUTA MAESTRA), CODE-FIRST cero IA. Pasos 1 y 2 
   TRANSICIÓN (no spam, via `_last_check_severity`). `prev_lev` del último snapshot para el salto.
   Alertas nuevas en `notify.py` (block/warn/recover). Verificado: ciclo DRY_RUN completo, guarda OK,
   audit `checks` registrado, NO falso-bloqueo del caso sano. **PENDIENTE PUSH+DEPLOY (toca loop vivo).**
-- **SIGUE (Fase 1):** paso 3 = health-check runtime en heartbeat (F1.2) · paso 4 = monitor correlación
-  sleeves (F1.5) · paso 5 = reporte profesional templado (F1.4). Todo código, cero IA.
+- **Paso 3 — health-check RUNTIME en heartbeat (F1.2) + REANUDACIÓN RÁPIDA:** `checks.run_heartbeat_checks`
+  (salto de equity, recencia de rebalanceo=¿atascado?, huérfanas) corre cada heartbeat (15min); solo AVISA
+  (el CB es la red dura), ntfy en transición (categoría `checks_hb`, sin spam ni audit en estado sano).
+  **Reanudación rápida:** un ciclo bloqueado/omitido NO consume la ventana (`retry_blocked`) → reintenta
+  cada 15min hasta que los datos se reparen (p.ej. backfill), sin esperar 24h. Verificado en DRY_RUN
+  (heartbeat limpio; chequeos sintéticos: caída equity/rebal 40h/huérfana → WARN). **PENDIENTE DEPLOY.**
+- **SIGUE (Fase 1):** paso 4 = monitor correlación sleeves (F1.5) · paso 5 = reporte profesional templado
+  (F1.4). Todo código, cero IA. Tras Fase 1 → Fase 2 (producto/track) cuando la DEMO acumule semanas.
 
 ## CHANGELOG 2026-06-02 (noche — RUTA MAESTRA: cambio de fase a Operación→Producto→Escala)
 Tras agotar la caza de alfa gratis, Oscar pidió consolidar TODO lo que sí aporta valor en una ruta

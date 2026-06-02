@@ -43,6 +43,7 @@ def heartbeat(db: DB):
     if equity is None:
         _log.warning("[hb] balance ilegible — se omite este punto de la curva")
         return
+    prev_eq = _prev_equity_tick(db)        # ANTES de registrar el nuevo tick (para el chequeo de salto)
     db.record_equity_tick(equity)
     db.upsert_equity_daily(equity)
     operate = circuit_breaker.check(equity, db)
@@ -55,6 +56,24 @@ def heartbeat(db: DB):
         except Exception as e:
             _log.exception(f"[hb] fallo al aplanar tras el CB: {e}")
             db.audit("ERROR", "orchestrator", f"Fallo al aplanar tras CB intradía: {e}")
+    # HEALTH-CHECK RUNTIME (Fase 1 paso 3, código puro): salto de equity, recencia de rebalanceo, huérfanas.
+    # Solo AVISA (el CB es la red dura); ntfy en TRANSICIÓN (categoría 'checks_hb', sin spam).
+    try:
+        positions = execution.get_positions() if not execution.DRY_RUN else None
+        hb = checks.run_heartbeat_checks(prev_eq, equity, _last_rebal_ts(db), int(time.time() * 1000),
+                                         MAX_REBAL_HOURS + checks.CYCLE_RECENCY_BUFFER_H,
+                                         positions, set(config.UNIVERSE))
+        sev, prev_sev = checks.worst(hb), _last_check_severity(db, "checks_hb")
+        if sev != checks.OK:
+            db.audit("CRITICAL" if sev == checks.CRIT else "WARNING", "checks_hb", f"Heartbeat: {sev}",
+                     detail={"severity": sev, "summary": checks.summarize(hb)})
+            if sev != prev_sev:
+                notify.alert_checks_warn("Heartbeat — " + checks.summarize(hb))
+        elif prev_sev != checks.OK:        # recuperación
+            db.audit("INFO", "checks_hb", "Heartbeat: OK", detail={"severity": "OK"})
+            notify.alert_checks_recover()
+    except Exception as e:
+        _log.warning(f"[hb] health-check runtime omitido (no fatal): {e}")
     _log.info(f"[hb] equity={equity:.2f} cb={'OK' if operate else 'HALT'}")
 
 
@@ -199,14 +218,28 @@ def _last_leverage(db: DB):
     return None
 
 
-def _last_check_severity(db: DB):
-    """Severidad de los chequeos del ciclo previo (para notificar solo en TRANSICIÓN, no spamear)."""
+def _last_check_severity(db: DB, category="checks"):
+    """Severidad de los chequeos previos de esa categoría (para notificar solo en TRANSICIÓN, no spamear)."""
     row = db.conn.execute(
-        "SELECT detail FROM audit_event WHERE category='checks' ORDER BY ts DESC LIMIT 1").fetchone()
+        "SELECT detail FROM audit_event WHERE category=? ORDER BY ts DESC LIMIT 1", (category,)).fetchone()
     if row and row[0]:
         try: return json.loads(row[0]).get("severity", "OK")
         except Exception: pass
     return "OK"
+
+
+def _prev_equity_tick(db: DB):
+    """Equity del tick anterior (para el chequeo de salto en el heartbeat)."""
+    row = db.conn.execute("SELECT equity FROM equity_tick ORDER BY ts DESC LIMIT 1").fetchone()
+    return float(row[0]) if row and row[0] else None
+
+
+def _last_rebal_ts(db: DB):
+    """ts (ms) del último rebalanceo OK (audit 'Ciclo ... ok') para el chequeo de recencia."""
+    row = db.conn.execute(
+        "SELECT ts FROM audit_event WHERE category='orchestrator' AND title LIKE 'Ciclo%ok%' "
+        "ORDER BY ts DESC LIMIT 1").fetchone()
+    return int(row[0]) if row and row[0] else None
 
 
 def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
@@ -342,6 +375,7 @@ def run(tier="ESTABLE", once=False):
     mode = "DRY_RUN" if execution.DRY_RUN else ("DEMO" if execution.USE_DEMO else "REAL")
     _log.info(f"════ KEPLER orquestador · tier {tier} · modo {mode} · rebal {REBALANCE_HOURS}h · hb {HEARTBEAT_MIN}min ════")
     last_rebal = 0.0
+    retry_blocked = False     # reanudación rápida: si un ciclo se bloqueó, reintenta cada heartbeat
     while True:
         try:
             now = time.time()
@@ -356,14 +390,21 @@ def run(tier="ESTABLE", once=False):
             else:
                 utc_hour = datetime.now(timezone.utc).hour
                 due = (hrs >= MIN_REBAL_HOURS and utc_hour == int(target_h)) or hrs >= MAX_REBAL_HOURS
-            if due:                                          # rebalanceo completo (1×/día, hora líquida)
+            # REANUDACIÓN RÁPIDA: un ciclo bloqueado/omitido NO consume la ventana → se reintenta cada
+            # heartbeat (15min) hasta que los datos/condiciones se reparen (p.ej. backfill), sin esperar 24h.
+            if due or retry_blocked:                         # rebalanceo completo (1×/día, hora líquida)
                 r = cycle(tier, db)
                 if r.get("skipped"):     # balance ilegible → NO consumir la ventana; reintentar
+                    retry_blocked = True
                     _log.warning("[orq] ciclo omitido — se reintenta en el próximo heartbeat")
+                elif r.get("blocked"):   # guarda crítica → NO consumir la ventana; reanudación rápida
+                    retry_blocked = True
+                    _log.warning("[orq] ciclo BLOQUEADO por guarda — reintenta en el próximo heartbeat (reanudación rápida)")
                 else:
                     last_rebal = now
+                    retry_blocked = False
                     _log.info(f"[orq] ciclo completo: {r}")
-            else:                                            # heartbeat (solo equity)
+            else:                                            # heartbeat (solo equity + health-check)
                 heartbeat(db)
         except Exception as e:
             _log.exception(f"[orq] error en ciclo: {e}")
