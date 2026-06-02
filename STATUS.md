@@ -74,6 +74,20 @@ mejor: lotería max_60d + TVL + iliquidez Amihud) y `tvl_pxdiv_14d` (control; el
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde — ON-CHAIN: `tx_pxdiv_14d` ORTOGONAL al blend → cierra el lazo 🎯)
+`research/e61_onchain_vs_blend.py`. ¿tx_pxdiv solapa con el TVL (ambos on-chain) o es nuevo?
+- **corr(tx_pxdiv, TVL) = +0.09** → ORTOGONAL pese a ser ambos on-chain (tx = actividad transaccional ≠
+  TVL = valor bloqueado). corr con lotería −0.01, iliquidez +0.18, blend +0.15. Genuinamente nuevo.
+- **Añadir al blend mejora todo** (modesto, doctrina de muchas señales): 3-comp Sharpe 0.98 (OOS 0.97)
+  → **4-comp +tx Sharpe 1.01 (OOS 1.00), maxDD −12.4→−11.8%**. NO reemplaza al TVL (complementarios;
+  tx-en-lugar-de-TVL cae a 0.66). 
+- **CLAVE estratégica:** contra el blend débil tx aporta poco (+0.03), pero contra los **7 sleeves
+  principales dio +1.46%/mes** (e60) → **tx_pxdiv es más fuerte como sleeve #8 DIRECTO que como componente
+  del blend.** Candidato más sólido desde taker_flow/hlpos.
+- **SIGUIENTE:** llevar `tx_pxdiv_14d` a SOMBRA (forward, como TVL/blend; añadir a `onchain.run_shadow`) →
+  acumular 60-90d → decidir promoción a sleeve #8 (directo) vs sumarlo al blend. Caveat: 12 coins = techo.
+  NADA en prod aún (la sombra es no-operativa).
+
 ## CHANGELOG 2026-06-02 (tarde — TIER 1 ON-CHAIN: factor `tx_pxdiv_14d` PASA el harness completo 🎯)
 Backtest del factor on-chain (`e59` construcción + harness, `e60` estrés taker + LOO) sobre las 12 coins
 operables (Coin Metrics, e58). Probé addr_pxdiv / tx_pxdiv / addr_mom × {7,14,30d}, lag point-in-time 2d.
