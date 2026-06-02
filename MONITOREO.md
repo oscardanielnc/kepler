@@ -37,10 +37,12 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
    bug, pero es el riesgo de un solo nombre. **Acción si >20-25% sostenido:** revisar si trend domina;
    evaluar cap por activo más estricto en trend (con backtest, regla de oro). Vigilar también que TRX no
    arrastre el β.
-2. **Slippage real (C3).** Primer dato (2026-05-31): **mediana ~1.5 bps, media ~1.3** — menor que el
-   modelo e18 (~4 bps central). Peor en thin coins (ZEC, XLM). **Acción:** acumular varios días → correr
-   `research/e21_fill_slippage` → recalibrar K de e18 → re-correr e18 = costo HONESTO real. Si la mediana
-   sube > 10 bps de forma sostenida, la ejecución maker se está degradando (revisar no-fills/GTX).
+2. **Slippage real (C3).** 2 días: **mediana ≈ −1 a +1.5 bps (favorable/barato)**, media 1.3–3.3 (la
+   inflan 3-4 thin coins). **Patrón firme: el coste vive en las monedas FINAS** (XLM hasta +51.8, HBAR
+   +21.6, ZEC, LIT). **Acción:** acumular → `research/e21_fill_slippage` → recalibrar K de e18 → costo
+   real. **Conexión estratégica:** alimenta la idea de Oscar de RETIRAR monedas — un coin fino que aporta
+   poco edge pero cuesta 20-50 bps de slippage podría no compensar. Si la mediana global sube > 10 bps
+   sostenido, la ejecución maker se degrada (revisar no-fills/GTX).
 3. **Ancla de leverage vs maxDD real (hallazgo e29).** El leverage se fija con el maxDD PASADO →
    **sobre-apalanca OOS** (en walk-forward el maxDD llegó a −13.5% vs −10% objetivo). **El −10% PUEDE
    excederse en vivo.** Vigilar `drawdown_pct`: si supera −10% con holgura, confirma e29 → priorizar
@@ -59,6 +61,26 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
 ---
 
 ## 3. BITÁCORA (registro por día — el más nuevo arriba)
+
+### 2026-06-01 (DEMO — sombras YA registrando en prod + slippage favorable)
+- **2 ciclos** (20:15 y 23:16 UTC = 15:15/18:16 Lima) = reinicios por el **deploy de hoy** (sombras), no
+  cadencia 24h. Ambos `Ciclo ESTABLE ok` (112s / 109s). Sin errores, CB OK, sin halts ni alertas.
+- **🌓 SOMBRAS FUNCIONANDO EN VIVO (lo más importante):** TVL **13** + BLEND **23** posiciones registradas
+  en AMBOS ciclos → **el reloj de los 60 días ya corre de verdad** (recordatorio ~2026-07-31). El BLEND
+  loguea su libro β-neutral completo (BTC 0.113, ZEC −0.074, NEAR +0.014…). Acumulando para `e33`.
+- **Equity −0.27% día:** 4944.06 → 4930.45 (dd −0.27%). Ruido de 1 día market-neutral, sano.
+- **Leverage 2.006x** (carry-7d), 21 pos, gross 0.757, net +0.357 (net-long chico = β-neutral OK).
+- **🎯 SLIPPAGE REAL (C3), 2º día con datos:** n=21, **mediana −0.99 bps (FAVORABLE), media 3.29**, peor
+  **XLM +51.8 / HBAR +21.6 / BNB +17.5**, favorables BCH −18.7 / AAVE −4.4. La mediana negativa = la
+  mayoría de fills maker entran a mid o mejor; la media la inflan 3-4 thin coins. **Patrón claro: el coste
+  real vive en las monedas FINAS** (XLM/HBAR/ZEC/LIT). Calibra e18 y **conecta con la idea de retirar
+  monedas** (¿su edge paga su slippage?). Acumular → `e21_fill_slippage`.
+- **Concentración TRX 20.25%** (top), vía `trend` (score trend 0.45). Recurrente, en el borde del umbral
+  (>20%); dentro del cap 0.25. Vigilar.
+- **Backtest del snapshot:** Sharpe 2.02 / ann 48.1 / maxDD −10 (recalcula con datos nuevos; ~2.07 motor).
+- ⚠️ **Bug ffill de sombra (noche-2) NO se manifestó hoy** (TVL logueó 13 ambos ciclos porque a 20/23h el
+  panel y DefiLlama estaban alineados). El fix endurece el **edge de día-boundary** (cuando C es más fresco
+  que DefiLlama → TVL logueaba 0). **Pendiente deploy**; no es outage activo, es robustez.
 
 ### 2026-05-31 (DEMO, primer análisis fino de logs)
 - **3 ciclos** (07:00, 09:00, 23:00 Lima) = reinicios por **deploys del día**, no cadencia 24h.
@@ -86,8 +108,13 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
 - [ ] **Concentración trend/TRX:** evaluar cap por activo en trend (con backtest) si supera ~20-25%.
 - [ ] **`r_multiple`/`exit_px` quedan null** (sistema de rebalanceo rodante, sin ciclo open→close clásico).
       El ciclo de vida de trade completo sería otro proyecto. Los fills+snapshots ya permiten analizar.
-- [ ] **Shadow on-chain TVL:** pendiente deploy; tras semanas, medir su retorno point-in-time real y
-      decidir promover a sleeve #8 (o no).
+- [ ] **Deploy del fix ffill de sombra (noche-2):** `kepler/onchain.py` — endurece el día-boundary (TVL
+      logueaba 0 cuando C > fecha DefiLlama). No es outage (hoy logueó 13), pero conviene desplegar.
+- [ ] **EVALUAR retirar monedas finas del universo (idea de Oscar):** XLM/HBAR/ZEC/LIT concentran el
+      slippage real (hasta 51.8 bps). Próxima sesión: ¿su aporte de edge paga su coste de ejecución?
+      Cruzar contribución por-coin (regla e50/e49) con slippage real (e21). Posible universo más limpio.
+- [x] ~~**Shadow on-chain TVL:** pendiente deploy~~ → **DESPLEGADO y registrando** (2026-06-01: TVL 13 +
+      BLEND 23 por ciclo). Reloj 60d corriendo; tras ≥60-90d correr `e33` y decidir sleeve #8.
 - [x] ~~`report:[]` (narrativo diario no se llamaba)~~ → ARREGLADO 2026-05-31 (wired en el ciclo).
 - [x] ~~shadow no salía en el log diario~~ → ARREGLADO 2026-05-31 (añadido a `export_daily_log`).
 - [x] ~~Desfase UTC vs Lima en días/horas~~ → ARREGLADO 2026-05-31 (config.TZ + helpers).
