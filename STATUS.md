@@ -79,6 +79,27 @@
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde-2 — 🔴 INCIDENTE: VM sobre-apalancada 2.93x → ancla robusta (e68))
+**Oscar reportó caídas fuertes** (1 día +0.09, 2 rojos, hoy −1.52%). Análisis del log diario (DEMO):
+- **CAUSA RAÍZ:** la VM corría a **2.929x** (log: `"leverage": 2.929`, TRX 23%) vs **2.16x de diseño**
+  (motor local, mismo código). Diferencia = la **VENTANA DE DATOS**: el motor local ve 2022-03→ (peor
+  maxDD −4.50% el 2022-04-18) → 2.16x; la VM arranca **~2023** (sin la caída de abril-2022) → maxDD a 1x
+  ~−3.2% → el `leverage_for_maxdd_anchor` cree que puede apalancar más → **3.06x**. `HIST_START_MONTH=2022-01`
+  es correcto; la VM **no tenía el backfill completo**. El sobre-leverage (~+36%) amplificó el tilt
+  net-long (β-dólar +0.45) en un mercado a la baja (BTC −1.3% hoy) y consume el presupuesto −10% un 36%
+  más rápido. **NO era estrategia rota.** Memoria `kepler-anchor-window-overleverage`.
+- **Hallazgos 2º:** concentración alta (TRX 23%/NEAR 19%/BTC 17%; el cap 0.25 aplica a `trend` pero
+  carry+lowvol también cargan TRX → combinado 23%); slippage telemetría contaminada por 1 trade ZEC
+  −742bps (ref_px stale; real = mediana 2.72bps, OK); 4 ciclos hoy = reinicios por deploys (churn extra).
+- **FIX INMEDIATO (Oscar en VM):** `python -m kepler.fetch 1h` (backfill 2022+) → `python -m kepler.engine
+  ESTABLE` debe dar ~2.16x.
+- **FIX DE FONDO — ANCLA ROBUSTA (e68, backtest ✓, regla de oro):** `leverage_robust = min(maxdd_anchor,
+  HAIRCUT·TARGET_VOL_ANCHOR/vol)`. La vol es estable entre ventanas → ancla el lev aunque falte historia.
+  e68: status quo da maxDD real −13%/−16% con ventana corta; el híbrido lo mantiene **≤9.5% en TODAS las
+  ventanas** y **mismo retorno con historia completa** (2.16x · 4.47%/mes · Sharpe 2.20). Implementado:
+  `config.TARGET_VOL_ANCHOR=0.205` + `portfolio.leverage_robust` + `engine.compute_target`. Verificado
+  (2.158x full; 6.5–9.2% maxDD real en ventanas cortas). **PENDIENTE PUSH+DEPLOY (Oscar).**
+
 ## CHANGELOG 2026-06-02 (tarde — CIERRE barrido on-chain: fees+issuance ✗ → familia AGOTADA, 2 ganadores)
 `research/e67_fees_supply.py`. Últimas métricas community: **issuance** (−Δlog supply = inflación) corr
 −0.63 con momentum (anti-mom) + IS/OOS inestable (1.39/−0.63) → ✗. **fees** (fee_pxdiv/fee_mom) solapan
