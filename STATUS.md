@@ -49,10 +49,11 @@
   de análisis (histórico completo). Curva de equity full-width.
 - ✅ **DESPLEGADO Y CORRIENDO (Oscar confirmó 2026-05-31 ~09:28 Lima):** la versión actual está en la
   VM operando en DEMO, se deja corriendo. **Confirmar al arrancar** (ver "VERIFICAR AL ARRANCAR").
-- 🌓 **Sombras on-chain REGISTRANDO EN VIVO (desde 2026-06-01; ffill fix desplegado hoy):** TVL
-  (`tvl_pxdiv_14d`) + **BLEND candidato a sleeve #8** (`blend_lottery_tvl_illiq_v1` = lotería max_60d +
-  TVL + iliquidez Amihud). El mejor candidato: OOS purgado **+0.34 Sharpe / 6-6 folds**, sobrevive taker
-  (+1.55%/mes), full-history, LOO robusto. ⏰ **Reloj 60-90d (~2026-07-31) → `e33` → ¿promover a sleeve #8?**
+- 🌓 **3 SOMBRAS on-chain (no operan, validación forward):** (1) TVL `onchain_tvl_pxdiv_14d` + (2) BLEND
+  `blend_lottery_tvl_illiq_v1` (lotería+TVL+iliquidez) — registrando desde 2026-06-01; (3) **TX
+  `onchain_tx_pxdiv_14d`** (Coin Metrics, **el más fuerte**: +1.46%/mes vs los 7, ortogonal a todo) —
+  IMPLEMENTADA hoy, **registrará tras el deploy**. ⏰ **Reloj 60-90d (~2026-07-31) → `e33`-style → ¿promover
+  alguna a sleeve #8?** (tx_pxdiv como directo; blend como conjunto). PENDIENTE DEPLOY de la sombra tx.
 - ✅ **B1/B2 (e29) + D0 RESUELTO:** el edge es ROBUSTO (Sharpe OOS 2.29 ≈ IS 2.21, 6/6 folds). El ancla
   sobre-apalancaba (maxDD OOS −13.5%) pero **se arregló** (haircut 0.95 + libro limpio → maxDD OOS −7.1%).
   El −10% se respeta con margen. Validar en DEMO el maxDD real.
@@ -61,8 +62,9 @@
 **OFICIALES (7, todos DIARIOS · rebal 24h · `engine.SLEEVES`):** 1.`mom_30d` (720h) · 2.`rev_60d` (1440h) ·
 3.`lowvol_14d` (336h) · 4.`carry` (funding suav.7d, hold 48h) · 5.`trend` (EMA20/100 long-only) ·
 6.`takerflow_5d` (120h) · 7.`hlpos_14d` (336h). Combinado: Sharpe 2.07 · maxDD −10% · 4.1%/mes · β +0.05.
-**EN SOMBRA (candidatos #8, DIARIOS, PENDIENTE DEPLOY → 0 logs aún):** `blend_lottery_tvl_illiq_v1` (el
-mejor: lotería max_60d + TVL + iliquidez Amihud) y `tvl_pxdiv_14d` (control; el blend ya lo absorbe).
+**EN SOMBRA (candidatos #8, DIARIOS, no operan):** `onchain_tvl_pxdiv_14d` + `blend_lottery_tvl_illiq_v1`
+(lotería+TVL+iliquidez) registrando desde 06-01; **`onchain_tx_pxdiv_14d`** (Coin Metrics, el más fuerte:
++1.46%/mes vs los 7, ortogonal a todo) implementado 06-02, registra tras deploy. Acumular 60-90d → e33.
 **INTRADÍA:** ninguno operable. Order-book DESCARTADO (e45). Backtester horario (e42/e44) montado.
 **Frecuencia del sistema HOY = 100% diaria.** No hay sleeve intradía en producción ni en sombra
 (la sombra solo registra señales diarias cada ciclo; lo intradía no es sombreable en el sistema diario).
@@ -73,6 +75,17 @@ mejor: lotería max_60d + TVL + iliquidez Amihud) y `tvl_pxdiv_14d` (control; el
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-06-02 (tarde — SOMBRA `tx_pxdiv_14d` IMPLEMENTADA → lista para deploy)
+Decisión de Oscar: poner YA en sombra todo lo validado (el reloj forward corre desde el deploy → antes
+validamos → antes a real/copytrading, el objetivo). `kepler/onchain.py` + `orchestrator.py`:
+- **`update_cm_addresses()`** (fetcher Coin Metrics Community, sin key, 13 coins AdrActCnt+TxCnt, overwrite),
+  **`tx_shadow_weights()`** (pesos β-neutral de tx_pxdiv_14d), **`run_tx_shadow()`** (loguea `shadow_signal`
+  sleeve=`onchain_tx_pxdiv_14d`), cableado al ciclo (junto a las sombras TVL y BLEND). NO opera.
+- Verificado end-to-end: 13 posiciones β-neutral (long DOGE/BCH, short UNI/ZEC, hedge BTC +0.26), fetcher
+  13/13, loguea 13. **PENDIENTE DEPLOY.** Tras desplegar → reloj 60-90d → `e33`-style → promover a sleeve #8.
+- **3 sombras corriendo tras deploy:** TVL (`onchain_tvl_pxdiv_14d`), BLEND (`blend_lottery_tvl_illiq_v1`),
+  TX (`onchain_tx_pxdiv_14d`, el más fuerte). Todas no-operativas (validación forward).
 
 ## CHANGELOG 2026-06-02 (tarde — ON-CHAIN: `tx_pxdiv_14d` ORTOGONAL al blend → cierra el lazo 🎯)
 `research/e61_onchain_vs_blend.py`. ¿tx_pxdiv solapa con el TVL (ambos on-chain) o es nuevo?

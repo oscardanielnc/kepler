@@ -194,6 +194,119 @@ def run_blend_shadow(db=None) -> dict:
     return {"logged": n, "asof": str(asof)}
 
 
+# ─── SOMBRA on-chain TX (Coin Metrics Community, GRATIS sin key) — candidato a sleeve #8 DIRECTO ──────
+# tx_pxdiv_14d = Δlog(TxCnt,14d) − retorno(14d): actividad transaccional neta de precio. Validado e59/e60/
+# e61: ortogonal a los 7 sleeves (corr −0.10) Y al blend (corr +0.09 vs TVL = NO solapa), sobrevive taker
+# (Δ +1.46%/mes vs los 7), LOO robusto (no 1-coin), vivo 2022+. Más fuerte que el TVL. point-in-time LIMPIO
+# (direcciones = cadena inmutable, no se revisa ≠ TVL). 12 coins operables. En SOMBRA: validar forward.
+CM_BASE = "https://community-api.coinmetrics.io/v4"
+CM_CACHE = os.path.join(config.DATA_DIR, "onchain_cm"); os.makedirs(CM_CACHE, exist_ok=True)
+TX_SLEEVE = "onchain_tx_pxdiv_14d"
+TX_LOOKBACK_D = 14
+TX_SHIFT_D = 2     # lag point-in-time (el dato de Coin Metrics llega con 1-2d de retraso)
+# 13 coins con AdrActCnt+TxCnt community-free (bnb/dot DESCARTADAS por stale, e58). CM id → ticker Binance.
+CM2TKR = {"aave": "AAVEUSDT", "ada": "ADAUSDT", "bch": "BCHUSDT", "btc": "BTCUSDT", "doge": "DOGEUSDT",
+          "etc": "ETCUSDT", "eth": "ETHUSDT", "link": "LINKUSDT", "ltc": "LTCUSDT", "trx": "TRXUSDT",
+          "uni": "UNIUSDT", "xrp": "XRPUSDT", "zec": "ZECUSDT"}
+
+
+def update_cm_addresses() -> int:
+    """Refresca AdrActCnt+TxCnt diarios (Coin Metrics Community, sin key) → parquet por coin. Overwrite
+    (la API da la historia completa paginada; ~13 requests/ciclo). Blindado: si una falla, sigue."""
+    ok = 0
+    for cm in CM2TKR:
+        try:
+            rows = []; url = f"{CM_BASE}/timeseries/asset-metrics"
+            params = {"assets": cm, "metrics": "AdrActCnt,TxCnt", "frequency": "1d",
+                      "start_time": "2016-01-01", "page_size": 10000}
+            for _ in range(30):
+                r = requests.get(url, params=params, timeout=60)
+                if r.status_code != 200:
+                    break
+                j = r.json(); rows += j.get("data", [])
+                nxt = j.get("next_page_url")
+                if not nxt:
+                    break
+                url = nxt; params = None
+            if not rows:
+                continue
+            df = pd.DataFrame(rows); df["time"] = pd.to_datetime(df["time"])
+            for c in ("AdrActCnt", "TxCnt"):
+                if c in df:
+                    df[c] = pd.to_numeric(df[c], errors="coerce")
+            df[["time", "AdrActCnt", "TxCnt"]].sort_values("time").to_parquet(os.path.join(CM_CACHE, f"{cm}.parquet"))
+            ok += 1
+        except Exception:
+            continue
+    return ok
+
+
+def _daily_logtx(symbols):
+    """Panel diario de log(TxCnt) para los coins cubiertos presentes en `symbols` (descarta stale)."""
+    cols = {}
+    for cm, tkr in CM2TKR.items():
+        if tkr not in symbols:
+            continue
+        p = os.path.join(CM_CACHE, f"{cm}.parquet")
+        if not os.path.exists(p):
+            continue
+        d = pd.read_parquet(p).set_index("time")
+        s = d["TxCnt"].dropna() if "TxCnt" in d else pd.Series(dtype=float)
+        if s.empty:
+            continue
+        cols[tkr] = np.log(s.replace(0, np.nan))
+    df = pd.DataFrame(cols)
+    if df.empty:
+        return df
+    df.index = pd.to_datetime(df.index, utc=True).normalize()
+    return df[~df.index.duplicated()].sort_index()
+
+
+def tx_shadow_weights():
+    """Pesos ACTUALES que el sleeve tx_pxdiv_14d tendría (β-neutral, vía el motor). NO opera."""
+    from kepler.engine import load, _beta, xs_sleeve
+    C = load(); ret = np.log(C).diff(); beta = _beta(ret)
+    ltx = _daily_logtx(list(C.columns))
+    if ltx.empty:
+        return None, None, C.index[-1]
+    Pd = C.resample("1D").last(); Pd.index = pd.to_datetime(Pd.index, utc=True).normalize()
+    ltx = ltx.reindex(Pd.index)                          # grid diario común con el precio
+    logp = np.log(Pd[ltx.columns])
+    h = TX_LOOKBACK_D * 24
+    # SCORE = Δlog(TxCnt,14d) − Δlog(precio,14d). Long alto = actividad crece más que el precio.
+    score_daily = (ltx.diff(TX_LOOKBACK_D) - logp.diff(TX_LOOKBACK_D)).shift(TX_SHIFT_D)   # lag point-in-time
+    score = score_daily.reindex(C.index, method="ffill").reindex(columns=C.columns)        # diario → horario
+    _, w_now = xs_sleeve(C, ret, beta, score, h)
+    return w_now, score.iloc[-1], C.index[-1]
+
+
+def run_tx_shadow(db=None) -> dict:
+    """Calcula y REGISTRA (sin operar) los pesos del candidato tx_pxdiv_14d de este ciclo. Aislado."""
+    from kepler.db import DB
+    db = db or DB()
+    update_cm_addresses()
+    try:
+        w, score, asof = tx_shadow_weights()
+    except Exception as e:
+        db.audit("WARNING", "shadow_tx", f"Sombra tx omitida: {str(e)[:80]}")
+        return {"logged": 0}
+    if w is None:
+        db.audit("WARNING", "shadow_tx", "Sin datos tx — sombra omitida")
+        return {"logged": 0}
+    n = 0
+    for sym, wt in w.items():
+        if abs(float(wt)) <= 1e-6:
+            continue
+        sc = float(score.get(sym, float("nan"))) if score is not None else None
+        db.log_shadow(sleeve=TX_SLEEVE, symbol=sym, weight=round(float(wt), 4),
+                      score=(None if sc is None or np.isnan(sc) else round(sc, 6)),
+                      detail={"asof": str(asof), "lookback_d": TX_LOOKBACK_D})
+        n += 1
+    db.audit("INFO", "shadow_tx", f"Sombra tx_pxdiv registrada ({n} posiciones)",
+             detail={"sleeve": TX_SLEEVE, "asof": str(asof)})
+    return {"logged": n, "asof": str(asof)}
+
+
 if __name__ == "__main__":
     try: sys.stdout.reconfigure(encoding="utf-8")
     except Exception: pass
@@ -201,3 +314,5 @@ if __name__ == "__main__":
     print(f"Sombra on-chain TVL registrada: {r}")
     rb = run_blend_shadow()
     print(f"Sombra BLEND registrada: {rb}")
+    rt = run_tx_shadow()
+    print(f"Sombra tx_pxdiv registrada: {rt}")
