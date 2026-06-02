@@ -23,6 +23,8 @@ REBALANCE_HOURS = 24
 MIN_REBAL_HOURS = 18        # no rebalancear dos veces dentro de la ventana del mismo día
 MAX_REBAL_HOURS = 30        # fallback: nunca dejar el libro >30h sin rebalancear (si se pierde la ventana)
 HEARTBEAT_MIN = 15          # registra equity cada 15 min (curva viva) sin rebalancear
+SLIP_SANITY_BPS = 200.0     # |slip| > 2% = book_mid de referencia stale/corrupto (no es slippage real):
+                            # un maker GTX nunca llena tan lejos del mid → se descarta del C3 (no ensucia)
 _log = logging.getLogger("kepler")
 
 
@@ -95,6 +97,8 @@ def _log_fills(db: DB, before: dict, after: dict, lev, target, t0_ms):
             if den > 0 and ref > 0:
                 fill_px = num / den
                 slip_bps = (1 if d > 0 else -1) * (fill_px - ref) / ref * 1e4
+                if abs(slip_bps) > SLIP_SANITY_BPS:   # ref book_mid corrupto → no es slippage real
+                    fill_px, slip_bps = ref, None
         except Exception:
             pass
         db.log_fill(symbol=sym, direction="BUY" if d > 0 else "SELL", qty=abs(d), price=fill_px,
@@ -154,7 +158,7 @@ def _save_daily_report(db: DB, tier, mode, equity, target, lev, bt, operate):
     # slippage REAL de los fills de hoy (C3)
     fills = db.conn.execute(
         "SELECT symbol,slip_bps FROM trades WHERE reason='rebalance_fill' AND slip_bps IS NOT NULL "
-        "AND open_ts BETWEEN ? AND ?", (d0, d1)).fetchall()
+        "AND ABS(slip_bps) <= ? AND open_ts BETWEEN ? AND ?", (SLIP_SANITY_BPS, d0, d1)).fetchall()
     slip = {}
     if fills:
         v = sorted(f[1] for f in fills); n = len(v)

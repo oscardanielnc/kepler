@@ -48,7 +48,13 @@ SLIPPAGE  = 0.0002     # 2 bps en órdenes a mercado (conservador)
 
 # ─── Riesgo / portafolio (dials — se calibran en backtest) ───────────────────
 CAPITAL_USD        = 5000.0    # ejemplo demo; todo el sizing es % del 100%
-MAX_WEIGHT_NORMAL  = 0.25      # tope normal por activo
+MAX_WEIGHT_NORMAL  = 0.25      # tope normal por activo (por-sleeve, pre vol-parity)
+# CAP de concentración del LIBRO COMBINADO (e69, Oscar 2026-06-02): el cap 0.25 es POR-SLEEVE; tras
+# combinar (vp·Σ) + leverage, un nombre puede acumular de varios sleeves (incidente: TRX 23% del equity
+# vía trend+carry+lowvol). Este tope recorta el target final para que NINGÚN nombre supere X% del equity.
+# Conservador por construcción: el leverage se ancla sobre el libro SIN capar → recortar solo BAJA riesgo.
+# e69: capar el peso combinado es neutral en Sharpe/maxDD/retorno (maxDD anclado). 0=desactiva.
+MAX_POSITION_EQUITY = 0.15     # ningún activo > 15% del equity (recorte de concentración de 1 nombre)
 MAX_WEIGHT_EVENT   = 1.00      # conviction override (evento/catalizador extremo)
 TARGET_VOL_ANNUAL  = 0.10      # vol objetivo del portafolio (dial de riesgo)
 MAX_GROSS          = 2.0       # exposición bruta máx (suma |pesos|)

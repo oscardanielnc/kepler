@@ -240,7 +240,13 @@ def compute_target(tier="ESTABLE"):
     target = target.reindex(C.columns).fillna(0.0)
     # GATE DE RÉGIMEN: probado (vol-target de-risk) → EMPEORA el maxDD, NO se usa (workflow).
     # El control de riesgo efectivo es la diversificación (corr~0) + el dial de leverage anclado.
-    target = (target * lev).round(4)
+    target = (target * lev)
+    # CAP DE CONCENTRACIÓN del libro combinado (e69): recorta cada nombre a ±MAX_POSITION_EQUITY del
+    # equity. El leverage ya se ancló sobre el libro SIN capar → este recorte solo BAJA el riesgo de
+    # 1 nombre (conservador). Evita que trend+carry+lowvol apilen un mismo símbolo (TRX 23% → cap).
+    if config.MAX_POSITION_EQUITY:
+        target = target.clip(-config.MAX_POSITION_EQUITY, config.MAX_POSITION_EQUITY)
+    target = target.round(4)
     # β MODELO de REGRESIÓN del libro = cov(combinado 1x, BTC diario)/var(BTC diario). Es la MISMA
     # métrica que el backtest (≈+0.05, market-neutral) y la que confirma la neutralidad en vivo (D1).
     # OJO: distinta de la β-DÓLAR instantánea (Σwβ), que la infla `trend` (long-only sin hedge).
