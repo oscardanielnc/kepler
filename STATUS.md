@@ -74,6 +74,22 @@ mejor: lotería max_60d + TVL + iliquidez Amihud) y `tvl_pxdiv_14d` (control; el
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde — TIER 1 ON-CHAIN: factor `tx_pxdiv_14d` PASA el harness completo 🎯)
+Backtest del factor on-chain (`e59` construcción + harness, `e60` estrés taker + LOO) sobre las 12 coins
+operables (Coin Metrics, e58). Probé addr_pxdiv / tx_pxdiv / addr_mom × {7,14,30d}, lag point-in-time 2d.
+- **GANADOR: `tx_pxdiv_14d`** (Δlog tx-count − retorno, 14d). Pasa TODO: corr **−0.10** con los 7 sleeves
+  (ortogonal), IS/OOS **0.33/0.50** (balanceado), vivo 2022+ (**+1.18%/mes**, no backfill), standalone taker
+  **+0.99%/mes**, **Δ combinado taker +1.46%/mes** (sobrevive), **LOO robusto** (sin TRX aún +0.85; mediana
+  +1.26 → NO depende de 1 coin). Pasa los filtros que tumbaron liquidaciones (ZEC/1-coin) y order-book
+  (muere a taker). **Más fuerte que el TVL** (+1.46 vs +0.6%/mes). Primer candidato ortogonal real del Tier 1.
+- **`addr_mom_30d`** (secundario): sobrevive taker (+1.00) y LOO, PERO corr 0.32 con momentum + IS/OOS
+  desbalanceado (0.11/1.30, sesgo reciente) → probable proxy de momentum con tilt de régimen. Cautela.
+- **Resto descartado:** addr_pxdiv (corr alta con hlpos o mom; sólo el 14d marginal), tx_pxdiv_7d/30d (muere).
+- **Caveat honesto:** cross-section delgado (12 coins) = techo de breadth/capacidad. Falta verificar
+  ortogonalidad vs los componentes del BLEND #8 (lotería+TVL+iliquidez) — el TVL también es on-chain, puede
+  solapar. **SIGUIENTE:** (1) corr de `tx_pxdiv_14d` vs TVL/lotería/iliquidez; si ortogonal → (2) añadir al
+  blend, re-validar, y a SOMBRA (forward, como el TVL). NADA en prod aún.
+
 ## CHANGELOG 2026-06-02 (tarde — TIER 1 ON-CHAIN: inventario + ingesta Coin Metrics (gratis))
 Tras el Tier 3 negativo (edge nuevo = dato nuevo), arranque del Tier 1: actividad de direcciones on-chain
 (el factor zoo lo lista entre los top ortogonales). `research/e58_onchain_addresses.py`.
