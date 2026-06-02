@@ -68,6 +68,20 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
 
 ## 3. BITÁCORA (registro por día — el más nuevo arriba)
 
+### 2026-06-02 (DEPLOY del bundle riesgo/calidad + ejecución — VALIDACIÓN PENDIENTE)
+Desplegados 2 commits (`e2f0505` + `55a429a`). Cambia el SIZING y CUÁNDO se rebalancea → el primer ciclo y
+los siguientes días son de **validación**. **Checklist a verificar en los primeros ciclos en vivo** (aún sin
+datos; rellenar al revisar logs):
+- [ ] Universo: NO aparecen XLM/HBAR/LIT en señales/posiciones; ZEC sí. (Cerrar a mano huérfanas si quedaron.)
+- [ ] Leverage ~2.16x (sube vs 2.02x: haircut 0.95 sobre libro limpio). maxDD objetivo −10%.
+- [ ] `top_position` (TRX) ~12-14% (cap 0.25 lo contiene; antes ~20%). Vigilar que no pase 15%.
+- [ ] `beta` del snapshot = valor REAL (regresión, ~+0.025 modelo hasta ≥20d de equity; luego realizada).
+- [ ] Rebalanceo se reordena a **14 UTC (09h Lima)** tras el ciclo de arranque (que va a la hora del deploy).
+- [ ] Heartbeat loguea `cb=OK` (chequeo del CB cada 15min ahora activo; NO debe disparar con ruido).
+- [ ] Sin errores, sin halts, sombras (TVL+BLEND) siguen registrando.
+- **CLAVE a vigilar varios días:** que el **maxDD real** quede cómodo bajo −10% (el lev 2.16x sale del ancla
+  sobre datos recientes calmos; e29 advierte que puede excederse). Si se acerca a −10% → endurecer haircut.
+
 ### 2026-06-01 (DEMO — sombras YA registrando en prod + slippage favorable)
 - **2 ciclos** (20:15 y 23:16 UTC = 15:15/18:16 Lima) = reinicios por el **deploy de hoy** (sombras), no
   cadencia 24h. Ambos `Ciclo ESTABLE ok` (112s / 109s). Sin errores, CB OK, sin halts ni alertas.

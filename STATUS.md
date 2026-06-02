@@ -2,13 +2,14 @@
 > **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-02** (mañana, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 >
-> **⏭️ PRÓXIMA EJECUCIÓN:** ✅ Cerrados hoy: D0+D1, concentración TRX (e52) y monedas finas (e53).
-> **Lo siguiente = retomar B) INTRADÍA** (CME gap vía `regime_lab` + monitor de riesgo e15, backtester e42
-> montado) **y/o una señal DIARIA de Coinalyze** (ya registrados, API key en `data/.coinalyze_key`;
-> liquidaciones diarias retenidas). Empezar cuando Oscar indique. **Antes conviene DESPLEGAR el bundle de
-> hoy y validar el sizing en DEMO** (haircut 0.95 + cap trend + universo reducido).
+> **⏭️ PRÓXIMA EJECUCIÓN:** ✅ Sesión 2026-06-02 cerrada y **DESPLEGADA** (D0+D1, cap TRX, finas, pin de
+> hora 14 UTC, chequeo CB intradía). Frontera intradía evaluada COMPLETA (ejecución ✅, slicing diferido,
+> monitor ✅, resto descartado). **AHORA = VALIDAR EN DEMO (E1, el foso real = tiempo):** confirmar maxDD
+> real bajo −10%, Sharpe/slippage reales, β realizada (≥20d). **NO apilar cambios sobre el deploy fresco.**
+> Pendientes en cola (ver §PENDIENTES): sombras→sleeve #8 (~2026-07-31, e33), fix de huérfanas, reconciliar
+> el Sharpe diario-vs-hold-block (e15), C3 calibrar slippage con fills reales.
 > **⏰ RECORDATORIO PROGRAMADO ~2026-07-31 (60d):** cerrar el ciclo de las sombras (≥60-90d acumulados →
-> `e33_shadow_tvl_analyze` → ¿promover blend a sleeve #8?). Requiere que Oscar DESPLIEGUE primero las sombras.
+> `e33_shadow_tvl_analyze` → ¿promover blend a sleeve #8?). Sombras YA registrando en vivo (desde 06-01).
 
 ---
 
@@ -24,10 +25,11 @@
   - **Concentración TRX (e52):** cap 0.25 en `trend` (= MAX_WEIGHT_NORMAL) → TRX 20%→~10-14%, HHI −34%, Sharpe intacto.
   - **Monedas finas (e53):** retiradas XLM/HBAR/LIT (edge ~nulo + slippage 7.5-12.9bps); **ZEC se mantiene**
     (tiene edge real, e48). Neto realista 2.24→2.96%/mes @haircut-0.85, sin empeorar OOS.
-  ⚠️ **PENDIENTE DE DEPLOY: 5 cambios de prod** = (1) `config.LEVERAGE_HAIRCUT=0.95` + `engine.compute_target`
-  (D0), (2) β real en `engine`/`orchestrator` (D1, telemetría), (3) `engine.trend_sleeve` cap 0.25 (e52),
-  (4) `config.UNIVERSE` −{XLM,HBAR,LIT} (e53), (5) `kepler/onchain.py` fix ffill sombra (desde noche-2).
-  **Validar el sizing (D0/e52/e53) en DEMO unos días tras desplegar.** El resto (e51-e53, docs) = research/local.
+  ✅ **DESPLEGADO 2026-06-02 (Oscar)** — 2 commits: `e2f0505` (riesgo: haircut 0.95, β real, cap 0.25,
+  universo −{XLM,HBAR,LIT}, fix ffill sombra) + `55a429a` (ejecución: pin rebal 14 UTC e54, chequeo CB
+  intradía en heartbeat e15). **🔎 AHORA: validar el sizing en DEMO** (que el maxDD real quede cómodo
+  bajo −10%; el lev 2.16x sale del ancla sobre datos recientes calmos). Recordatorio operativo: cerrar a
+  mano posiciones huérfanas de XLM/HBAR/LIT si quedaron (el rebal no cierra coins fuera del universo).
 - ❌ **FASE 2 INTRADÍA order-book → DESCARTADO (e45):** a coste real (taker+ADV 8.6bps) TODAS las celdas
   negativas; el muro es coste×turnover (1h→4313x), no la señal. Rama order-book intradía CERRADA. Detalle
   en changelog tarde-3 e `INTRADAY.md §5`. Backtester horario queda montado/reusable para las otras ramas.
@@ -43,15 +45,13 @@
   de análisis (histórico completo). Curva de equity full-width.
 - ✅ **DESPLEGADO Y CORRIENDO (Oscar confirmó 2026-05-31 ~09:28 Lima):** la versión actual está en la
   VM operando en DEMO, se deja corriendo. **Confirmar al arrancar** (ver "VERIFICAR AL ARRANCAR").
-- 🌓 **Sleeve on-chain TVL en MODO SOMBRA (noche-6, PENDIENTE DEPLOY):** `kepler/onchain.py` registra
-  cada ciclo los pesos que tendría (sin operar) → validación forward del +0.6%/mes. No afecta lo que opera.
-- 🌗 **BLEND candidato a sleeve #8 en MODO SOMBRA (2026-06-01, PENDIENTE DEPLOY):** blend cross-family
-  {lotería(max_60d) + tvl_pxdiv + iliquidez(Amihud)} — **el mejor candidato de la sesión**: OOS purgado
-  **+0.34 Sharpe / 6-6 folds**, sobrevive taker (**+1.55%/mes** ADV central), full-history (sin punto ciego
-  2022), cuartiles parejos, LOO robusto. Caveat: lotería-60d es pico (no plateau) + TVL revisable → sombra
-  valida forward. `onchain.run_blend_shadow` loguea `shadow_signal` sleeve=`blend_lottery_tvl_illiq_v1`.
-- 🔬 **B1/B2 (e29): edge ROBUSTO** (Sharpe OOS 2.29 ≈ IS 2.21, 6/6 folds+) pero **el ancla −10% es
-  optimista** — en walk-forward el maxDD OOS llega a −13.5%; **el −10% puede excederse en vivo** (riesgo, ROADMAP D).
+- 🌓 **Sombras on-chain REGISTRANDO EN VIVO (desde 2026-06-01; ffill fix desplegado hoy):** TVL
+  (`tvl_pxdiv_14d`) + **BLEND candidato a sleeve #8** (`blend_lottery_tvl_illiq_v1` = lotería max_60d +
+  TVL + iliquidez Amihud). El mejor candidato: OOS purgado **+0.34 Sharpe / 6-6 folds**, sobrevive taker
+  (+1.55%/mes), full-history, LOO robusto. ⏰ **Reloj 60-90d (~2026-07-31) → `e33` → ¿promover a sleeve #8?**
+- ✅ **B1/B2 (e29) + D0 RESUELTO:** el edge es ROBUSTO (Sharpe OOS 2.29 ≈ IS 2.21, 6/6 folds). El ancla
+  sobre-apalancaba (maxDD OOS −13.5%) pero **se arregló** (haircut 0.95 + libro limpio → maxDD OOS −7.1%).
+  El −10% se respeta con margen. Validar en DEMO el maxDD real.
 
 ### 🗂️ INVENTARIO DE SLEEVES (referencia rápida)
 **OFICIALES (7, todos DIARIOS · rebal 24h · `engine.SLEEVES`):** 1.`mom_30d` (720h) · 2.`rev_60d` (1440h) ·
@@ -793,12 +793,13 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
 > Roadmap completo en `ROADMAP.md`. Empezar la próxima sesión leyendo este STATUS + ROADMAP.
 
 ### ⚠️ VERIFICAR AL ARRANCAR (antes de tocar nada)
-- **0a. Demo viva con la versión nueva:** en la VM `journalctl -u kepler -n 50` → buscar
-  `lev≈2.02x(maxDD-10%)`. Dashboard http://213.35.121.9:8080 panel backtest = **2.07 / −10** y deben
-  verse los paneles nuevos (Cómo funciona, Drawdown, Diversificación, PnL por posición).
+- **0a. Demo viva con la versión nueva (desplegada 2026-06-02):** en la VM `journalctl -u kepler -n 50` →
+  buscar `lev≈2.16x(maxDD-10%)`, β real en el snapshot, heartbeat `cb=OK`, rebalanceo a las 14 UTC.
+  Dashboard http://213.35.121.9:8080. Confirmar que NO hay XLM/HBAR/LIT y que ZEC sí está.
 - **0b. Acumulación de datos:** ¿hay varios ciclos con fills y `slip_bps`? (para C3). Pedir a Oscar la
   `kepler.db` de la VM si ya pasaron días → correr `python -m research.e21_fill_slippage <ruta_db>`.
-- **0c. Estado esperado:** **32 perps · 7 sleeves · ancla −10% · lev ~2.02x · carry suavizado 7d.**
+- **0c. Estado esperado:** **29 perps · 7 sleeves · ancla −10% · lev ~2.16x · haircut 0.95 · trend cap 0.25
+  · carry suavizado 7d · rebal 14 UTC · CB en heartbeat.** maxDD a vigilar (validación en curso).
 
 ### 🧭 RUTA ACORDADA (2026-06-01, orden de evaluación) — reemplaza el "menú agotado" de abajo
 > Workstream de régimen CERRADO a fondo (R0+R1 lab + R2 actuales + R3 descartados → el conditional
