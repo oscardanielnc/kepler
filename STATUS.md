@@ -79,6 +79,19 @@
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde-8 — UNIVERSO LIMPIO barrido LOO (e74) → universo YA limpio, NO retirar)
+Barrido LOO sistemático sobre las 20 coins operadas (reúsa e53: turnover + slippage ADV + ancla haircut).
+Baseline 20 coins: REAL 3.52%/mes · Sh 1.87 · IS/OOS 2.09/1.69 · maxDD −9.5%.
+- Marca 3 "retirables" (mejoran REAL+OOS por single-LOO): LTC +0.40, SOL +0.36, ADA +0.12%/mes.
+- **PERO son majors LÍQUIDAS (slippage 1.2-3.5 bps, de las más baratas) y su FLAT Δ es positivo** → no es
+  drag de costo, es que las señales no ganaron en ellas in-sample = **curvar el universo al P&L pasado**
+  (la trampa que e50 ya advirtió: excluir por retorno pasado empeora OOS en agregado; 19 pruebas → 2-3
+  falsos positivos esperables; Δ chicos ≈ ruido deflactado).
+- **Confirmación:** las coins de slippage ALTO (ZEC 9.0, TRX 6.0, ATOM 5.8, UNI 5.6) son TODAS MANTENER
+  (su edge paga su costo). Por el lado defendible (costo), el universo YA está limpio (e53 retiró las finas).
+- **VEREDICTO: NO retirar nada.** Universo ya limpio; quitar líquidas = overfit. Workstream "universo
+  limpio" CERRADO (evaluado → sin acción). e74 queda como diagnóstico reusable.
+
 ## CHANGELOG 2026-06-02 (tarde-7 — CME gap (e73) DESCARTADO + limpieza de pendientes)
 - **CME GAP → DESCARTADO con números (e73).** Fade del gap de fin de semana (BTC, 228 weekends 2022-2026,
   proxy vie-21UTC→dom-22UTC): **pierde en TODOS los horizontes** (12-120h): Sharpe −0.58 a −1.59, ann −22%
@@ -1064,10 +1077,10 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
      las monedas; excluir empeora OOS). Regla queda como diagnóstico permanente (`kepler-per-sleeve-universe-rule`).
    - **Ruta B intradía — TODO lo evaluable está CERRADO:** order-book ✗ (e45), liquidaciones ✗ (e46-49),
      CME gap ✗ (e73), monitor e15 ✗ (evaluado, CB en heartbeat ya desplegado). NADA pendiente intradía.
-   - **ÚNICO workstream vivo de esta rama = "UNIVERSO LIMPIO" (diario, NO intradía):** RETIRAR monedas del
-     universo GLOBAL que aporten poco edge + mucho slippage (ampliar se descartó e17; achicar está menos
-     explorado; ya validado en e53 con −{XLM,HBAR,LIT}). Barrido sistemático estilo e53/LOO por moneda →
-     ¿más monedas cuya retirada mejora OOS y baja slippage sin perder edge? Barato y alineado con bajo-DD.
+   - **"UNIVERSO LIMPIO" → CERRADO (e74):** barrido LOO sobre las 20 coins → el universo YA está limpio por
+     el lado del costo (las de slippage alto tienen edge que lo paga). Las "retirables" (LTC/SOL/ADA) son
+     majors líquidas = overfit de P&L pasado → NO retirar. Sin acción.
+   - **⇒ RUTA B INTRADÍA COMPLETAMENTE AGOTADA.** order-book✗ liquidaciones✗ CME✗ e15✗ universo-limpio✗.
    - (Parado, NO pendiente activo) Colector intradía hacia adelante (liquidaciones 1h/WS) — solo si se
      decide invertir meses en acumular dato intradía inexistente gratis.
 
