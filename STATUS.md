@@ -49,11 +49,12 @@
   de análisis (histórico completo). Curva de equity full-width.
 - ✅ **DESPLEGADO Y CORRIENDO (Oscar confirmó 2026-05-31 ~09:28 Lima):** la versión actual está en la
   VM operando en DEMO, se deja corriendo. **Confirmar al arrancar** (ver "VERIFICAR AL ARRANCAR").
-- 🌓 **3 SOMBRAS on-chain (no operan, validación forward):** (1) TVL `onchain_tvl_pxdiv_14d` + (2) BLEND
-  `blend_lottery_tvl_illiq_v1` (lotería+TVL+iliquidez) — registrando desde 2026-06-01; (3) **TX
-  `onchain_tx_pxdiv_14d`** (Coin Metrics, **el más fuerte**: +1.46%/mes vs los 7, ortogonal a todo) —
-  IMPLEMENTADA hoy, **registrará tras el deploy**. ⏰ **Reloj 60-90d (~2026-07-31) → `e33`-style → ¿promover
-  alguna a sleeve #8?** (tx_pxdiv como directo; blend como conjunto). PENDIENTE DEPLOY de la sombra tx.
+- 🌓 **4 SOMBRAS (no operan, validación forward):** (1) TVL `onchain_tvl_pxdiv_14d` + (2) BLEND
+  `blend_lottery_tvl_illiq_v1` (registrando desde 06-01); (3) **TX `onchain_tx_pxdiv_14d`** (actividad,
+  +1.46%/mes) + (4) **MVRV `onchain_mvrv_lvl`** (valor, +1.41%/mes, turnover 6x) — implementadas 06-02,
+  registran tras el deploy. tx y mvrv son **ortogonales entre sí (corr +0.02)** y a los 7 → 2 edges
+  on-chain independientes. ⏰ **Reloj 60-90d (~2026-07-31) → `e33`-style → ¿promover a sleeve #8?**
+  (tx/mvrv como directos; blend como conjunto). PENDIENTE DEPLOY de las sombras tx+mvrv.
 - ✅ **B1/B2 (e29) + D0 RESUELTO:** el edge es ROBUSTO (Sharpe OOS 2.29 ≈ IS 2.21, 6/6 folds). El ancla
   sobre-apalancaba (maxDD OOS −13.5%) pero **se arregló** (haircut 0.95 + libro limpio → maxDD OOS −7.1%).
   El −10% se respeta con margen. Validar en DEMO el maxDD real.
@@ -75,6 +76,22 @@
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-06-02 (tarde — COIN METRICS ampliado: `mvrv_lvl` PASA → 2ª sombra on-chain 🎯)
+Barrido del catálogo Coin Metrics community (e65/e66). 31 métricas; las fundamentales nuevas:
+- **Netflow de exchanges** (`FlowInExUSD/FlowOutExUSD`) — el netflow que creíamos de pago (CryptoQuant)
+  está GRATIS… pero **SOLO BTC/ETH** community-free → NO cross-seccional (muro market-wide) → ✗ muerto.
+  Igual `SplyExNtv` (exchange supply). Honesto: la cobertura mata el lead más emocionante.
+- **GANADOR: `mvrv_lvl`** (short high MVRV = market cap / realized cap; long infravalorado). Factor de
+  VALOR on-chain. Pasa TODO (e66): corr 0.28 (mom) / **+0.02 con tx_pxdiv** (¡ortogonales entre sí!),
+  IS/OOS 0.69/0.80, **turnover 6x/año → inmune al taker** (Δ +1.41%/mes maker=taker), **LOO robusto**
+  (sin ZEC aún +1.08, NO 1-coin). point-in-time limpio (realized cap = historia inmutable). 11 coins.
+- Descartados: mvrv_mom/mvrv_z (corr alta con mom/hlpos), size (corr 0.66 mom; reconfirma e35).
+- **IMPLEMENTADA SOMBRA `onchain_mvrv_lvl`** (`onchain.py` + orchestrator): update_cm_fundamentals +
+  mvrv_shadow_weights + run_mvrv_shadow. Verificado: 12 posiciones β-neutral (short ZEC/ETH, long UNI/ADA).
+  **PENDIENTE DEPLOY.** Ahora **4 sombras** (TVL, BLEND, tx_pxdiv, mvrv_lvl) → reloj forward.
+- **DOS edges on-chain ortogonales:** tx_pxdiv (ACTIVIDAD) + mvrv_lvl (VALOR), corr +0.02 → la doctrina de
+  muchas señales chicas materializándose. La familia on-chain SIGUE produciendo (≠ derivados, agotada).
 
 ## CHANGELOG 2026-06-02 (tarde — COINALYZE Tier 2: predicted-funding + OI → NEGATIVO (familia agotada))
 Inventario API (e62) + harness (e63) + estrés (e64). Coinalyze diario cross-exchange (2020→hoy): predicted

@@ -276,6 +276,9 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
         # tx_pxdiv_14d (Coin Metrics, e59/e60/e61): candidato a sleeve #8 DIRECTO (más fuerte que el TVL)
         sht = onchain.run_tx_shadow(db)
         _log.info(f"[orq] sombra tx_pxdiv: {sht.get('logged', 0)} señales registradas")
+        # mvrv_lvl (Coin Metrics, e65/e66): 2º candidato on-chain, de VALOR (ortogonal a tx; corr +0.02)
+        shm = onchain.run_mvrv_shadow(db)
+        _log.info(f"[orq] sombra mvrv_lvl: {shm.get('logged', 0)} señales registradas")
     except Exception as e:
         _log.warning(f"[orq] sombra on-chain omitida: {e}")
     notify.alert_cycle(equity, n_target, float(target.abs().sum()), operate, mode)

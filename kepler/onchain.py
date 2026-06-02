@@ -307,6 +307,110 @@ def run_tx_shadow(db=None) -> dict:
     return {"logged": n, "asof": str(asof)}
 
 
+# ─── SOMBRA on-chain MVRV (Coin Metrics) — 2º candidato a sleeve #8, de VALOR (≠ tx que es ACTIVIDAD) ──
+# mvrv_lvl = short high MVRV (market cap / realized cap = precio vs coste base on-chain). Validado e65/e66:
+# ortogonal a los 7 sleeves (corr 0.28 mom) Y a tx_pxdiv (corr +0.02), IS/OOS 0.69/0.80, turnover 6x/año →
+# inmune al taker (Δ +1.41%/mes), LOO robusto (no 1-coin). Factor de VALOR fundamental. point-in-time
+# limpio (realized cap = historia on-chain inmutable). 11 coins. En SOMBRA: validar forward.
+MVRV_SLEEVE = "onchain_mvrv_lvl"
+MVRV_HOLD_D = 30
+FUND_CACHE = os.path.join(config.DATA_DIR, "onchain_cm_fund"); os.makedirs(FUND_CACHE, exist_ok=True)
+# 14 coins con CapMVRVCur community-free (los stale se filtran en _daily_mvrv por fecha). CM id → ticker.
+FUND2TKR = {"aave": "AAVEUSDT", "ada": "ADAUSDT", "bch": "BCHUSDT", "bnb": "BNBUSDT", "btc": "BTCUSDT",
+            "doge": "DOGEUSDT", "dot": "DOTUSDT", "etc": "ETCUSDT", "eth": "ETHUSDT", "link": "LINKUSDT",
+            "ltc": "LTCUSDT", "uni": "UNIUSDT", "xrp": "XRPUSDT", "zec": "ZECUSDT"}
+
+
+def update_cm_fundamentals() -> int:
+    """Refresca CapMVRVCur diario (Coin Metrics Community, sin key) → parquet por coin. Overwrite."""
+    ok = 0
+    for cm in FUND2TKR:
+        try:
+            rows = []; url = f"{CM_BASE}/timeseries/asset-metrics"
+            params = {"assets": cm, "metrics": "CapMVRVCur", "frequency": "1d",
+                      "start_time": "2016-01-01", "page_size": 10000}
+            for _ in range(30):
+                r = requests.get(url, params=params, timeout=60)
+                if r.status_code != 200:
+                    break
+                j = r.json(); rows += j.get("data", [])
+                if not j.get("next_page_url"):
+                    break
+                url = j["next_page_url"]; params = None
+            if not rows:
+                continue
+            df = pd.DataFrame(rows); df["time"] = pd.to_datetime(df["time"])
+            df["CapMVRVCur"] = pd.to_numeric(df.get("CapMVRVCur"), errors="coerce")
+            df[["time", "CapMVRVCur"]].dropna().sort_values("time").to_parquet(os.path.join(FUND_CACHE, f"{cm}.parquet"))
+            ok += 1
+        except Exception:
+            continue
+    return ok
+
+
+def _daily_mvrv(symbols):
+    """Panel diario de log(MVRV) para los coins cubiertos y FRESCOS (descarta stale: última fecha >20d)."""
+    cutoff = pd.Timestamp.now(tz="UTC").normalize() - pd.Timedelta(days=20)
+    cols = {}
+    for cm, tkr in FUND2TKR.items():
+        if tkr not in symbols:
+            continue
+        p = os.path.join(FUND_CACHE, f"{cm}.parquet")
+        if not os.path.exists(p):
+            continue
+        d = pd.read_parquet(p).set_index("time")
+        d.index = pd.to_datetime(d.index, utc=True).normalize()
+        s = d["CapMVRVCur"].dropna() if "CapMVRVCur" in d else pd.Series(dtype=float)
+        if s.empty or s.index.max() < cutoff:           # descartar stale (bnb 2019, dot 2022)
+            continue
+        cols[tkr] = np.log(s.replace(0, np.nan))
+    df = pd.DataFrame(cols)
+    if df.empty:
+        return df
+    return df[~df.index.duplicated()].sort_index()
+
+
+def mvrv_shadow_weights():
+    """Pesos ACTUALES que el sleeve mvrv_lvl tendría (β-neutral). NO opera."""
+    from kepler.engine import load, _beta, xs_sleeve
+    C = load(); ret = np.log(C).diff(); beta = _beta(ret)
+    lmv = _daily_mvrv(list(C.columns))
+    if lmv.empty:
+        return None, None, C.index[-1]
+    # SCORE = −log(MVRV) (short high MVRV = sobrevalorado; long bajo = infravalorado), lag point-in-time.
+    score_daily = (-lmv).shift(TX_SHIFT_D)
+    score = score_daily.reindex(C.index, method="ffill").reindex(columns=C.columns)
+    _, w_now = xs_sleeve(C, ret, beta, score, MVRV_HOLD_D * 24)
+    return w_now, score.iloc[-1], C.index[-1]
+
+
+def run_mvrv_shadow(db=None) -> dict:
+    """Calcula y REGISTRA (sin operar) los pesos del candidato mvrv_lvl de este ciclo. Aislado."""
+    from kepler.db import DB
+    db = db or DB()
+    update_cm_fundamentals()
+    try:
+        w, score, asof = mvrv_shadow_weights()
+    except Exception as e:
+        db.audit("WARNING", "shadow_mvrv", f"Sombra mvrv omitida: {str(e)[:80]}")
+        return {"logged": 0}
+    if w is None:
+        db.audit("WARNING", "shadow_mvrv", "Sin datos mvrv — sombra omitida")
+        return {"logged": 0}
+    n = 0
+    for sym, wt in w.items():
+        if abs(float(wt)) <= 1e-6:
+            continue
+        sc = float(score.get(sym, float("nan"))) if score is not None else None
+        db.log_shadow(sleeve=MVRV_SLEEVE, symbol=sym, weight=round(float(wt), 4),
+                      score=(None if sc is None or np.isnan(sc) else round(sc, 6)),
+                      detail={"asof": str(asof), "hold_d": MVRV_HOLD_D})
+        n += 1
+    db.audit("INFO", "shadow_mvrv", f"Sombra mvrv_lvl registrada ({n} posiciones)",
+             detail={"sleeve": MVRV_SLEEVE, "asof": str(asof)})
+    return {"logged": n, "asof": str(asof)}
+
+
 if __name__ == "__main__":
     try: sys.stdout.reconfigure(encoding="utf-8")
     except Exception: pass
@@ -316,3 +420,5 @@ if __name__ == "__main__":
     print(f"Sombra BLEND registrada: {rb}")
     rt = run_tx_shadow()
     print(f"Sombra tx_pxdiv registrada: {rt}")
+    rm = run_mvrv_shadow()
+    print(f"Sombra mvrv_lvl registrada: {rm}")
