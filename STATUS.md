@@ -79,6 +79,16 @@
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde-7 — CME gap (e73) DESCARTADO + limpieza de pendientes)
+- **CME GAP → DESCARTADO con números (e73).** Fade del gap de fin de semana (BTC, 228 weekends 2022-2026,
+  proxy vie-21UTC→dom-22UTC): **pierde en TODOS los horizontes** (12-120h): Sharpe −0.58 a −1.59, ann −22%
+  a −32%, win ~50%. La "fill rate" sube 32%→73% con el horizonte pero es trivial (mean-reversion banal, no
+  rentable). + choca con β-neutral (BTC-direccional). Rama CME CERRADA. No re-litigar.
+- **Limpieza de pendientes:** sacados de la cola CME gap (e73, ✗) y monitor de riesgo intradía e15 (ya
+  evaluado/NEGATIVO: DD intradía diminuto, hard-halt=whipsaw; única mejora barata=CB en heartbeat YA
+  desplegada). Ruta B intradía: order-book ✗, liquidaciones ✗, CME ✗, e15 ✗ → **solo queda "universo
+  limpio" (diario, no intradía)** como workstream barato y vivo.
+
 ## CHANGELOG 2026-06-02 (tarde-6 — NETFLOW Dune (e72): pipeline VALIDADO, build cross-chain = decisión)
 Key Dune gratis (`data/.dune_key`). Pipeline funcional (`research/dune_util.py`: crear query pública →
 ejecutar **perf='free'** ← OJO el bug: 'medium' es inválido en free tier y falla silencioso → leer por
@@ -1052,22 +1062,19 @@ Durante la sesión salté a una conclusión errónea y la documenté a medias do
      gratis completo pero el edge era **ZEC (1 coin)** → sin ZEC nada (precedente e17/AXS). Rama cerrada.
    - ✅ **Regla universo por-sleeve aplicada a los 7** (e50) → **ningún cambio** (los 7 ya usan bien todas
      las monedas; excluir empeora OOS). Regla queda como diagnóstico permanente (`kepler-per-sleeve-universe-rule`).
-   - **⏭️ PRÓXIMA SESIÓN (cuando Oscar indique), lo que QUEDA de la ruta B:**
-     a) **CME gap** (#2) — gap del futuro CME de BTC fin de semana, vía `regime_lab` con pre-registro/
-        deflación; caveat: BTC-direccional/intradía choca con β-neutral → evaluable como overlay. NO
-        necesita dato externo nuevo (CME de BTC es accesible).
-     b) **Monitor de riesgo e15** (#3) — reduce maxDD intradía (misión copy-lead), NO añade retorno;
-        re-correr sobre el backtester e42 ya funcional. Criterio: ¿baja el DD sin matar Sharpe?
-     c) **Idea abierta de Oscar:** RETIRAR monedas del universo GLOBAL (no por-sleeve; ampliar ya se
-        descartó e17, pero achicar a un universo más limpio está MENOS explorado) → posible workstream.
-     d) **Colector intradía hacia adelante** (liquidaciones reales 1h / WS @forceOrder) — solo si se
-        decide invertir meses en acumular el dato intradía que no existe gratis.
+   - **Ruta B intradía — TODO lo evaluable está CERRADO:** order-book ✗ (e45), liquidaciones ✗ (e46-49),
+     CME gap ✗ (e73), monitor e15 ✗ (evaluado, CB en heartbeat ya desplegado). NADA pendiente intradía.
+   - **ÚNICO workstream vivo de esta rama = "UNIVERSO LIMPIO" (diario, NO intradía):** RETIRAR monedas del
+     universo GLOBAL que aporten poco edge + mucho slippage (ampliar se descartó e17; achicar está menos
+     explorado; ya validado en e53 con −{XLM,HBAR,LIT}). Barrido sistemático estilo e53/LOO por moneda →
+     ¿más monedas cuya retirada mejora OOS y baja slippage sin perder edge? Barato y alineado con bajo-DD.
+   - (Parado, NO pendiente activo) Colector intradía hacia adelante (liquidaciones 1h/WS) — solo si se
+     decide invertir meses en acumular dato intradía inexistente gratis.
 
 ### 📌 RECORDATORIO — MENÚ DE CONDICIONES (hacer DESPUÉS de #2 y #4) — vía `regime_lab`, con disciplina
 > Pedido de Oscar (2026-06-01): mantener abierto el rescate por condición específica. Probar cada una
 > con PRE-REGISTRO + deflación + walk-forward purgado + validación forward (no sweeps masivos).
-- **CME gap** (gap del futuro CME de BTC fin de semana). ⚠️ Es BTC-direccional/intradía → choca con
-  β-neutral (se hedgea BTC) y/o requiere el backtester horario; evaluable como overlay con ese caveat.
+- ~~CME gap~~ → **DESCARTADO (e73):** el fade pierde en todos los horizontes (Sharpe<0). No re-litigar.
 - **Fechas macro** (FOMC/CPI), **funding extremo**, **vencimiento de opciones** (ojo: e28 ya lo halló artefacto).
 - Cualquier "pista" nueva de señal que rinda **solo en condiciones específicas** → directo al lab.
 
