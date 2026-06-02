@@ -2,11 +2,11 @@
 > **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-01** (tarde-3, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 >
-> **⏭️ PRÓXIMA EJECUCIÓN:** agotar **B) INTRADÍA** + el workstream nuevo. Ya cerrados hoy: order-book
-> (DESCARTADO, e45) y **liquidaciones** (DESCARTADO, edge=ZEC, e46-49). **Quedan:** (a) **CME gap** (vía
-> regime_lab, caveat β-neutral), (b) **monitor de riesgo e15** (backtester e42 ya montado), y (c) 🟢
-> **aplicar la REGLA universo por-sleeve a los 7 oficiales** (`kepler-per-sleeve-universe-rule`, molde
-> e49 — la mejor avenida nueva: de-draggear puede limpiar/mejorar sleeves; workstream validado).
+> **⏭️ PRÓXIMA EJECUCIÓN:** agotar **B) INTRADÍA**. Ya cerrados: order-book (DESCARTADO, e45),
+> **liquidaciones** (DESCARTADO, edge=ZEC, e46-49) y **regla universo por-sleeve sobre los 7** (e50 →
+> ningún cambio, los 7 ya usan bien todas las monedas). **Quedan:** (a) **CME gap** (vía regime_lab,
+> caveat β-neutral), (b) **monitor de riesgo e15** (backtester e42 montado). Idea abierta de Oscar:
+> RETIRAR monedas del universo GLOBAL (menos explorado que ampliar). Empezar cuando Oscar indique.
 > **⏰ RECORDATORIO PROGRAMADO ~2026-07-31 (60d):** cerrar el ciclo de las sombras (≥60-90d acumulados →
 > `e33_shadow_tvl_analyze` → ¿promover blend a sleeve #8?). Requiere que Oscar DESPLIEGUE primero las sombras.
 
@@ -76,9 +76,15 @@ Arranque de la ruta B (intradía). #1 = liquidaciones (Coinalyze, gratis con API
   bueno pero depende/falla por 1 moneda, diagnosticar contribución POR coin y usar **universo por-sleeve**
   (excluir estorbadores con selección-IS/validación-OOS; rechazar lo que dependa de 1 coin). Validada:
   de-draggear liq_imb_3d pasó −0.59/+2.00 → **+1.91/+1.47** (equilibrado entre mitades) = mejora REAL de
-  robustez. Aquí no rescató liquidaciones (lo que quedaba era ZEC) pero **como técnica general es sólida**
-  → candidata a aplicar a los 7 oficiales (workstream validado, no parche). Idea abierta: RETIRAR monedas
-  del universo global (ampliar ya se descartó, e17) está menos explorado.
+  robustez. Aquí no rescató liquidaciones (lo que quedaba era ZEC) pero **como técnica general es sólida**.
+- ✅ **REGLA aplicada a los 7 oficiales (e50) → NINGÚN cambio necesario.** Con disciplina IS→OOS (selección
+  de estorbadores en IS, validación en OOS; métrica Sharpe combinado anti-artefacto + %/mes anclado):
+  excluir coins EMPEORA el OOS en todos (mom ΔOOS −1.35%/mes, rev −2.67; lowvol/takerflow/hlpos marginal y
+  MIXTO = ruido). **Los 7 sleeves YA usan bien todas las monedas** (los "estorbadores" de IS no generalizan).
+  Respuesta a Oscar (¿deben estar todas?): **SÍ para los 7 oficiales.** Doble validación: la regla rescató
+  liquidaciones-de-dragged (+1.91/+1.47 IS/OOS) y RECHAZA aquí → su disciplina IS→OOS funciona. carry/trend
+  no cubiertos (universo interno funding/EMA; refactor pendiente si se quisiera). Idea abierta de Oscar:
+  RETIRAR monedas del universo GLOBAL (ampliar ya se descartó, e17) sigue menos explorado.
 - Archivos: `research/e46_download_liquidations.py` (downloader Coinalyze), `e47_liquidations_check.py`
   (chequeo barato), `e48_liquidations_stress.py` (taker/concentración/horizonte), `e49_liquidations_universe.py`
   (regla universo por-sleeve). Datos en `data/liquidations_daily/` (no trackeado).
