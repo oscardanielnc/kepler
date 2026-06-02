@@ -1,5 +1,7 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-02** (mañana, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-02** (tarde, hora Lima).
+> Sesión maratónica: D0/D1/concentración/finas/ejecución/monitor/Sharpe/huérfanas + barrido de fuentes →
+> 2 edges on-chain nuevos (`tx_pxdiv`, `mvrv_lvl`) en sombra. Deploy-ready (único prod nuevo: sombra mvrv `b7d086c`).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 >
 > **⏭️ PRÓXIMA EJECUCIÓN:** ✅ Sesión 2026-06-02 cerrada y **DESPLEGADA** (D0+D1, cap TRX, finas, pin de
