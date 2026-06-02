@@ -82,6 +82,21 @@
 
 ---
 
+## CHANGELOG 2026-06-02 (noche-2 — FASE 1 robustez: guardas pre-trade (checks.py) wired al orchestrator)
+Arranque de la Fase 1 (ROADMAP §RUTA MAESTRA), CODE-FIRST cero IA. Pasos 1 y 2 hechos:
+- **Paso 1 — `kepler/checks.py`** (módulo nuevo, chequeos puros): data_coverage (caza el incidente de hoy:
+  panel arranca tarde → CRIT), data_freshness, leverage (banda+salto), concentración, n_posiciones,
+  β-dólar. Severidad OK<WARN<CRIT. Test `research/e75_checks_test.py`: 6 casos, **el incidente reproducido
+  (datos desde 2023) BLOQUEA** ✅; todos los asserts pasan.
+- **Paso 2 — wired al orchestrator (`cycle`):** guarda PRE-TRADE entre target y rebalanceo. **CRÍTICO +
+  operate ⇒ NO rebalancea** (libro intacto, reintenta solo próximo ciclo = opción (a) de Oscar), ntfy
+  urgente, audit CRITICAL. Un flatten por CB NO se bloquea (aplanar es seguro). WARN ⇒ opera + ntfy en
+  TRANSICIÓN (no spam, via `_last_check_severity`). `prev_lev` del último snapshot para el salto.
+  Alertas nuevas en `notify.py` (block/warn/recover). Verificado: ciclo DRY_RUN completo, guarda OK,
+  audit `checks` registrado, NO falso-bloqueo del caso sano. **PENDIENTE PUSH+DEPLOY (toca loop vivo).**
+- **SIGUE (Fase 1):** paso 3 = health-check runtime en heartbeat (F1.2) · paso 4 = monitor correlación
+  sleeves (F1.5) · paso 5 = reporte profesional templado (F1.4). Todo código, cero IA.
+
 ## CHANGELOG 2026-06-02 (noche — RUTA MAESTRA: cambio de fase a Operación→Producto→Escala)
 Tras agotar la caza de alfa gratis, Oscar pidió consolidar TODO lo que sí aporta valor en una ruta
 ordenada. Evaluadas y respondidas sus preguntas (memoria `kepler-news-ia-bots-decision`):

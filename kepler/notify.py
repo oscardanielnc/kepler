@@ -40,3 +40,20 @@ def alert_halt(dd, equity):
     send("⛔ Kepler CIRCUIT BREAKER",
          f"Drawdown {dd*100:.1f}% — operación PAUSADA (equity ${equity:,.0f})",
          priority="urgent", tags="octagonal_sign")
+
+
+def alert_checks_block(msg):
+    """Guarda pre-trade CRÍTICA: el rebalanceo se bloqueó (libro intacto)."""
+    send("⛔ Kepler REBALANCEO BLOQUEADO",
+         f"Guarda pre-trade CRÍTICA — NO se operó (libro intacto, reintenta próximo ciclo):\n{msg}",
+         priority="urgent", tags="octagonal_sign,no_entry")
+
+
+def alert_checks_warn(msg):
+    """Aviso de chequeos (operó, pero hay desviación a vigilar)."""
+    send("🟡 Kepler aviso de chequeos", msg, priority="high", tags="warning")
+
+
+def alert_checks_recover():
+    send("✅ Kepler chequeos OK", "Los chequeos pre-trade volvieron a verde.",
+         priority="default", tags="white_check_mark")

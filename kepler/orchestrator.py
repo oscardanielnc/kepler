@@ -9,13 +9,13 @@ DRY_RUN se controla en kepler/execution.py (default True = seguro).
 python -m kepler.orchestrator [ESTABLE|BALANCEADO|GROWTH] [--once]
 """
 from __future__ import annotations
-import logging, os, sys, time
+import json, logging, os, sys, time
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config  # noqa
-from kepler import fetch, execution, circuit_breaker, notify
-from kepler.engine import compute_target, TIERS
+from kepler import fetch, execution, circuit_breaker, notify, checks
+from kepler.engine import compute_target, TIERS, load as load_panel_close
 from kepler.portfolio import metrics as pf_metrics
 from kepler.db import DB
 
@@ -190,6 +190,25 @@ def _save_daily_report(db: DB, tier, mode, equity, target, lev, bt, operate):
     return narr
 
 
+def _last_leverage(db: DB):
+    """Leverage del ciclo previo (del último snapshot) para el chequeo de salto. None si no hay."""
+    row = db.conn.execute("SELECT detail FROM portfolio_snapshot ORDER BY ts DESC LIMIT 1").fetchone()
+    if row and row[0]:
+        try: return float(json.loads(row[0]).get("leverage"))
+        except Exception: pass
+    return None
+
+
+def _last_check_severity(db: DB):
+    """Severidad de los chequeos del ciclo previo (para notificar solo en TRANSICIÓN, no spamear)."""
+    row = db.conn.execute(
+        "SELECT detail FROM audit_event WHERE category='checks' ORDER BY ts DESC LIMIT 1").fetchone()
+    if row and row[0]:
+        try: return json.loads(row[0]).get("severity", "OK")
+        except Exception: pass
+    return "OK"
+
+
 def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     db = db or DB()
     t0 = time.time()
@@ -210,6 +229,31 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     target, vp, df, port, asof, lev, weights, beta_last, beta_model = compute_target(tier)
     bt = pf_metrics(port * lev)   # métricas del backtest CON el leverage anclado (lo que se opera)
     target = target[target.abs() > 0.005]
+    # 4b. GUARDA PRE-TRADE (Fase 1, robustez operativa): chequeos deterministas (datos/leverage/concentración).
+    #     CRÍTICO ⇒ NO rebalancear (libro intacto, reintenta solo el próximo ciclo) — habría frenado el
+    #     incidente 2026-06-02 (backfill faltante → ancla 2.93x). Un flatten por CB (operate=False) NO se
+    #     bloquea (aplanar a 0 es seguro e independiente de la calidad del dato). Alertas en TRANSICIÓN.
+    try:
+        chk = checks.run_pretrade_checks(load_panel_close(), target, lev, beta_last, prev_lev=_last_leverage(db))
+        sev, prev_sev = checks.worst(chk), _last_check_severity(db)
+        summary = checks.summarize(chk)
+        db.audit("CRITICAL" if sev == checks.CRIT else ("WARNING" if sev == checks.WARN else "INFO"),
+                 "checks", f"Chequeos pre-trade: {sev}",
+                 detail={"severity": sev, "summary": summary,
+                         "results": [{"name": r.name, "sev": r.severity, "msg": r.message} for r in chk]})
+        if checks.should_block(chk) and operate:
+            _log.error(f"[orq] ⛔ GUARDA PRE-TRADE CRÍTICA — rebalanceo BLOQUEADO: {summary}")
+            notify.alert_checks_block(summary)
+            db.record_equity_tick(equity); db.upsert_equity_daily(equity)   # mantener la curva
+            db.audit("CRITICAL", "orchestrator", "Rebalanceo BLOQUEADO por guarda pre-trade",
+                     detail={"equity": equity, "summary": summary})
+            return {"equity": equity, "n_target": 0, "operate": False, "blocked": True, "mode": mode}
+        if sev == checks.WARN and prev_sev != checks.WARN:
+            notify.alert_checks_warn(summary)
+        elif sev == checks.OK and prev_sev != checks.OK:
+            notify.alert_checks_recover()
+    except Exception as e:
+        _log.warning(f"[orq] guarda pre-trade omitida (error no fatal): {e}")
     if not operate:
         _log.warning("[orq] CIRCUIT BREAKER activo — aplanando (target=0)")
         target = target * 0.0
