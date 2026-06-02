@@ -79,6 +79,20 @@
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde-5 — SANTIMENT social (e71) + Flipside MUERTO → Dune para netflow)
+Oscar consiguió API key de Santiment (gratis, en `data/.santiment_key`). Probada y funcional (`sanpy`).
+- **e71 (chequeo EXPLORATORIO, social_volume + sentiment_balance, 18 monedas):** el social es **muy
+  ortogonal** a los 7 (max |corr| 0.04–0.10, < que Trends). Señales débiles que sobreviven taker:
+  `sentiment_lvl`(−1)="comprar miedo" (Sh 0.53, taker 0.51) y `socvol_mom_14`(+1)=atención↑→long
+  (Sh 0.42, taker 0.39).
+- **BLOQUEO del free tier:** solo **~1 año de historia + lag 30 días** → (1) NO se puede validar IS/OOS
+  con 1y; (2) el lag de 30d hace la señal viva siempre 1 mes vieja → inservible en producción. El free
+  tier sirve solo para confirmar ortogonalidad (✓), no para actuar. **→ Santiment social va a la lista
+  PAGADA** (Pro ~$50/mo quita el lag + da historia) junto a CryptoQuant. Memoria `kepler-sentiment-trends-marginal`.
+- **FLIPSIDE MUERTO:** vendió su negocio de datos a SonarX; Flipspace se apaga 2026-06-17 → no hay sign-up.
+  **Para netflow → Dune** (sigue activo). Pendiente: Oscar registra en Dune (key gratis) → yo escribo el
+  SQL de netflow per-token. Flipside descartado como fuente.
+
 ## CHANGELOG 2026-06-02 (tarde-4 — SENTIMENT vía Google Trends (e70): edge marginal-real pero FUENTE frágil)
 Familia nueva (Oscar): agotar sentiment/social gratis + netflow Dune/Flipside. Hallazgos:
 - **Acceso:** lo único gratis+keyless+cross-seccional+con histórico es **Google Trends** (pytrends; ojo bug
