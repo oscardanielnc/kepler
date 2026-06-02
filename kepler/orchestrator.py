@@ -20,6 +20,8 @@ from kepler.portfolio import metrics as pf_metrics
 from kepler.db import DB
 
 REBALANCE_HOURS = 24
+MIN_REBAL_HOURS = 18        # no rebalancear dos veces dentro de la ventana del mismo día
+MAX_REBAL_HOURS = 30        # fallback: nunca dejar el libro >30h sin rebalancear (si se pierde la ventana)
 HEARTBEAT_MIN = 15          # registra equity cada 15 min (curva viva) sin rebalancear
 _log = logging.getLogger("kepler")
 
@@ -28,14 +30,30 @@ def heartbeat(db: DB):
     """Registra equity sin rebalancear — mantiene la curva y la tabla diaria al día.
     Si NO se puede leer el balance, se OMITE el punto (no se inventa un 5000 que mete
     escalones falsos en la curva y corrompe la rentabilidad). En DRY_RUN get_balance
-    devuelve el capital configurado, así que esto solo afecta a DEMO/REAL con la API caída."""
+    devuelve el capital configurado, así que esto solo afecta a DEMO/REAL con la API caída.
+
+    CHEQUEO INTRADÍA DEL CIRCUIT BREAKER (e15): el CB ANCHO (−20%) hoy solo se evaluaba en el ciclo de
+    24h → una catástrofe entre rebalanceos no se cortaba hasta ~24h después. Chequearlo cada heartbeat
+    (15min) atrapa el cisne negro ~24h más rápido a coste ~0 (el −20% NUNCA dispara con ruido intradía:
+    el peor DD intradía en 4 años fue −3.3%). NO es un halt fino (eso sería whipsaw, e15) — es el MISMO
+    umbral ancho, solo evaluado más seguido. Al disparar, aplana el libro YA (no espera al ciclo)."""
     equity = execution.get_balance()
     if equity is None:
         _log.warning("[hb] balance ilegible — se omite este punto de la curva")
         return
     db.record_equity_tick(equity)
     db.upsert_equity_daily(equity)
-    _log.info(f"[hb] equity={equity:.2f}")
+    operate = circuit_breaker.check(equity, db)
+    if not operate:
+        _log.warning("[hb] CIRCUIT BREAKER intradía DISPARADO — aplanando el libro (no se espera al ciclo)")
+        try:
+            orders = execution.flatten(equity)
+            if orders:
+                db.audit("CRITICAL", "orchestrator", "Halt intradía: libro aplanado por el CB", detail={"equity": equity})
+        except Exception as e:
+            _log.exception(f"[hb] fallo al aplanar tras el CB: {e}")
+            db.audit("ERROR", "orchestrator", f"Fallo al aplanar tras CB intradía: {e}")
+    _log.info(f"[hb] equity={equity:.2f} cb={'OK' if operate else 'HALT'}")
 
 
 def _log_signals(db: DB, target, vp, weights, lev, asof):
@@ -273,7 +291,18 @@ def run(tier="ESTABLE", once=False):
     while True:
         try:
             now = time.time()
-            if now - last_rebal >= REBALANCE_HOURS * 3600:   # rebalanceo completo (cada 24h)
+            # Disparo del rebalanceo: PINEADO a la hora más líquida (config.REBALANCE_HOUR_UTC, e54) para
+            # abaratar la ejecución → rebalancea cuando estamos en esa hora UTC y ya pasó MIN_REBAL_HOURS;
+            # con fallback a MAX_REBAL_HOURS por si se pierde la ventana (servicio caído). Si la hora es
+            # None, vuelve al comportamiento viejo (cada REBALANCE_HOURS desde el arranque, a la deriva).
+            hrs = (now - last_rebal) / 3600
+            target_h = getattr(config, "REBALANCE_HOUR_UTC", None)
+            if target_h is None:
+                due = hrs >= REBALANCE_HOURS
+            else:
+                utc_hour = datetime.now(timezone.utc).hour
+                due = (hrs >= MIN_REBAL_HOURS and utc_hour == int(target_h)) or hrs >= MAX_REBAL_HOURS
+            if due:                                          # rebalanceo completo (1×/día, hora líquida)
                 r = cycle(tier, db)
                 if r.get("skipped"):     # balance ilegible → NO consumir la ventana; reintentar
                     _log.warning("[orq] ciclo omitido — se reintenta en el próximo heartbeat")

@@ -67,6 +67,11 @@ LEVERAGE_HAIRCUT   = 0.95      # Oscar 2026-06-02 (e51, re-ajustado tras e52/e53
                                # (sin finas + trend capado) ya respeta el −10% OOS sin recorte (maxDD OOS
                                # −7.1%); 0.95 deja un pequeño cojín. lev ~1.88x. 1.0=sin recorte. Era 0.85
                                # sobre el libro sucio (OOS −13.5%), ahora sobre-conservador.
+# HORA del rebalanceo diario (ejecución, e54): la liquidez cripto sigue el reloj US/EU → pico 14-16 UTC
+# (solape US-mañana/EU-tarde, 1.5× la media), zonas muertas 21-23 y 03-05 UTC. Fijar el rebalanceo a la
+# hora más líquida baja ~21% el slippage (~0.1-0.15%/mes) sin añadir turnover ni β. Antes iba a la deriva
+# (la hora del último deploy). None = comportamiento viejo (cada 24h desde el arranque, sin pinear).
+REBALANCE_HOUR_UTC = 14        # 09h Lima · hora más líquida (e54). Ajustable.
 
 # ─── Timezone (Lima, UTC-5) ──────────────────────────────────────────────────
 # El sistema bucketea y MUESTRA los días/horas en hora de Lima (no UTC). Así "hoy" en el

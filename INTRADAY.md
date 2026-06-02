@@ -1,8 +1,9 @@
 # KEPLER — FRONTERA INTRADÍA (guía para el futuro)
-> **Estado: APARCADO a propósito (2026-05-31).** Hoy Kepler opera SOLO diario (rebal 24h) y seguimos
-> con el menú de fuentes DIARIAS. Este documento guarda lo aprendido para cuando el proyecto crezca y
-> tenga sentido incluir intradía. **No es trabajo pendiente inmediato; es un mapa para el día que toque.**
-> Decisión de Oscar (2026-05-31): documentar los hallazgos intradía y seguir, por ahora, con lo diario.
+> **Estado (2026-06-02): RUTA EJECUCIÓN ACTIVA; el resto sigue aparcado/descartado.** Oscar reabrió la
+> frontera tras cerrar D0/D1/concentración/finas. Veredicto de la sesión (ver §7): para Kepler (β-neutral,
+> diario, maker, bajo-DD, NO-HFT) el alfa intradía DIRECCIONAL es un callejón sin salida (coste×turnover,
+> probado e19/e24/e45). Lo intradía ÚTIL aquí = **ejecución** (bajar coste) y **riesgo** (monitor), no alfa.
+> En marcha: **timing del rebalanceo (e54)**. El resto del documento es el mapa histórico.
 
 ---
 
@@ -120,5 +121,23 @@ microsegundos/market-making. Mantener la misión: bajo maxDD, supervivencia, no 
   **maxDD fijo** con costos reales (no solo corr~0 + IS/OOS). Lección e16d/e24.
 
 ---
-*Relacionado: `STATUS.md` (changelog 2026-05-31 noche, A2 order-book), `ROADMAP.md` §A2/§D/§F,
-`research/e23_orderbook_check.py`, `research/e24_orderbook_sleeve.py`, `research/e15_intraday_monitor.py`.*
+## 7. EVALUACIÓN DE RUTAS (2026-06-02) — cuáles encajan en Kepler y cuáles no
+Marco: 3 pruebas (e19 carry-inst, e24 OB-diario +0.00, e45 OB-intradía todo negativo) confirman que el
+alfa intradía DIRECCIONAL muere en coste×turnover con nuestra estructura de coste. ⇒ lo intradía útil es
+**ejecución (bajar coste)** y **riesgo (monitor)**, NO alfa. Veredicto por ruta:
+
+| Ruta | Veredicto | Razón |
+|---|---|---|
+| **Timing del rebalanceo** (e54) | 🟢 **ACTIVA** | Baja el slippage ~21% pineando a la hora líquida (14 UTC). Sin turnover ni β. Implementada (pendiente deploy). |
+| Slicing pasivo en la ventana | 🟡 DIFERIDO a capacidad (e55) | Cuantificado: a tamaño DEMO participación ~0.00% → ahorro CERO. Empieza a importar ~$1M+ AUM en coins finos, crítico >$10M. NO implementar ahora; revisar al escalar AUM (con cap de tamaño por liquidez). |
+| Capacidad/impacto (B4) | 🟡 útil, no urgente (e55) | Datos intradía → techo de AUM antes de degradar el edge. Cruce ~$4.6M (pos 5% en ZEC supera 2% participación). Relevante copy-lead. No es alfa. |
+| Monitor de riesgo intradía (e15) | 🟢→🔴 EVALUADO 2026-06-02 | **Hard-halt intradía = whipsaw, NO sirve** (β≈0: DD intradía diminuto y revierte; peor −3.3% en 4a, 99% bloques >−1.6%; cualquier umbral mata el retorno). El maxDD se forma en DÍAS, no intradía. **ÚNICA acción útil:** chequear el CB ANCHO existente (−20%) en el heartbeat (15min) en vez de solo en el ciclo 24h = rail de catástrofe más rápido a coste histórico CERO (nunca dispara con ruido). |
+| Order-book intradía | 🔴 descartado (e45) | Todo negativo a coste real. No resucitar sin ángulo nuevo. |
+| Liquidaciones intradía | 🔴 bloqueado/aparcar | Coinalyze no da histórico (colector meses); edge diario = solo ZEC. |
+| **CME gap** | 🔴 **descartar de raíz** | Timing direccional de BTC market-wide → inyecta β en un libro β-neutral; cae en gates-de-régimen ya descartados (e25/e28/R2/R3). Empeoraría lo que nos define. |
+| Vol-scaling intradía del gross | 🔴 descartar | Overlay de régimen/vol-target = dead end conocido (empeora maxDD). |
+| Efectos de sesión (Asia/US) cross-sec | 🔴 muy escéptico | Mismo muro coste×turnover + sabor a estacionalidad (e28). |
+| Funding-timing del carry | 🟡 marginal | Podría capturar algo de funding pero añade turnover al sleeve que suavizamos (e19). Baja prioridad. |
+
+*Relacionado: `STATUS.md` (changelog 2026-05-31 noche A2 order-book, 2026-06-02 ejecución), `ROADMAP.md`
+§A2/§D/§F, `research/e54_rebalance_timing.py`, `e23/e24_orderbook`, `e45_intraday_orderbook`, `e15_intraday_monitor`.*

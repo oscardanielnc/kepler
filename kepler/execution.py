@@ -236,6 +236,20 @@ def rebalance(target_weights, equity=None):
     return [("rebalance", summary, remaining)]
 
 
+def flatten(equity=None):
+    """Cierra TODAS las posiciones abiertas (rebalancea a target 0). Para el HALT del circuit breaker
+    (e15: chequeo intradía en el heartbeat). Idempotente: si ya está plano, no coloca órdenes.
+    Devuelve el resumen de rebalance() o [] si DRY_RUN/sin posiciones."""
+    if DRY_RUN:
+        return []
+    import pandas as pd
+    current = get_positions()
+    if not current:
+        return []
+    target = pd.Series(0.0, index=list(current.keys()))
+    return rebalance(target, equity)
+
+
 def main():
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     from kepler.engine import compute_target

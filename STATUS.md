@@ -75,6 +75,35 @@ Oscar pidió cerrar D0 y D1 (riesgos prioritarios de MONITOREO §4), luego conce
 Resultado: libro más limpio/barato/menos concentrado y mejor número honesto. **Config final: haircut 0.95,
 trend cap 0.25, universo −{XLM,HBAR,LIT}.** (Las 4 piezas interactúan vía el ancla — leer las 4 secciones.)
 
+### EJECUCIÓN — timing del rebalanceo diario (`research/e54_rebalance_timing.py`) → pinear a 14 UTC
+Arranque de la frontera intradía por la ruta CORRECTA para Kepler (bajar COSTE, no buscar alfa: el alfa
+intradía direccional muere en coste×turnover, probado e19/e24/e45). e54 mide el perfil de liquidez por
+hora-del-día del universo (quote_volume de 1h klines; el modelo de coste es slip~K/√volumen):
+- **La liquidez sigue el reloj US/EU:** pico **14-16 UTC** (09-11h Lima, 1.5× la media), zonas muertas
+  21-23 y 03-05 UTC (~0.78×). Fines de semana finos (Sáb 0.77/Dom 0.81; el rebal diario no los evita).
+- **Fijar el rebalanceo a las 14 UTC ahorra ~21% del slippage** vs la deriva actual (~29% vs la peor hora)
+  = **~0.13%/mes recuperado, GRATIS** (sin turnover, sin β). Hoy el orquestador rebalancea a la deriva
+  (la hora del último deploy) → si cayó en zona muerta paga lo peor.
+- **Implementado:** `config.REBALANCE_HOUR_UTC=14` + disparo pineado en `orchestrator.run` (rebalancea en
+  esa hora UTC tras MIN_REBAL_HOURS=18, fallback MAX=30h; None=comportamiento viejo). Verificado (7/7
+  escenarios del disparo). **PENDIENTE DEPLOY** (cambia CUÁNDO se rebalancea; validar slip real en DEMO).
+- **Slicing pasivo (e55) → DIFERIDO a capacidad.** Cuantificado: a tamaño DEMO la participación es ~0.00%
+  → impacto nulo, maker llena a mid → slicing NO ahorra nada hoy. Es feature de CAPACIDAD: importa ~$1M+
+  AUM en coins finos, crítico >$10M (cruce ~$4.6M para pos 5% en ZEC). NO implementar ahora; revisar al
+  escalar AUM con cap de tamaño por liquidez (roadmap B4). El pineo de hora ya captura el win gratis.
+- **Monitor de riesgo intradía (e15) → EVALUADO, resultado NEGATIVO útil** (`research/e15_intraday_risk.py`):
+  reconstruí el libro diario real (pesos agregados 7 sleeves, MTM horario) y medí el DD INTRADÍA: es
+  diminuto (peor −3.3% en 4 años; 99% de bloques >−1.6%; β≈0 como se esperaba) y **mayormente revierte**.
+  **Un hard-halt intradía es WHIPSAW** a cualquier umbral útil (−4% baja ann +12.8→−1.3% sin casi mejorar
+  el maxDD); el maxDD se forma en DÍAS (dispersión cross-seccional), no en spikes intradía → un halt rápido
+  no lo ataca. **CONCLUSIÓN: el CB diario basta; NO añadir halt intradía.** ÚNICA mejora barata: chequear el
+  CB ANCHO existente (−20%) en el heartbeat (15min) — hoy solo se evalúa en el ciclo 24h — = rail de
+  catástrofe ~24h más rápido a coste histórico CERO (nunca dispara con ruido). Pendiente de tu OK para implementar.
+  - Nota honesta: la reconstrucción diaria-rebalanceada da Sharpe ~1.3 (vs motor hold-block 2.07); es una
+    aproximación que sobre-rebalancea (re-forma el target a diario) → subestima; la verdad está entre ambos
+    y la dirá la DEMO (E1). No cambia la conclusión de riesgo de e15.
+
+
 ### MONEDAS FINAS — retirar del universo global (`research/e53_thin_coins.py`) → −{XLM,HBAR,LIT}, ZEC se queda
 Reúsa la maquinaria de e18 (turnover por-símbolo + slippage ADV K50) con el trend capado + haircut. Mide,
 bajo coste FLAT (solo edge) y REALISTA (edge−slip), el Δ%/mes de quitar cada fina:
