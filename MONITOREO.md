@@ -33,26 +33,32 @@ Lo genera el orquestador cada ciclo (`orchestrator._save_daily_report`) y se des
 ## 2. CRITERIOS A VIGILAR (watch-list operativa)
 Cada uno: qué es, por qué importa, y qué hacer si se dispara.
 
-1. **Concentración (top_position).** Hoy **TRX ~18%** empujado por el sleeve `trend` (long-only). No es
-   bug, pero es el riesgo de un solo nombre. **Acción si >20-25% sostenido:** revisar si trend domina;
-   evaluar cap por activo más estricto en trend (con backtest, regla de oro). Vigilar también que TRX no
-   arrastre el β.
+1. **Concentración (top_position) — MITIGADA con cap 0.25 en trend (e52, 2026-06-02).** Antes TRX ~20%
+   (78% era `trend` long-only). Ahora `engine.trend_sleeve` capa cada coin a `MAX_WEIGHT_NORMAL=0.25` →
+   **TRX 20%→~10%, HHI −34%** (Sharpe combinado intacto). OJO: tras retirar finas + haircut 0.95 el lev
+   subió a 2.16x y TRX rebotó a **~14%** (sigue <15%; el cap lo contiene). **Vigilar `top_position`:** si
+   supera ~15-18% sostenido = apilamiento multi-sleeve (el cap es por-sleeve, no agregado) → evaluar cap
+   AGREGADO al target o bajar el cap de trend. **Pendiente deploy.**
 2. **Slippage real (C3).** 2 días: **mediana ≈ −1 a +1.5 bps (favorable/barato)**, media 1.3–3.3 (la
    inflan 3-4 thin coins). **Patrón firme: el coste vive en las monedas FINAS** (XLM hasta +51.8, HBAR
    +21.6, ZEC, LIT). **Acción:** acumular → `research/e21_fill_slippage` → recalibrar K de e18 → costo
    real. **Conexión estratégica:** alimenta la idea de Oscar de RETIRAR monedas — un coin fino que aporta
    poco edge pero cuesta 20-50 bps de slippage podría no compensar. Si la mediana global sube > 10 bps
    sostenido, la ejecución maker se degrada (revisar no-fills/GTX).
-3. **Ancla de leverage vs maxDD real (hallazgo e29).** El leverage se fija con el maxDD PASADO →
-   **sobre-apalanca OOS** (en walk-forward el maxDD llegó a −13.5% vs −10% objetivo). **El −10% PUEDE
-   excederse en vivo.** Vigilar `drawdown_pct`: si supera −10% con holgura, confirma e29 → priorizar
-   **ROADMAP D0** (haircut de leverage / calibrar sobre el peor tramo). NO subir de tier hasta resolverlo.
+3. **Ancla de leverage vs maxDD real (e29 → RESUELTO, e51+e52+e53).** El ancla sobre-apalancaba (walk-forward
+   maxDD OOS −13.5% vs −10%). **Doble arreglo:** (a) `LEVERAGE_HAIRCUT` recorta el lev; (b) limpiar el libro
+   (trend capado + sin finas) bajó el maxDD OOS a **−7.1%** de raíz → el haircut se relajó a **0.95** (lev
+   vivo ~2.16x, maxDD IS −9.5%). **Vigilar `drawdown_pct` en vivo:** el lev vivo (2.16x) sale > el del
+   backtest (1.88x) porque el ancla es sensible a la muestra (datos recientes calmos). Si en DEMO el maxDD
+   real se acerca a −10% con holgura, endurecer el haircut; si queda cómodo, se puede subir. NO subir de tier aún.
 4. **Tormenta de reinicios (cycles_today).** Cada reinicio del servicio dispara un ciclo inmediato →
    rebalanceo extra = turnover/costo extra. En días de deploy es normal (hoy 3 ciclos). **Acción si
    persiste sin deploys:** revisar por qué se reinicia `kepler.service` (journalctl).
-5. **β real del libro.** Hoy el snapshot guarda `beta=0.0` HARDCODEADO (no se calcula en vivo) →
-   ROADMAP D1. Mientras tanto, vigilar `net` y la coherencia long/short. El β validado en backtest es
-   ≈+0.05; confirmar en vivo cuando D1 esté.
+5. **β real del libro (D1 resuelto, e51-sesión).** El snapshot ya reporta la **β de regresión**
+   (modelo +0.025 hoy; pasa a **realizada** de la equity en vivo a ≥20 días) → confirma neutralidad
+   ≈+0.05. Vigilar que la **realizada** se mantenga |β|<~0.15 cuando active. Diagnóstico **β-dólar**
+   (`detail.beta_dollar`, ~+0.45): exposición direccional del notional, la genera `trend` long-only;
+   si crece mucho = más beta-de-mercado latente (cruzar con la concentración de TRX).
 6. **Equity ilegible / balance falso.** Ya blindado (heartbeat y ciclo OMITEN si el balance no se lee, no
    inventan 5000). Si ves escalones planos a 5000 exactos → regresión de ese fix.
 7. **Circuit breaker.** `cb_operate=false` = HALT por −20%. Debe ser rarísimo en ESTABLE. Si salta,
@@ -102,17 +108,26 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
 ---
 
 ## 4. BUGS / ISSUES CONOCIDOS · TODOs
-- [ ] **D0 (riesgo, prioritario):** el ancla de leverage puede exceder el −10% en vivo (e29). Diseñar
-      haircut / calibración robusta + backtest. **Antes de subir de tier.**
-- [ ] **D1:** `beta` del snapshot está hardcodeado a 0.0 → calcular β real del libro en vivo.
-- [ ] **Concentración trend/TRX:** evaluar cap por activo en trend (con backtest) si supera ~20-25%.
+- [x] ~~**D0 (riesgo, prioritario):** el ancla de leverage puede exceder el −10% en vivo (e29)~~ →
+      **RESUELTO 2026-06-02 (e51):** `config.LEVERAGE_HAIRCUT=0.85` (decisión de Oscar) recorta el lev
+      vivo 2.02x→**1.72x** → maxDD OOS ~−11.5% (cierra el grueso del gap del ancla cediendo ~14% de
+      retorno → ~3.4%/mes). Mecanismo en `engine.compute_target`. **PENDIENTE DEPLOY.** Reevaluar el
+      factor cuando la DEMO dé maxDD real (puede relajarse si el sobre-tiro vivo es menor al pesimista).
+- [x] ~~**D1:** `beta` del snapshot está hardcodeado a 0.0~~ → **RESUELTO 2026-06-02:** el snapshot
+      reporta la **β de REGRESIÓN** (neutralidad ≈+0.05): realizada de la equity en vivo a ≥20 días, si
+      no la modelo (hoy +0.025). Diagnóstico extra **β-dólar** (Σwβ, exposición direccional del notional,
+      la infla `trend`). **PENDIENTE DEPLOY.**
+- [x] ~~**Concentración trend/TRX:** evaluar cap por activo en trend~~ → **HECHO (e52, 2026-06-02):** cap
+      0.25 en `engine.trend_sleeve` (TRX 20%→9.6%, Sharpe intacto). Pendiente deploy. Si reaparece >15% =
+      apilamiento multi-sleeve → cap AGREGADO al target (no testeado aún).
 - [ ] **`r_multiple`/`exit_px` quedan null** (sistema de rebalanceo rodante, sin ciclo open→close clásico).
       El ciclo de vida de trade completo sería otro proyecto. Los fills+snapshots ya permiten analizar.
 - [ ] **Deploy del fix ffill de sombra (noche-2):** `kepler/onchain.py` — endurece el día-boundary (TVL
       logueaba 0 cuando C > fecha DefiLlama). No es outage (hoy logueó 13), pero conviene desplegar.
-- [ ] **EVALUAR retirar monedas finas del universo (idea de Oscar):** XLM/HBAR/ZEC/LIT concentran el
-      slippage real (hasta 51.8 bps). Próxima sesión: ¿su aporte de edge paga su coste de ejecución?
-      Cruzar contribución por-coin (regla e50/e49) con slippage real (e21). Posible universo más limpio.
+- [x] ~~**EVALUAR retirar monedas finas del universo**~~ → **HECHO (e53, 2026-06-02):** retiradas
+      **XLM/HBAR/LIT** (edge ~nulo/negativo + slippage 7.5-12.9bps); **ZEC se MANTIENE** (su edge paga el
+      coste, e48). Neto realista 2.24→2.96%/mes sin empeorar OOS. Bonus: limpió el maxDD OOS (−13.5%→−7.1%)
+      → permitió relajar el haircut a 0.95. Pendiente deploy. Universo ahora 29 global / 20 largo.
 - [x] ~~**Shadow on-chain TVL:** pendiente deploy~~ → **DESPLEGADO y registrando** (2026-06-01: TVL 13 +
       BLEND 23 por ciclo). Reloj 60d corriendo; tras ≥60-90d correr `e33` y decidir sleeve #8.
 - [x] ~~`report:[]` (narrativo diario no se llamaba)~~ → ARREGLADO 2026-05-31 (wired en el ciclo).

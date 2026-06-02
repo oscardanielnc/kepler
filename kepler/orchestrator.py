@@ -84,6 +84,46 @@ def _log_fills(db: DB, before: dict, after: dict, lev, target, t0_ms):
                     prev_amt=b, new_amt=a, ref_px=ref, slip_bps=slip_bps)
 
 
+def _beta_dollar(positions_detail, beta_last, equity, target):
+    """β-DÓLAR instantánea del libro vs BTC = Σ (exposición_con_signo / equity)·βₛᵧₘ. Diagnóstico
+    SECUNDARIO (no la neutralidad): mide la exposición direccional NETA del notional, dominada por
+    `trend` (long-only sin hedge β). βₛᵧₘ = última barra del rolling β del motor (BTC≈1). Dos modos:
+      • REAL (DEMO/REAL): sobre las posiciones reales (notional×signo) — lo que de verdad expone el libro.
+      • MODELO (DRY_RUN): sobre los pesos del target. Devuelve (beta_dollar, fuente) o (None, 'n/d')."""
+    if beta_last is None:
+        return None, "n/d"
+    if positions_detail and equity:
+        b = sum(float(p["notional"]) * (1 if p["side"] == "LONG" else -1) *
+                float(beta_last.get(p["symbol"], 0.0)) for p in positions_detail)
+        return round(b / equity, 4), "real"
+    bd = float((target.reindex(beta_last.index).fillna(0.0) * beta_last).sum())
+    return round(bd, 4), "modelo"
+
+
+def _beta_realized(db: DB, min_pts: int = 20):
+    """β de REGRESIÓN REALIZADA del libro en vivo = regresión de los retornos diarios REALES (equity_daily)
+    sobre el retorno diario de BTC. Es la confirmación honesta del β≈+0.05 una vez que la DEMO acumula
+    historia. Devuelve None hasta tener ≥min_pts días (antes es ruido). BTC diario desde el parquet."""
+    import glob, numpy as np, pandas as pd
+    rows = db.conn.execute("SELECT day, ret_pct FROM equity_daily WHERE ret_pct IS NOT NULL ORDER BY day").fetchall()
+    if len(rows) < min_pts:
+        return None, len(rows)
+    eq = pd.Series({r[0]: r[1] / 100.0 for r in rows})
+    p = os.path.join(config.DATA_DIR, "futures_um", "1h", "BTCUSDT.parquet")
+    g = glob.glob(p)
+    if not g:
+        return None, len(rows)
+    c = pd.read_parquet(g[0], columns=["open_time", "close"]).set_index("open_time")["close"]
+    # resamplear BTC por día LOCAL (Lima) para alinear con equity_daily, que bucketea por día local
+    c.index = pd.to_datetime(c.index, unit="ms", utc=True).tz_convert(config.TZ)
+    btc = c.resample("1D").last().pct_change().dropna()
+    btc = pd.Series(btc.values, index=[t.strftime("%Y-%m-%d") for t in btc.index])
+    v = pd.concat([eq.rename("e"), btc.rename("b")], axis=1).dropna()
+    if len(v) < min_pts or v["b"].var() == 0:
+        return None, len(v)
+    return round(float(np.cov(v["e"], v["b"])[0, 1] / np.var(v["b"])), 4), len(v)
+
+
 def _save_daily_report(db: DB, tier, mode, equity, target, lev, bt, operate):
     """Genera el REPORTE DIARIO (metrics JSON + narrativa) para monitoreo y descarga. Pensado para
     vigilar avance y detectar problemas: retorno/dd del día, exposición, leverage, CONCENTRACIÓN
@@ -145,7 +185,7 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     # 3. circuit breaker
     operate = circuit_breaker.check(equity, db)
     # 4. target (leverage anclado al maxDD objetivo del tier — ver engine.compute_target)
-    target, vp, df, port, asof, lev, weights = compute_target(tier)
+    target, vp, df, port, asof, lev, weights, beta_last, beta_model = compute_target(tier)
     bt = pf_metrics(port * lev)   # métricas del backtest CON el leverage anclado (lo que se opera)
     target = target[target.abs() > 0.005]
     if not operate:
@@ -173,10 +213,19 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
             _log_fills(db, current, after, lev, target, int(t0 * 1000))
         except Exception as e:
             _log.warning(f"[orq] no se pudieron loguear trades/posiciones: {e}")
-    # 7. log
+    # 7. log — β del libro (D1, ya no se hardcodea 0.0). PRIMARIA = β de REGRESIÓN (neutralidad ≈+0.05):
+    #    realizada de la equity en vivo cuando hay ≥20 días; si no, la modelo (del backtest del mix actual).
+    #    Además se guarda la β-DÓLAR (Σwβ, exposición direccional neta, la infla `trend`) como diagnóstico.
+    beta_real, n_days = _beta_realized(db)
+    beta_dollar, bd_src = _beta_dollar(positions_detail, beta_last, equity, target)
+    beta_book = beta_real if beta_real is not None else round(float(beta_model), 4)
+    beta_src = f"realizada({n_days}d)" if beta_real is not None else "modelo"
+    _log.info(f"[orq] β regresión ({beta_src})={beta_book} · β-dólar({bd_src})={beta_dollar}")
     db.snapshot_portfolio(equity=equity, gross=float(target.abs().sum()), net=float(target.sum()),
-                          beta=0.0, n_positions=n_target,
+                          beta=beta_book, n_positions=n_target,
                           detail={"tier": tier, "asof": str(asof), "cb": operate, "leverage": lev,
+                                  "beta_source": beta_src, "beta_dollar": beta_dollar,
+                                  "beta_model": round(float(beta_model), 4),
                                   "maxdd_target": TIERS[tier],
                                   "backtest": {"sharpe": round(bt.get("sharpe", 0), 2),
                                                "ann": round(bt.get("ann", 0), 1),

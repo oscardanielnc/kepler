@@ -18,14 +18,16 @@ for _d in (DATA_DIR, LOGS_DIR):
 # BTC y ETH son los DRIVERS primarios del grafo de dominancia.
 # Universo LIMPIO: cripto-perps líquidos con >=2 años de historia (filtrado del top-60
 # por volumen — excluidos tokenizados de acciones/commodities y listings nuevos).
+# RETIRADAS 2026-06-02 (e53, Oscar): XLM/HBAR/LIT = finas con aporte de edge ~nulo/negativo y
+# slippage alto (7.5-12.9 bps). Quitarlas sube el %/mes neto realista 2.24→2.96 (Sh 1.67→1.80) sin
+# empeorar el OOS. ZEC se MANTIENE (su edge paga su slippage; es también el edge de liquidaciones e48).
 UNIVERSE: list[str] = [
     "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT",
     "DOGEUSDT", "ADAUSDT", "AVAXUSDT", "LINKUSDT", "DOTUSDT",
     "LTCUSDT",  "TRXUSDT", "BCHUSDT", "ETCUSDT", "ATOMUSDT",
-    "NEARUSDT", "FILUSDT", "UNIUSDT", "AAVEUSDT", "XLMUSDT",
-    "ZECUSDT",  "HBARUSDT", "LITUSDT", "INJUSDT", "FETUSDT",
-    "SUIUSDT",  "1000PEPEUSDT", "WLDUSDT", "ONDOUSDT", "TONUSDT",
-    "ENAUSDT",  "TAOUSDT",
+    "NEARUSDT", "FILUSDT", "UNIUSDT", "AAVEUSDT", "ZECUSDT",
+    "INJUSDT",  "FETUSDT", "SUIUSDT", "1000PEPEUSDT", "WLDUSDT",
+    "ONDOUSDT", "TONUSDT", "ENAUSDT", "TAOUSDT",
 ]
 DRIVERS: list[str] = ["BTCUSDT", "ETHUSDT"]   # masas dominantes (factor)
 
@@ -57,6 +59,14 @@ NET_NEUTRAL_TOL    = 0.10      # |beta neta| tolerada (market-neutral por defect
 # (−20%) sigue como red. Tope de leverage de estrategia para no inflar el gross sin control.
 TARGET_MAXDD       = 0.10      # maxDD objetivo del tier ESTABLE (10%)
 MAX_STRAT_LEVERAGE = 4.0       # tope duro del multiplicador de estrategia (seguridad)
+# HAIRCUT de leverage (D0, e51): el ancla fija el leverage con el maxDD PASADO y sobre-apalanca
+# cuando el futuro es más volátil → en walk-forward el maxDD OOS llegó a −13.5% vs −10% objetivo
+# (el −10% PUEDE excederse en vivo). Este factor (≤1) recorta el leverage para que el maxDD vivo
+# respete mejor el presupuesto. 1.0 = sin recorte (statu quo). Decisión de Oscar (e51 da el tradeoff).
+LEVERAGE_HAIRCUT   = 0.95      # Oscar 2026-06-02 (e51, re-ajustado tras e52/e53): el libro limpio
+                               # (sin finas + trend capado) ya respeta el −10% OOS sin recorte (maxDD OOS
+                               # −7.1%); 0.95 deja un pequeño cojín. lev ~1.88x. 1.0=sin recorte. Era 0.85
+                               # sobre el libro sucio (OOS −13.5%), ahora sobre-conservador.
 
 # ─── Timezone (Lima, UTC-5) ──────────────────────────────────────────────────
 # El sistema bucketea y MUESTRA los días/horas en hora de Lima (no UTC). Así "hoy" en el

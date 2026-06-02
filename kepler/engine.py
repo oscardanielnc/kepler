@@ -154,22 +154,50 @@ def carry_sleeve(C, ret, beta):
     return series, full
 
 
+def _cap_normalize(v: np.ndarray, cap: float) -> np.ndarray:
+    """v ≥ 0 (long-only). Normaliza a suma 1 y redistribuye el exceso sobre `cap` hacia los no-topados
+    (water-filling) hasta que cada peso ≤ cap. Devuelve pesos suma≈1 con tope `cap`."""
+    s = v.sum()
+    if s <= 0:
+        return v
+    w = v / s
+    for _ in range(20):
+        over = w > cap + 1e-9
+        if not over.any():
+            break
+        excess = (w[over] - cap).sum()
+        w[over] = cap
+        under = ~over; pool = w[under].sum()
+        if pool <= 0:
+            break
+        w[under] += excess * w[under] / pool
+    return w
+
+
 def trend_sleeve(C):
-    """Trend long-only EMA20/100 vol-target, por activo. Serie diaria + pesos actuales."""
+    """Trend long-only EMA20/100 vol-target, por activo. Serie diaria + pesos actuales.
+    CAP DE CONCENTRACIÓN (e52, Oscar 2026-06-02): cada día normaliza la cesta a gross 1 y capa cada
+    coin a config.MAX_WEIGHT_NORMAL (0.25, el mismo tope que xs/carry). Antes (.mean de pos vol-scaled)
+    el sleeve volcaba ~47% de su gross en la coin de menor vol en tendencia (TRX → top del libro ~20%).
+    El cap baja la concentración de un nombre a la mitad (TRX 20%→~10%, HHI −34%) SIN tocar el Sharpe
+    combinado (2.07) ni el maxDD, mejorando el balance IS/OOS. Riesgo↓ a coste ~nulo (regla de oro)."""
     px = C.resample("1D").last(); ret = px.pct_change()
     ef = px.ewm(span=20).mean(); es = px.ewm(span=100).mean()
     sig = np.sign(ef - es).clip(lower=0)
     vol = ret.rolling(30).std()
     scal = (0.20/np.sqrt(365) / vol).clip(0, 3)
     pos = (sig.shift(1) * scal).fillna(0)
-    # COSTO de turnover (faltaba: trend pagaba 0; rota ~57x/año). Maker plano, consistente con
-    # xs/carry → contabilidad de costos uniforme. Impacto pequeño (~−0.01%/mes) pero honesto (e18).
-    turn = (pos - pos.shift(1)).abs().fillna(0.0)
-    pnl = (pos * ret).mean(axis=1) - (turn * config.MAKER_FEE).mean(axis=1)
+    # cesta normalizada-capada cada día (consistente backtest↔live)
+    W = pos.copy()
+    for i in range(len(pos)):
+        W.iloc[i] = _cap_normalize(pos.iloc[i].values.astype(float), config.MAX_WEIGHT_NORMAL)
+    # COSTO de turnover (trend rota ~57x/año). Maker plano, consistente con xs/carry (e18, contabilidad
+    # uniforme). El return ahora es Σ wᵢ·retᵢ con la cesta capada (antes media de pos sin normalizar).
+    turn = (W - W.shift(1)).abs().fillna(0.0)
+    pnl = (W * ret).sum(axis=1) - (turn * config.MAKER_FEE).sum(axis=1)
     pv = pnl.rolling(30).std().shift(1); lev = (0.15/np.sqrt(365)/pv).clip(0, 4).fillna(1)
     series = (pnl*lev).dropna()
-    w_now = (pos.iloc[-1] / pos.iloc[-1].abs().sum()) if pos.iloc[-1].abs().sum() > 0 else pos.iloc[-1]
-    return series, w_now.reindex(C.columns).fillna(0.0)
+    return series, W.iloc[-1].reindex(C.columns).fillna(0.0)
 
 
 def compute_target(tier="ESTABLE"):
@@ -200,7 +228,10 @@ def compute_target(tier="ESTABLE"):
     # LEVERAGE = el que clava el maxDD del backtest en el presupuesto del tier (regla de Oscar).
     # Se auto-recalibra: cada sleeve nuevo que baja el maxDD a 1x → sube el leverage → más
     # retorno al MISMO maxDD. Cap de seguridad en config.MAX_STRAT_LEVERAGE.
-    lev = min(leverage_for_maxdd_anchor(port_ret, TIERS[tier]), config.MAX_STRAT_LEVERAGE)
+    # HAIRCUT (D0, e51): recorta el leverage del ancla para que el maxDD vivo respete el presupuesto
+    # (el ancla sobre-apalanca; maxDD OOS −13.5% vs −10%). config.LEVERAGE_HAIRCUT=1.0 → statu quo.
+    lev = min(config.LEVERAGE_HAIRCUT * leverage_for_maxdd_anchor(port_ret, TIERS[tier]),
+              config.MAX_STRAT_LEVERAGE)
     # target neto por activo = Σ vp_i · w_i, escalado por el leverage anclado
     target = pd.Series(0.0, index=C.columns)
     for name in series:
@@ -209,9 +240,16 @@ def compute_target(tier="ESTABLE"):
     # GATE DE RÉGIMEN: probado (vol-target de-risk) → EMPEORA el maxDD, NO se usa (workflow).
     # El control de riesgo efectivo es la diversificación (corr~0) + el dial de leverage anclado.
     target = (target * lev).round(4)
-    # `weights` = pesos por sleeve (cada uno serie por símbolo) → para registrar en la DB
-    # el desglose de cada decisión: qué sleeve empuja cada posición. NO afecta al cálculo.
-    return target, vp, df, port_ret, C.index[-1], lev, weights
+    # β MODELO de REGRESIÓN del libro = cov(combinado 1x, BTC diario)/var(BTC diario). Es la MISMA
+    # métrica que el backtest (≈+0.05, market-neutral) y la que confirma la neutralidad en vivo (D1).
+    # OJO: distinta de la β-DÓLAR instantánea (Σwβ), que la infla `trend` (long-only sin hedge).
+    rd_d = np.expm1(ret[DRIVER].resample("1D").sum()).reindex(port_ret.index)
+    _v = pd.concat([port_ret.rename("p"), rd_d.rename("b")], axis=1).dropna()
+    beta_model = float(np.cov(_v["p"], _v["b"])[0, 1] / np.var(_v["b"])) if len(_v) > 30 and _v["b"].var() > 0 else 0.0
+    # `weights` = pesos por sleeve (cada uno serie por símbolo) → para registrar en la DB el desglose
+    # de cada decisión. `beta.iloc[-1]` = β por-símbolo vs BTC (BTC≈1) → para la β-dólar diagnóstica
+    # del libro REAL en vivo. `beta_model` = la β de regresión (neutralidad, ≈+0.05) que va al snapshot.
+    return target, vp, df, port_ret, C.index[-1], lev, weights, beta.iloc[-1], beta_model
 
 
 def main():
@@ -219,7 +257,7 @@ def main():
     for _s in (sys.stdout, sys.stderr):
         try: _s.reconfigure(encoding="utf-8", errors="replace")
         except Exception: pass
-    target, vp, df, port_ret, asof, lev, _w = compute_target(tier)
+    target, vp, df, port_ret, asof, lev, _w, beta_last, beta_model = compute_target(tier)
     m1 = metrics(port_ret)                 # 1x (base)
     m = metrics(port_ret * lev)            # con leverage anclado
     print(f"KEPLER motor live · tier {tier} · maxDD objetivo −{TIERS[tier]*100:.0f}% · "
@@ -234,9 +272,12 @@ def main():
         print(f"  {'SHORT' if w<0 else 'LONG ':5s} {s:12s} {w:+.3f}")
     # log a DB
     try:
+        # β de REGRESIÓN del libro (neutralidad ≈+0.05) → ya no se hardcodea 0.0 (D1). β-dólar Σwβ aparte.
+        beta_dollar = float((target.reindex(beta_last.index).fillna(0.0) * beta_last).sum())
         db = DB(); db.snapshot_portfolio(equity=None, gross=float(target.abs().sum()),
-              net=float(target.sum()), beta=0.0, n_positions=int((target.abs()>0.005).sum()),
-              detail={"tier": tier, "weights": target[target.abs()>0.005].round(4).to_dict()})
+              net=float(target.sum()), beta=round(beta_model, 4), n_positions=int((target.abs()>0.005).sum()),
+              detail={"tier": tier, "beta_dollar": round(beta_dollar, 4),
+                      "weights": target[target.abs()>0.005].round(4).to_dict()})
         db.audit("INFO", "engine", f"Target portfolio {tier}", detail={"asof": str(asof)})
         print(f"\n→ Logueado en DB ({(target.abs()>0.005).sum()} posiciones)")
     except Exception as e:

@@ -1,22 +1,33 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-01** (tarde-3, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-02** (mañana, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 >
-> **⏭️ PRÓXIMA EJECUCIÓN:** agotar **B) INTRADÍA**. Ya cerrados: order-book (DESCARTADO, e45),
-> **liquidaciones** (DESCARTADO, edge=ZEC, e46-49) y **regla universo por-sleeve sobre los 7** (e50 →
-> ningún cambio, los 7 ya usan bien todas las monedas). **Quedan:** (a) **CME gap** (vía regime_lab,
-> caveat β-neutral), (b) **monitor de riesgo e15** (backtester e42 montado). Idea abierta de Oscar:
-> RETIRAR monedas del universo GLOBAL (menos explorado que ampliar). Empezar cuando Oscar indique.
+> **⏭️ PRÓXIMA EJECUCIÓN:** ✅ Cerrados hoy: D0+D1, concentración TRX (e52) y monedas finas (e53).
+> **Lo siguiente = retomar B) INTRADÍA** (CME gap vía `regime_lab` + monitor de riesgo e15, backtester e42
+> montado) **y/o una señal DIARIA de Coinalyze** (ya registrados, API key en `data/.coinalyze_key`;
+> liquidaciones diarias retenidas). Empezar cuando Oscar indique. **Antes conviene DESPLEGAR el bundle de
+> hoy y validar el sizing en DEMO** (haircut 0.95 + cap trend + universo reducido).
 > **⏰ RECORDATORIO PROGRAMADO ~2026-07-31 (60d):** cerrar el ciclo de las sombras (≥60-90d acumulados →
 > `e33_shadow_tvl_analyze` → ¿promover blend a sleeve #8?). Requiere que Oscar DESPLIEGUE primero las sombras.
 
 ---
 
-## ESTADO ACTUAL (2026-06-01)
-- 🟢 **DEPLOY-READY VERIFICADO (2026-06-01 noche-2):** motor ESTABLE **Sharpe 2.07 / lev 2.02x / maxDD
-  −10.0% / 4.11%/mes** · ciclo orquestador DRY_RUN completo y limpio · sombras logueando bien (TVL 13,
-  BLEND 23, **tras el fix ffill**). ⚠️ **PENDIENTE DE DEPLOY: 1 cambio de prod** = `kepler/onchain.py`
-  (fix ffill de la sombra TVL, noche-2). El resto (e45-e50, docs) es research/local. Nada más cambió en prod.
+## ESTADO ACTUAL (2026-06-02)
+- 🟢 **SESIÓN DE RIESGO/CALIDAD (2026-06-02): D0 + D1 + concentración TRX + monedas finas — TODO cerrado.**
+  Resultado neto: libro **más limpio, más barato, menos concentrado Y con mejor número honesto.**
+  Config final: **haircut 0.95 · trend cap 0.25 · universo −{XLM,HBAR,LIT}**. Motor vivo: **lev 2.16x ·
+  ~4.47%/mes flat (~3.4%/mes realista) · maxDD IS −9.5% · mo+ 73% · TRX 14.1%** (cap lo contiene).
+  - **D0 (ancla):** haircut wired (`config.LEVERAGE_HAIRCUT`). Clave: e52/e53 **arreglaron el sobre-apalancamiento
+    de raíz** — el maxDD OOS del walk-forward cayó −13.5%→**−7.1%** (libro limpio) → el haircut se relajó
+    0.85→**0.95** (recupera retorno, deja cojín). El −10% se respeta con margen.
+  - **D1 (β real):** snapshot reporta β de regresión (modelo +0.025 → realizada a ≥20d) + β-dólar diagnóstica.
+  - **Concentración TRX (e52):** cap 0.25 en `trend` (= MAX_WEIGHT_NORMAL) → TRX 20%→~10-14%, HHI −34%, Sharpe intacto.
+  - **Monedas finas (e53):** retiradas XLM/HBAR/LIT (edge ~nulo + slippage 7.5-12.9bps); **ZEC se mantiene**
+    (tiene edge real, e48). Neto realista 2.24→2.96%/mes @haircut-0.85, sin empeorar OOS.
+  ⚠️ **PENDIENTE DE DEPLOY: 5 cambios de prod** = (1) `config.LEVERAGE_HAIRCUT=0.95` + `engine.compute_target`
+  (D0), (2) β real en `engine`/`orchestrator` (D1, telemetría), (3) `engine.trend_sleeve` cap 0.25 (e52),
+  (4) `config.UNIVERSE` −{XLM,HBAR,LIT} (e53), (5) `kepler/onchain.py` fix ffill sombra (desde noche-2).
+  **Validar el sizing (D0/e52/e53) en DEMO unos días tras desplegar.** El resto (e51-e53, docs) = research/local.
 - ❌ **FASE 2 INTRADÍA order-book → DESCARTADO (e45):** a coste real (taker+ADV 8.6bps) TODAS las celdas
   negativas; el muro es coste×turnover (1h→4313x), no la señal. Rama order-book intradía CERRADA. Detalle
   en changelog tarde-3 e `INTRADAY.md §5`. Backtester horario queda montado/reusable para las otras ramas.
@@ -58,6 +69,80 @@ mejor: lotería max_60d + TVL + iliquidez Amihud) y `tvl_pxdiv_14d` (control; el
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-06-02 (mañana — SESIÓN RIESGO/CALIDAD: D0 + D1 + concentración TRX + monedas finas)
+Oscar pidió cerrar D0 y D1 (riesgos prioritarios de MONITOREO §4), luego concentración TRX, luego finas.
+Resultado: libro más limpio/barato/menos concentrado y mejor número honesto. **Config final: haircut 0.95,
+trend cap 0.25, universo −{XLM,HBAR,LIT}.** (Las 4 piezas interactúan vía el ancla — leer las 4 secciones.)
+
+### MONEDAS FINAS — retirar del universo global (`research/e53_thin_coins.py`) → −{XLM,HBAR,LIT}, ZEC se queda
+Reúsa la maquinaria de e18 (turnover por-símbolo + slippage ADV K50) con el trend capado + haircut. Mide,
+bajo coste FLAT (solo edge) y REALISTA (edge−slip), el Δ%/mes de quitar cada fina:
+| quitar | FLAT Δ | REAL Δ | REAL %/mes | Sharpe | IS/OOS |
+|---|---|---|---|---|---|
+| baseline (23) | — | — | 2.24% | 1.67 | 1.85/1.57 |
+| −ZEC | −0.34 | −0.28 | 1.96% | 1.35 | 1.87/**1.07** |
+| −XLM,HBAR,LIT | +0.93 | +0.72 | **2.96%** | 1.80 | 2.09/1.56 |
+| −GRUPO(4) | −0.26 | −0.15 | 2.09% | 1.75 | 2.15/1.25 |
+- **VEREDICTO: retirar el grupo de 4 sería ERROR — ZEC tiene edge** (quitarla daña, OOS 1.57→1.07; es
+  también el edge de liquidaciones e48). LIT es lastre puro (FLAT +0.85 = pierde sin slippage) + peor
+  ejecución (12.9bps); XLM/HBAR ~nulos + slippage alto. **Retirar {XLM,HBAR,LIT}, conservar ZEC** sube el
+  neto realista 2.24→2.96%/mes (Sh 1.67→1.80) **sin empeorar OOS** (1.57→1.56). Honesto: el salto es
+  mayormente IS (OOS plano); la ganancia CIERTA = libro limpio + menos drag de slippage, cero downside OOS.
+- **DECISIÓN DE OSCAR: retirar XLM/HBAR/LIT** de `config.UNIVERSE` (29 global / 20 largo). Verificado en vivo.
+- **⚡ EFECTO COLATERAL CLAVE (re-corrido e51 sobre el libro limpio):** el maxDD OOS del walk-forward cayó
+  **−13.5%→−7.1%** — e52+e53 **arreglaron el sobre-apalancamiento de D0 de raíz** (las finas causaban
+  drawdowns de cola en folds tempranos). El haircut 0.85 quedó sobre-conservador → **Oscar lo relajó a 0.95**
+  (lev vivo ~2.16x, recupera retorno, deja cojín; maxDD IS −9.5% = diseño 0.95×10%). El −10% se respeta.
+
+### CONCENTRACIÓN TRX — cap por-activo en `trend` (`research/e52_trend_concentration_cap.py`) → cap 0.25
+Diagnóstico: la top del libro (TRX ~20% del equity) es **78% `trend`** (long-only vol-target → vuelca ~47%
+de su gross en la coin de menor vol en tendencia). e52 prueba el cap recombinando el sistema (vol-parity +
+ancla con haircut) y midiendo el combinado + el `top_position` resultante. El cap normaliza la cesta de
+trend a gross 1 y capa cada coin (consistente backtest↔live):
+| variante | Sharpe comb (IS/OOS) | %/mes | maxDD | top TRX | HHI |
+|---|---|---|---|---|---|
+| producción (sin cap) | 2.07 (1.94/2.21) | 3.38% | −8.6% | **19.5%** | 0.124 |
+| **cap 0.25 (elegido)** | **2.06 (1.83/2.28)** | **3.30%** | −8.6% | **9.6%** | 0.082 |
+- **VEREDICTO: mejora el RIESGO a coste ~nulo** (regla de oro ✓). Concentración de un nombre **a la mitad**
+  (TRX 20%→9.6%, HHI −34%), Sharpe combinado intacto (~2.07), maxDD idéntico (−8.6, lo clava el ancla),
+  %/mes −1%/año. Además **equilibra IS/OOS** (OOS 2.21→2.28) = más robusto, no overfit. Es exactamente la
+  misión copy-lead de bajo-DD (menos riesgo idiosincrático).
+- **DECISIÓN DE OSCAR: cap 0.25** = el mismo `config.MAX_WEIGHT_NORMAL` que ya usan xs/carry → tope por-activo
+  UNIFICADO en todo el sistema. Implementado en `engine.trend_sleeve` (cesta normalizada + `_cap_normalize`
+  water-filling). Verificado en vivo: TRX 0.195→**0.096**, lev 1.59x, 3.30%/mes, maxDD −8.6%. **PENDIENTE DEPLOY.**
+
+
+
+### D0 — CALIBRACIÓN ROBUSTA DEL ANCLA (`research/e51_leverage_robust.py`) → haircut 0.85
+e29 halló que fijar el leverage con el maxDD PASADO sobre-apalanca: walk-forward maxDD OOS −13.5% vs
+−10% objetivo (rompería la promesa de bajo-DD). e51 reúsa los 7 sleeves + el mismo walk-forward purgado
+y mide el tradeoff de cerrar el gap (Sharpe/edge es invariante; lo que cambia es lev → maxDD y %/mes):
+| haircut | lev vivo | %/mes vivo | maxDD OOS |
+|---|---|---|---|
+| 1.00 (antes) | 2.02x | ~4.1% | **−13.5%** |
+| **0.85 (elegido)** | **1.72x** | **~3.4%** | **−11.5%** |
+| 0.75 | 1.52x | ~3.1% | −10.2% |
+- **Política "peor-tramo" DESCARTADA:** da lev MAYOR (las ventanas tienen menos DD que el global) → empuja
+  al lado equivocado. El haircut plano es el más transparente para copy-lead.
+- **DECISIÓN DE OSCAR: haircut 0.85** inicialmente (sobre el libro sucio) → **RE-AJUSTADO a 0.95** al final
+  de la sesión: e52+e53 limpiaron el libro y el maxDD OOS bajó −13.5%→−7.1% (ver sección monedas finas) →
+  el 0.85 quedó sobre-conservador. `config.LEVERAGE_HAIRCUT=0.95` (default 1.0=statu quo).
+- **Implementado:** `engine.compute_target` aplica `LEVERAGE_HAIRCUT × leverage_for_maxdd_anchor`.
+  Verificado en la config final: lev vivo ~2.16x, maxDD IS −9.5% (diseño 0.95×10%). **PENDIENTE DEPLOY.**
+
+### D1 — β REAL DEL LIBRO EN VIVO (`engine` + `orchestrator`) → ya no se hardcodea 0.0
+Al destripar el cálculo: hay **dos β distintas**. (a) **β de REGRESIÓN** (combinado vs BTC) = **+0.025** =
+la neutralidad real (confirma el ≈+0.05 validado). (b) **β-DÓLAR** (Σwβ) = +0.45, exposición direccional
+del notional **dominada por `trend`** (long-only sin hedge; los 5 xs están Σwβ≈0, carry +0.04). Reportar la
+β-dólar como "la β del libro" habría sido alarmante y falso → se reporta la de REGRESIÓN.
+- **`engine.compute_target`** devuelve ahora 9-tupla (+`beta.iloc[-1]` por-símbolo, +`beta_model` regresión).
+  Callers actualizados (orchestrator/engine.main/execution.main/report.py).
+- **Snapshot:** `beta` = β de regresión **realizada** de la equity en vivo (≥20 días; `_beta_realized`,
+  regresa retornos diarios de `equity_daily` sobre BTC diario en tz Lima) y si no, la **modelo** (+0.025).
+  `detail.beta_dollar` = diagnóstico Σwβ de las posiciones REALES (en DRY_RUN, del target). Todo blindado.
+- Verificado: 9-tupla OK, β-dólar real con posiciones sintéticas −0.09 (sensata), realizada None<20d→cae a
+  modelo, imports OK, sin cambio de comportamiento del trading. **PENDIENTE DEPLOY** (solo telemetría).
 
 ## CHANGELOG 2026-06-01 (noche-2 — FIX sombra TVL (ffill) → ⚠️ ÚNICO cambio de prod pendiente de deploy)
 Al verificar deploy-readiness cacé un bug en la sombra: la TVL standalone logueaba **0** (antes 13)
