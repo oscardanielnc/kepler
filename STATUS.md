@@ -2,10 +2,11 @@
 > **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-01** (tarde-3, hora Lima).
 > **Roadmap de mejora del sistema: `ROADMAP.md`** (faro Medallion/RenTech).
 >
-> **⏭️ PRÓXIMA EJECUCIÓN (indicación de Oscar 2026-06-01):** agotar **B) INTRADÍA** — el backtester
-> horario (e42/e44) ya está montado; cerramos hoy la rama order-book (DESCARTADO, e45) y quedan
-> **liquidaciones** (Coinalyze, chequeo barato del histórico gratis estilo e23), **CME gap** (vía
-> regime_lab, con caveat β-neutral) y el **monitor de riesgo e15**. Empezar SOLO cuando Oscar lo indique.
+> **⏭️ PRÓXIMA EJECUCIÓN:** agotar **B) INTRADÍA** + el workstream nuevo. Ya cerrados hoy: order-book
+> (DESCARTADO, e45) y **liquidaciones** (DESCARTADO, edge=ZEC, e46-49). **Quedan:** (a) **CME gap** (vía
+> regime_lab, caveat β-neutral), (b) **monitor de riesgo e15** (backtester e42 ya montado), y (c) 🟢
+> **aplicar la REGLA universo por-sleeve a los 7 oficiales** (`kepler-per-sleeve-universe-rule`, molde
+> e49 — la mejor avenida nueva: de-draggear puede limpiar/mejorar sleeves; workstream validado).
 > **⏰ RECORDATORIO PROGRAMADO ~2026-07-31 (60d):** cerrar el ciclo de las sombras (≥60-90d acumulados →
 > `e33_shadow_tvl_analyze` → ¿promover blend a sleeve #8?). Requiere que Oscar DESPLIEGUE primero las sombras.
 
@@ -57,6 +58,30 @@ mejor: lotería max_60d + TVL + iliquidez Amihud) y `tvl_pxdiv_14d` (control; el
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-06-01 (noche — RUTA B intradía: LIQUIDACIONES descartadas (edge=ZEC) + REGLA universo por-sleeve)
+Arranque de la ruta B (intradía). #1 = liquidaciones (Coinalyze, gratis con API key en `data/.coinalyze_key`).
+- **Intradía bloqueado por dato** (e46): Coinalyze guarda solo 1500-2000 puntos rodantes a <12h → ~2-3
+  meses a 1h, nunca multi-año. Para intradía real = colector hacia adelante (meses). Confirma INTRADAY.md §2.2.
+- **Diario gratis y completo** (e46: 32/32, 2023→hoy, `data/liquidations_daily/`). Probado como sleeve
+  cross-seccional (e47): `liq_imb_3d` = media_3d((long−short)/(suma)), signo −1 (momentum; el rebote
+  contrarian es intradía). Parecía bueno: Sharpe 1.11, corr **0.11** (ortogonal), **+1.05%/mes** maker,
+  y **sobrevive taker** (≠ order-book).
+- **DESCARTADO — el edge ES ZEC (1 coin fino)** (e48/e49). LOO: sin ZEC 1.05→0.11. Por mitades full
+  −0.59 IS / +2.00 OOS (todo reciente); sin ZEC −0.83/−0.16; de-dragged sin ZEC **+0.01 (OOS −1.16)**.
+  Edge de 1 nombre ≠ sleeve (precedente e17/AXS). No entra a prod. Memoria `kepler-liquidations-descartado`.
+- ⚠️ **Artefacto cazado (e48):** a taker+ADV el Δ/Sharpe SUBÍAN → el coste recorta colas de liquidación
+  extrema, baja maxDD, el ancla sube leverage. NO es mejora real (gate limpio = maker). Patrón de e28.
+- 🟢 **REGLA NUEVA de Oscar → memoria `kepler-per-sleeve-universe-rule` (molde e49):** si un sleeve es
+  bueno pero depende/falla por 1 moneda, diagnosticar contribución POR coin y usar **universo por-sleeve**
+  (excluir estorbadores con selección-IS/validación-OOS; rechazar lo que dependa de 1 coin). Validada:
+  de-draggear liq_imb_3d pasó −0.59/+2.00 → **+1.91/+1.47** (equilibrado entre mitades) = mejora REAL de
+  robustez. Aquí no rescató liquidaciones (lo que quedaba era ZEC) pero **como técnica general es sólida**
+  → candidata a aplicar a los 7 oficiales (workstream validado, no parche). Idea abierta: RETIRAR monedas
+  del universo global (ampliar ya se descartó, e17) está menos explorado.
+- Archivos: `research/e46_download_liquidations.py` (downloader Coinalyze), `e47_liquidations_check.py`
+  (chequeo barato), `e48_liquidations_stress.py` (taker/concentración/horizonte), `e49_liquidations_universe.py`
+  (regla universo por-sleeve). Datos en `data/liquidations_daily/` (no trackeado).
 
 ## CHANGELOG 2026-06-01 (tarde-3 — FASE 2 INTRADÍA order-book: edge REAL pero COSTE manda → DESCARTADO)
 `research/e45_intraday_orderbook.py`. Primera aplicación real del backtester horario (e42) + motor de
