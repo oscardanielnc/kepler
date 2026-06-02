@@ -16,7 +16,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config  # noqa
 from kepler import alphas
-from kepler.portfolio import vol_parity_weights, metrics, leverage_for_maxdd_anchor
+from kepler.portfolio import vol_parity_weights, metrics, leverage_for_maxdd_anchor, leverage_robust
 from kepler.db import DB
 
 DRIVER = "BTCUSDT"; BETA_W = 168; MIN_BARS = 34000
@@ -228,10 +228,11 @@ def compute_target(tier="ESTABLE"):
     # LEVERAGE = el que clava el maxDD del backtest en el presupuesto del tier (regla de Oscar).
     # Se auto-recalibra: cada sleeve nuevo que baja el maxDD a 1x → sube el leverage → más
     # retorno al MISMO maxDD. Cap de seguridad en config.MAX_STRAT_LEVERAGE.
-    # HAIRCUT (D0, e51): recorta el leverage del ancla para que el maxDD vivo respete el presupuesto
-    # (el ancla sobre-apalanca; maxDD OOS −13.5% vs −10%). config.LEVERAGE_HAIRCUT=1.0 → statu quo.
-    lev = min(config.LEVERAGE_HAIRCUT * leverage_for_maxdd_anchor(port_ret, TIERS[tier]),
-              config.MAX_STRAT_LEVERAGE)
+    # HAIRCUT (D0, e51): recorta el leverage del ancla para que el maxDD vivo respete el presupuesto.
+    # VOL-ANCHOR (e68): min(maxdd_anchor, vol_anchor) → robusto a la VENTANA de datos (el maxdd-anchor
+    # solo sobre-apalanca con histórico corto/calmado: incidente VM sin 2022 → 2.93x vs 2.16x diseño).
+    lev = leverage_robust(port_ret, TIERS[tier], config.LEVERAGE_HAIRCUT,
+                          config.MAX_STRAT_LEVERAGE, config.TARGET_VOL_ANCHOR)
     # target neto por activo = Σ vp_i · w_i, escalado por el leverage anclado
     target = pd.Series(0.0, index=C.columns)
     for name in series:

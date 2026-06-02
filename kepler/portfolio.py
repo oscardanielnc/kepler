@@ -82,6 +82,27 @@ def leverage_for_maxdd_anchor(r: pd.Series, target_maxdd: float = 0.10,
     return (lo + hi) / 2
 
 
+def leverage_robust(r: pd.Series, target_maxdd: float, haircut: float, cap: float,
+                    target_vol_annual: float = 0.0, ppy: int = 365) -> float:
+    """Leverage de estrategia ROBUSTO a la ventana de datos (e68, Oscar 2026-06-02).
+    = min(maxdd_anchor, vol_anchor) × haircut, topado en `cap`.
+
+    El maxdd_anchor solo (statu quo) es híper-sensible a la ventana: con histórico corto/calmado
+    sobre-apalanca (incidente VM sin 2022: 2.93x → maxDD real −13%). El vol_anchor usa la vol realizada
+    (estable entre ventanas) contra una `target_vol_annual` fija calibrada offline → ancla el leverage
+    aunque falte historia. Tomamos el MÁS conservador de los dos (cinturón y tirantes): nunca sube por
+    encima del maxdd-anchor, solo lo baja cuando la ventana es corta o la vol está elevada.
+    Si `target_vol_annual<=0`, se desactiva el vol-anchor (vuelve al statu quo: haircut × maxdd_anchor)."""
+    lev_dd = leverage_for_maxdd_anchor(r, target_maxdd)
+    if target_vol_annual and target_vol_annual > 0:
+        v = r.dropna().std() * np.sqrt(ppy)
+        lev_vol = (target_vol_annual / v) if v > 0 else cap
+        lev = min(lev_dd, lev_vol)
+    else:
+        lev = lev_dd
+    return min(haircut * lev, cap)
+
+
 if __name__ == "__main__":
     import os, sys
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

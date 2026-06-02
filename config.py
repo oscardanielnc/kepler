@@ -67,6 +67,13 @@ LEVERAGE_HAIRCUT   = 0.95      # Oscar 2026-06-02 (e51, re-ajustado tras e52/e53
                                # (sin finas + trend capado) ya respeta el −10% OOS sin recorte (maxDD OOS
                                # −7.1%); 0.95 deja un pequeño cojín. lev ~1.88x. 1.0=sin recorte. Era 0.85
                                # sobre el libro sucio (OOS −13.5%), ahora sobre-conservador.
+# VOL-ANCHOR (e68, Oscar 2026-06-02): el maxDD-anchor es híper-sensible a la VENTANA de datos — si el
+# histórico es corto/calmado (incidente: la VM sin 2022 corrió a 2.93x vs 2.16x → maxDD real −13%/−16%).
+# El leverage robusto = min(maxdd_anchor, HAIRCUT·TARGET_VOL_ANCHOR/vol_realizada). La vol es estable
+# entre ventanas (≈9% a 1x) → ancla el leverage aunque falte historia. Calibrado offline = vol_full ×
+# ancla_raw_full (9.0% × 2.274). e68: mantiene maxDD real ≤9.5% en TODAS las ventanas, mismo retorno con
+# historia completa (2.16x). 0=desactiva el vol-anchor (solo maxdd-anchor, statu quo viejo).
+TARGET_VOL_ANCHOR  = 0.205     # vol anual operativa que clava el maxDD presupuestado en la referencia full
 # HORA del rebalanceo diario (ejecución, e54): la liquidez cripto sigue el reloj US/EU → pico 14-16 UTC
 # (solape US-mañana/EU-tarde, 1.5× la media), zonas muertas 21-23 y 03-05 UTC. Fijar el rebalanceo a la
 # hora más líquida baja ~21% el slippage (~0.1-0.15%/mes) sin añadir turnover ni β. Antes iba a la deriva
