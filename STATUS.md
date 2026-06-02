@@ -79,6 +79,24 @@
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde-3 — cap de concentración combinado (e69) + fix telemetría slippage)
+Dos cierres pedidos por Oscar tras el incidente:
+- **CAP DE CONCENTRACIÓN COMBINADO (e69):** el cap 0.25 de e52 es POR-SLEEVE; tras combinar+leverage un
+  nombre apila de varios sleeves (TRX 23% del equity vía trend+carry+lowvol). Nuevo `config.MAX_POSITION_EQUITY
+  = 0.15`: recorta el target final para que **ningún nombre supere 15% del equity**. Conservador por
+  construcción (el leverage se ancla sobre el libro SIN capar → recortar solo baja riesgo). e69 (marcado
+  diario consistente) confirma que capar el peso combinado es **neutral en Sharpe/maxDD/retorno** (maxDD
+  anclado; OOS hasta mejora) → regla de oro ✓. Implementado en `engine.compute_target` (clip post-leverage).
+  Verificado: engine métricas idénticas (Sh 2.20, maxDD −9.5%); el clip muerde (prueba cap 0.10 → top=0.10).
+  En la VM hoy recortará TRX 23→15, NEAR 19→15, BTC 17→15 (top-5 82%→~68%). Caveat honesto: e69 corre a
+  leverage más bajo que el engine (retornos diarios más ruidosos) → no dimensiona el 23% vivo, pero la
+  conclusión RELATIVA (cap = neutral) es sólida. **PENDIENTE PUSH+DEPLOY.**
+- **FIX TELEMETRÍA SLIPPAGE (C3):** el `slip_bps` se mide vs `book_mid`; cuando el mid viene stale (ZEC: ref
+  621 vs fill 575 = −742bps) ensuciaba la MEDIA del reporte (−15.94 vs mediana real 2.72). Nuevo
+  `SLIP_SANITY_BPS=200`: al calcular, |slip|>2% = ref corrupto → se descarta (no entra a la DB); al agregar,
+  se excluye del reporte (`ABS(slip_bps)<=200`). Simulado sobre hoy: media **−15.94 → 3.71bps** (= mediana).
+  **PENDIENTE PUSH+DEPLOY.**
+
 ## CHANGELOG 2026-06-02 (tarde-2 — 🔴 INCIDENTE: VM sobre-apalancada 2.93x → ancla robusta (e68))
 **Oscar reportó caídas fuertes** (1 día +0.09, 2 rojos, hoy −1.52%). Análisis del log diario (DEMO):
 - **CAUSA RAÍZ:** la VM corría a **2.929x** (log: `"leverage": 2.929`, TRX 23%) vs **2.16x de diseño**
