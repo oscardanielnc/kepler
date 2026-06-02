@@ -74,6 +74,20 @@ mejor: lotería max_60d + TVL + iliquidez Amihud) y `tvl_pxdiv_14d` (control; el
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde — TIER 1 ON-CHAIN: inventario + ingesta Coin Metrics (gratis))
+Tras el Tier 3 negativo (edge nuevo = dato nuevo), arranque del Tier 1: actividad de direcciones on-chain
+(el factor zoo lo lista entre los top ortogonales). `research/e58_onchain_addresses.py`.
+- **Coin Metrics Community API** (`community-api.coinmetrics.io/v4`, **GRATIS sin key**): `AdrActCnt`
+  (direcciones activas) + `TxCnt` community-free. `AdrNewCnt`/valor-transferido NO son community.
+- **Inventario:** 15/29 coins con dato; **2 STALE descartadas** (bnb cortado 2019-04 = viejo ERC-20;
+  dot 2022-06) → **13 usables** (aave,ada,bch,btc,doge,etc,eth,link,ltc,trx,uni,xrp,zec), histórico
+  2016-2020→2026-06-01 (fresco). Cross-section delgado (13, como TVL 12) pero viable.
+- **Ventaja point-in-time:** las direcciones se computan de la cadena INMUTABLE → no se revisan (≠ backfill
+  de TVL) = dato más honesto. **Ingesta hecha** (44k filas en `data/onchain_cm/`, no trackeado).
+- **SIGUIENTE:** construir `addr_pxdiv` (Δlog actividad − retorno, análogo al TVL que dio +0.6%/mes) +
+  variantes (tx-count, addr-momentum) → harness brutal (corr<0.35, IS/OOS purgado, ancla, **taker**) +
+  ataque point-in-time → si pasa, candidato al **blend #8**. (Aún NADA en prod.)
+
 ## CHANGELOG 2026-06-02 (tarde — barrido de recetas de factores: Tier 3 (data propia) → todo redundante)
 Tras el barrido web (factor zoo cripto + GitHub + Coinalyze), Oscar dio luz verde a probar los factores
 computables con NUESTRA data (`research/e57_tier3_factors.py`), por el harness brutal (corr<0.35 + IS/OOS):
