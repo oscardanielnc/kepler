@@ -79,6 +79,22 @@
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde-6 — NETFLOW Dune (e72): pipeline VALIDADO, build cross-chain = decisión)
+Key Dune gratis (`data/.dune_key`). Pipeline funcional (`research/dune_util.py`: crear query pública →
+ejecutar **perf='free'** ← OJO el bug: 'medium' es inválido en free tier y falla silencioso → leer por
+execution_id). Free tier: 0 queries privadas (solo públicas), créditos limitados, ejecuciones lentas.
+- **CEX labels (`cex.addresses`) cobertura amplia:** ethereum 4373, polygon, bnb, base, avalanche_c,
+  litecoin 1110, bitcoin 761, ripple 377, solana 166, tron 151 → cubre BTC/ETH/BNB/SOL/XRP/AVAX/LTC/TRX
+  + ERC-20 (LINK/UNI/AAVE) nativamente. Mejor de lo esperado.
+- **Extracción netflow VALIDADA** (e72, LINK ethereum: inflow/outflow diario en millones de tokens,
+  netflow ± sano). `erc20_ethereum.evt_Transfer` ⋈ `cex.addresses`. Subset ERC-20 cacheado.
+- **CAVEAT DE ALCANCE (decisión Oscar):** netflow per-coin es CROSS-CHAIN → ~8 queries por-cadena
+  (bitcoin/litecoin/ripple/tron/solana/bnb/avax + eth), cada una scan multi-año en free tier lento/credit-
+  limitado = build de **varias sesiones**. ERC-20 solo = 3 coins (muy fino para rankear). Pregunta: invertir
+  sesiones en el build Dune gratis vs **CryptoQuant pago** (~$99/mo, netflow per-token limpio instantáneo).
+  Dado que on-chain ya dio 2 ganadores (tx, mvrv) y netflow es la misma familia, evaluar ROI esfuerzo.
+  PENDIENTE: decisión de Oscar. Memoria `kepler-sentiment-trends-marginal` (actualizar con netflow).
+
 ## CHANGELOG 2026-06-02 (tarde-5 — SANTIMENT social (e71) + Flipside MUERTO → Dune para netflow)
 Oscar consiguió API key de Santiment (gratis, en `data/.santiment_key`). Probada y funcional (`sanpy`).
 - **e71 (chequeo EXPLORATORIO, social_volume + sentiment_balance, 18 monedas):** el social es **muy
