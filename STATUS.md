@@ -6,8 +6,8 @@
 > hora 14 UTC, chequeo CB intradía). Frontera intradía evaluada COMPLETA (ejecución ✅, slicing diferido,
 > monitor ✅, resto descartado). **AHORA = VALIDAR EN DEMO (E1, el foso real = tiempo):** confirmar maxDD
 > real bajo −10%, Sharpe/slippage reales, β realizada (≥20d). **NO apilar cambios sobre el deploy fresco.**
-> Pendientes en cola (ver §PENDIENTES): sombras→sleeve #8 (~2026-07-31, e33), fix de huérfanas, reconciliar
-> el Sharpe diario-vs-hold-block (e15), C3 calibrar slippage con fills reales.
+> Pendientes en cola (ver §PENDIENTES): sombras→sleeve #8 (~2026-07-31, e33), fix de huérfanas, C3 calibrar
+> slippage con fills reales. ✅ Sharpe reconciliado (e56): el 2.07 NO está inflado (honesto 2.34 ≥ motor 2.20).
 > **⏰ RECORDATORIO PROGRAMADO ~2026-07-31 (60d):** cerrar el ciclo de las sombras (≥60-90d acumulados →
 > `e33_shadow_tvl_analyze` → ¿promover blend a sleeve #8?). Sombras YA registrando en vivo (desde 06-01).
 
@@ -99,9 +99,11 @@ hora-del-día del universo (quote_volume de 1h klines; el modelo de coste es sli
   no lo ataca. **CONCLUSIÓN: el CB diario basta; NO añadir halt intradía.** ÚNICA mejora barata: chequear el
   CB ANCHO existente (−20%) en el heartbeat (15min) — hoy solo se evalúa en el ciclo 24h — = rail de
   catástrofe ~24h más rápido a coste histórico CERO (nunca dispara con ruido). Pendiente de tu OK para implementar.
-  - Nota honesta: la reconstrucción diaria-rebalanceada da Sharpe ~1.3 (vs motor hold-block 2.07); es una
-    aproximación que sobre-rebalancea (re-forma el target a diario) → subestima; la verdad está entre ambos
-    y la dirá la DEMO (E1). No cambia la conclusión de riesgo de e15.
+  - Nota honesta → **RESUELTA (e56):** el Sharpe ~1.3 de e15 era artefacto de SOBRE-rebalanceo (re-formaba
+    el target a diario, lo que el libro vivo NO hace). Marcando a diario pero MANTENIENDO sobre el bloque
+    (e42), el combinado honesto da **Sharpe 2.34 ≥ motor 2.20** → **el 2.07 NO está inflado.** Matiz fino:
+    el marcado diario da maxDD-a-1x un pelín peor (−5.1 vs −4.5) → el motor sub-apalanca... perdón, el ancla
+    apalancaría de más (2.27 vs 1.98x) = exactamente el sobre-apalancamiento que **valida el haircut 0.95 (D0).**
 
 
 ### MONEDAS FINAS — retirar del universo global (`research/e53_thin_coins.py`) → −{XLM,HBAR,LIT}, ZEC se queda
