@@ -77,6 +77,16 @@
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde — CIERRE barrido on-chain: fees+issuance ✗ → familia AGOTADA, 2 ganadores)
+`research/e67_fees_supply.py`. Últimas métricas community: **issuance** (−Δlog supply = inflación) corr
+−0.63 con momentum (anti-mom) + IS/OOS inestable (1.39/−0.63) → ✗. **fees** (fee_pxdiv/fee_mom) solapan
+con actividad (tx) y lowvol, standalone ~0 → ✗. **NINGUNO pasa.**
+- **🏁 BARRIDO COIN METRICS / ON-CHAIN AGOTADO.** Balance de la familia: **2 GANADORES** (`tx_pxdiv_14d`
+  actividad + `mvrv_lvl` valor, ortogonales entre sí, ambos en SOMBRA). Descartados: addr variants, netflow
+  (BTC/ETH-only), MVRV mom/z, size, fees, issuance. **La familia on-chain rindió 2 edges** — la mejor de
+  todas (derivados/Coinalyze = 0). Confirma: el edge ortogonal vive en FUNDAMENTALES on-chain, no en precio
+  ni posicionamiento. Próxima familia de datos (siguiente sesión): sentiment/social o netflow vía Dune (BTC/ETH-only en CM).
+
 ## CHANGELOG 2026-06-02 (tarde — COIN METRICS ampliado: `mvrv_lvl` PASA → 2ª sombra on-chain 🎯)
 Barrido del catálogo Coin Metrics community (e65/e66). 31 métricas; las fundamentales nuevas:
 - **Netflow de exchanges** (`FlowInExUSD/FlowOutExUSD`) — el netflow que creíamos de pago (CryptoQuant)
