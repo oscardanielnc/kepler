@@ -79,6 +79,22 @@
 
 ---
 
+## CHANGELOG 2026-06-02 (tarde-4 — SENTIMENT vía Google Trends (e70): edge marginal-real pero FUENTE frágil)
+Familia nueva (Oscar): agotar sentiment/social gratis + netflow Dune/Flipside. Hallazgos:
+- **Acceso:** lo único gratis+keyless+cross-seccional+con histórico es **Google Trends** (pytrends; ojo bug
+  urllib3: NO pasar `retries`). LunarCrush free = sin API/sin social. Santiment free = key (registro Oscar)
+  + solo 2y + excluye 30d + 1000 calls/mes. Fear&Greed = market-wide (gate-de-régimen, descartado).
+  Netflow Dune/Flipside = key (registro) + SQL cross-chain pesado → NO ejecutable autónomo esta sesión.
+- **e70 (chequeo barato, 19 monedas, atención relativa a BTC, 2022-2026 semanal, cache data/trends/):** la
+  atención ES **ortogonal** a los 7 (max |corr| 0.18, carry). Factor ganador `attn_pxdiv_4w`(−1) = fade del
+  hype (búsqueda sube más que precio→short): **maker Sh 0.54, TAKER Sh 0.46 (+1.12%/mes), IS/OOS 0.52/0.57
+  balanceado** → pasa ortogonalidad+taker+IS/OOS (los filtros que mataron a otros). Marginal-real.
+- **VEREDICTO: edge real pero NO production-ready por la FUENTE.** (1) Google Trends rate-limita/429 desde
+  IPs cloud → una sombra en la VM se rompería (la VM es más bloqueada que local). (2) semanal + lag 1sem
+  = lento. (3) best-of-12 variantes, signo post-hoc → falta deflación + LOO. **Camino limpio si se quiere
+  sentiment = Santiment (API estable, needs key Oscar) > Trends.** Memoria `kepler-sentiment-trends-marginal`.
+  PENDIENTE (si Oscar lo prioriza): LOO + deflación; o evaluar Santiment/Dune con keys que cree Oscar.
+
 ## CHANGELOG 2026-06-02 (tarde-3 — cap de concentración combinado (e69) + fix telemetría slippage)
 Dos cierres pedidos por Oscar tras el incidente:
 - **CAP DE CONCENTRACIÓN COMBINADO (e69):** el cap 0.25 de e52 es POR-SLEEVE; tras combinar+leverage un
