@@ -100,8 +100,14 @@ Arranque de la Fase 1 (ROADMAP §RUTA MAESTRA), CODE-FIRST cero IA. Pasos 1 y 2 
   **Reanudación rápida:** un ciclo bloqueado/omitido NO consume la ventana (`retry_blocked`) → reintenta
   cada 15min hasta que los datos se reparen (p.ej. backfill), sin esperar 24h. Verificado en DRY_RUN
   (heartbeat limpio; chequeos sintéticos: caída equity/rebal 40h/huérfana → WARN). **PENDIENTE DEPLOY.**
-- **SIGUE (Fase 1):** paso 4 = monitor correlación sleeves (F1.5) · paso 5 = reporte profesional templado
-  (F1.4). Todo código, cero IA. Tras Fase 1 → Fase 2 (producto/track) cuando la DEMO acumule semanas.
+- **Paso 4 — monitor de correlación entre sleeves (F1.5), en la guarda pre-trade:** métrica robusta =
+  MEDIA de |corr| entre pares (NO el máximo: con 21 pares y ventana corta el max se sesga alto → falsas
+  alarmas; calibrado: full=0.065, p99(180d)=0.27) sobre ventana 180d, WARN si >0.35 (colapso real). Verif:
+  real OK (media 0.11), colapso total → WARN. **🐛 BUG cazado y corregido:** `np.fill_diagonal` sobre el
+  array read-only de `.corr()` (→ copia escribible) + recalibración del umbral. Barrido de bugs: todo el
+  paquete compila/importa/corre; e75 pasa; ciclo DRY_RUN limpio. **PENDIENTE DEPLOY.**
+- **SIGUE (Fase 1):** **solo queda paso 5 = reporte profesional templado (F1.4)**, código puro. Tras eso,
+  Fase 1 cerrada → Fase 2 (producto/track) cuando la DEMO acumule semanas.
 
 ## CHANGELOG 2026-06-02 (noche — RUTA MAESTRA: cambio de fase a Operación→Producto→Escala)
 Tras agotar la caza de alfa gratis, Oscar pidió consolidar TODO lo que sí aporta valor en una ruta

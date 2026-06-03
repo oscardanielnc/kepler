@@ -9,6 +9,7 @@ Severidad: OK < WARN < CRIT. CRIT pre-trade ⇒ NO operar (mantener el libro) + 
 """
 from __future__ import annotations
 from dataclasses import dataclass
+import numpy as np
 import pandas as pd
 import config
 
@@ -119,10 +120,37 @@ def check_beta_dollar(target, beta_last) -> CheckResult:
         return _r("beta_dollar", WARN, f"no evaluable: {e}")
 
 
+SLEEVE_CORR_WINDOW_D = 180   # ventana larga (la corta es ruido: con 21 pares el MAX se sesga alto)
+SLEEVE_CORR_WARN     = 0.35  # MEDIA de |corr| entre pares (calibrado e: full=0.065, p99(180d)=0.27 → 0.35 = colapso real)
+
+
+def check_sleeve_correlation(sleeve_df, window=SLEEVE_CORR_WINDOW_D, thresh=SLEEVE_CORR_WARN) -> CheckResult:
+    """Diversificación = control de riesgo nº1. Métrica robusta = MEDIA de |corr| entre todos los pares
+    (NO el máximo, que con 21 pares y ventana corta se sesga alto → falsas alarmas). Ventana larga (180d).
+    Si la media sube por encima del umbral → la diversificación colapsa (libro = apuesta concentrada). WARN."""
+    try:
+        if sleeve_df is None or sleeve_df.shape[1] < 2:
+            return _r("sleeve_corr", OK, "n/a")
+        sub = sleeve_df.dropna().tail(window)
+        n = sub.shape[1]
+        if len(sub) < max(40, window // 2):
+            return _r("sleeve_corr", OK, f"histórico insuficiente ({len(sub)}d)")
+        a = sub.corr().abs().to_numpy(copy=True)   # copia escribible (.corr() es read-only)
+        np.fill_diagonal(a, 0.0)
+        mean_c = float(a.sum() / (n * (n - 1)))
+        i, j = np.unravel_index(a.argmax(), a.shape)
+        top = f"{sub.columns[i]}~{sub.columns[j]} {a.max():.2f}"   # par más alto, solo contexto
+        if mean_c > thresh:
+            return _r("sleeve_corr", WARN, f"corr media {mean_c:.2f} > {thresh} ({window}d; top {top}) — diversificación COLAPSANDO", mean_c)
+        return _r("sleeve_corr", OK, f"corr media {mean_c:.2f} ≤ {thresh} ({window}d; top {top})", mean_c)
+    except Exception as e:
+        return _r("sleeve_corr", OK, f"no evaluable: {e}")
+
+
 # ── Orquestación ────────────────────────────────────────────────────────────
-def run_pretrade_checks(C, target, lev, beta_last, prev_lev=None, now=None) -> list[CheckResult]:
+def run_pretrade_checks(C, target, lev, beta_last, prev_lev=None, now=None, sleeve_df=None) -> list[CheckResult]:
     """Conjunto de guardas PRE-TRADE. Si alguna es CRIT → el orchestrator NO debe operar."""
-    return [
+    res = [
         check_data_coverage(C),
         check_data_freshness(C, now=now),
         check_leverage(lev, prev_lev),
@@ -130,6 +158,9 @@ def run_pretrade_checks(C, target, lev, beta_last, prev_lev=None, now=None) -> l
         check_n_positions(target),
         check_beta_dollar(target, beta_last),
     ]
+    if sleeve_df is not None:
+        res.append(check_sleeve_correlation(sleeve_df))
+    return res
 
 
 # ── Chequeos RUNTIME (heartbeat, entre rebalanceos) ─────────────────────────

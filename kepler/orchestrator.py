@@ -267,7 +267,8 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     #     incidente 2026-06-02 (backfill faltante → ancla 2.93x). Un flatten por CB (operate=False) NO se
     #     bloquea (aplanar a 0 es seguro e independiente de la calidad del dato). Alertas en TRANSICIÓN.
     try:
-        chk = checks.run_pretrade_checks(load_panel_close(), target, lev, beta_last, prev_lev=_last_leverage(db))
+        chk = checks.run_pretrade_checks(load_panel_close(), target, lev, beta_last,
+                                         prev_lev=_last_leverage(db), sleeve_df=df)
         sev, prev_sev = checks.worst(chk), _last_check_severity(db)
         summary = checks.summarize(chk)
         db.audit("CRITICAL" if sev == checks.CRIT else ("WARNING" if sev == checks.WARN else "INFO"),
