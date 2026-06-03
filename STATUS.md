@@ -7,14 +7,25 @@
 > ROBUSTEZ OPERATIVA (prioridad, el incidente de hoy probó que es el riesgo #1)** · Fase 2 producto/track
 > · Fase 3 escala. IA = herramienta operativa, NO alfa. Negocio = copy-lead. (Memorias `kepler-news-ia-bots-decision`.)
 >
-> **⏭️ PRÓXIMA EJECUCIÓN:** arrancar **Fase 1 (robustez operativa)** del ROADMAP — empezar por F1.1/F1.2
-> (guardas de sanity pre-trade + health-check con alertas ntfy). Confirmar primero con Oscar el alcance.
-> En paralelo corre solo: Fase 0 (E1 DEMO + sombras→sleeve #8 ~2026-07-31).
+> **⏭️ PRÓXIMA EJECUCIÓN (mañana 2026-06-03):**
+>   1. **VERIFICAR EL DEPLOY de anoche** (Oscar despliega la Fase 1 pasos 1-4 + ruta maestra; ~9 commits
+>      desde el último deploy). En la VM tras desplegar: confirmar en `journalctl -u kepler` que un ciclo
+>      corre y registra `audit checks: OK` (categoría `checks`), SIN falso-bloqueo en DEMO, y heartbeat OK.
+>   2. **Cerrar Fase 1 → PASO 5: reporte profesional diario templado (F1.4)**, código puro (métricas +
+>      anomalías por regla + narrativa por plantilla, CERO IA). Es lo único que queda de Fase 1.
+>   3. Luego → Fase 2 (producto/track) cuando la DEMO acumule semanas.
+>   En paralelo corre solo: Fase 0 (E1 DEMO + sombras→sleeve #8 ~2026-07-31 + C3 slippage real).
 >
-> **Estado del sistema (todo DESPLEGADO y verificado en vivo 2026-06-02):** 7 sleeves · ancla −10% · **lev
-> 2.23x** (vol-anchor e68, tras incidente sobre-leverage 2.93x→2.23x) · haircut 0.95 · **cap 15%/nombre**
-> (e69) · trend cap 0.25 · universo 20 long (−XLM/HBAR/LIT) · rebal 14 UTC · CB en heartbeat · slippage
-> telemetría limpia (e70 winsor). 4 sombras registrando (tx/mvrv/tvl/blend).
+> **ESTADO FASE 1 (robustez operativa, code-first, CERO IA):** pasos 1-4 HECHOS y verificados en DRY_RUN
+> (guarda pre-trade que bloquea+avisa en CRÍTICO · health-check runtime en heartbeat · reanudación rápida ·
+> monitor de correlación de sleeves). 1 bug cazado y corregido (sleeve_corr read-only). **PENDIENTE
+> PUSH+DEPLOY (Oscar) — hasta desplegar, las guardas NO protegen el vivo.** Falta solo el paso 5.
+>
+> **Estado del sistema en PRODUCCIÓN (DESPLEGADO y verificado en vivo 2026-06-02 tarde):** 7 sleeves · ancla
+> −10% · **lev 2.23x** (vol-anchor e68, tras incidente sobre-leverage 2.93x→2.23x) · haircut 0.95 · **cap
+> 15%/nombre** (e69) · trend cap 0.25 · universo 20 long (−XLM/HBAR/LIT) · rebal 14 UTC · CB en heartbeat ·
+> slippage telemetría limpia (e70 winsor). 4 sombras registrando (tx/mvrv/tvl/blend).
+> ⚠️ **La Fase 1 (guardas/checks) está en commits locales, NO en la VM todavía** (≠ el bloque de arriba que sí está vivo).
 > **⏰ RECORDATORIO ~2026-07-31:** cerrar ciclo sombras (≥60-90d → `e33_shadow_tvl_analyze` → ¿sleeve #8?).
 
 ---
