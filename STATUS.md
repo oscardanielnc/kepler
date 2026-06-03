@@ -57,6 +57,51 @@
     fetchean datos reales y dibujan todas las gráficas sin errores JS. Archivos siguen autocontenidos (1 .html).
   - **PENDIENTE (Oscar):** PUSH+DEPLOY y mirar `/` y `/track` en la VM. Futuro (anotado, no urgente): ampliar
     el bloque "cómo se gestiona el riesgo" y algún contenido más en `/track`.
+- 🐛 **BUG OPERATIVO ENCONTRADO Y CORREGIDO (2026-06-03): reinicio del servicio forzaba rebalanceo inmediato → churn.**
+  Diagnóstico de la "pérdida" que preocupaba a Oscar (equity 4939→4860 = **−1.61% en 5 días**):
+  - **El "hoy 0%" es CORRECTO** — el 06-03 la equity quedó plana (+0.004%). No es bug del frontend.
+  - **Toda la pérdida es UN evento:** el 06-02 cayó −1.38% en un escalón de **−$63 a las 15:35 UTC**, justo en un
+    rebalanceo. Ese día el sistema rebalanceó **6 veces** (01,14,15,18,19,23h) cuando debe ser **1×/24h**.
+  - **Causa raíz (`orchestrator.run`):** `last_rebal` arrancaba en `0.0` en memoria → tras cualquier REINICIO,
+    `hrs=(now-0)/3600` es enorme → el fallback `hrs>=MAX_REBAL_HOURS` dispara rebalanceo INMEDIATO. El 06-02
+    hubo varios deploys (fix de leverage 2.93→2.23 + cambios exec) → cada reinicio forzó un rebalanceo → churn.
+  - **Fix:** `last_rebal` ahora se recupera del último "Ciclo ok" en la DB (`_last_rebal_ts`, helper que ya
+    existía pero no se usaba para esto). Verificado por simulación: reinicio 2h tras rebal → ya NO rebalancea;
+    ventana 14h y fallback >30h siguen funcionando; DB nueva rebalancea al inicio (correcto). `py_compile` OK.
+    **Es fix de robustez operativa (no toca el edge ni el sizing; acerca el vivo al supuesto del backtest
+    de 1 rebal/día) → no requiere backtest.** Commit local pendiente PUSH+DEPLOY (Oscar).
+  - **Reconciliación verde/rojo:** el libro ABIERTO ahora está en **+$87 no realizado** (11 verdes +$204 / 6
+    rojas −$117), pero la cuenta está −$79 → la diferencia (~−$166) es **pérdida YA REALIZADA en rebalanceos
+    pasados** (sobre todo el churn del 06-02). Por eso "muchas verdes" y aun así pérdida: las verdes son del
+    libro vivo; el sangrado está en lo ya cerrado.
+- ✅ **ACCOUNTING DE COSTES MONTADO (2026-06-03, gap #1 cerrado):** el ledger `trades` ahora registra
+  `fees_usd` (comisión real) y `pnl_usd` (PnL realizado de Binance) por fill — **gratis**, sacados del mismo
+  `userTrades` que ya se pedía para el slippage (`_log_fills`). El reporte diario gana un bloque `costs`
+  {fees, funding, realized_pnl} (funding vía `execution.get_income` FUNDING_FEE, nuevo helper read-only) y el
+  dashboard lo muestra en la tarjeta "Reporte del día" (Fees / Funding / Realizado). Así CADA pérdida se
+  podrá atribuir a coste-vs-mercado. Sumas verificadas con datos mock. (Datos viejos → "s/d" hasta el 1er ciclo nuevo.)
+- ✅ **REBALANCEO MANUAL FORZADO (flag-file):** `orchestrator.run` revisa `.force_rebalance` (repo root →
+  `/opt/kepler-app/.force_rebalance`) cada heartbeat; si existe, fuerza UN rebalanceo y lo borra. Vía segura
+  de forzar SIN reiniciar (el reinicio ya no rebalancea). Forzar en VM: `touch /opt/kepler-app/.force_rebalance`
+  (o `python -m kepler.orchestrator --once` para un ciclo suelto inmediato). En `.gitignore`.
+- ✨ **MEJORAS FRONTEND adicionales (2026-06-03):**
+  - **"Posiciones activas ahora"** reestructurado: grupo **Exposición** (Long/Short/Net con sub-etiquetas
+    "comprado/en corto/dirección neta β≈0" + tooltips) y grupo **Resultado** (Ganancias/Pérdidas/PnL no
+    realizado + Comisiones acum. + **Balance neto desde inicio**). `/api/status` ahora expone
+    `cum_fees`/`cum_realized`/`net_balance`. Deja clara la lección verde-libro vs cuenta-roja.
+  - **🐛 fix latente:** en modo OBJETIVO los notional vienen con signo → el Short salía negativo y el Net
+    sumaba en vez de restar (+$4,169 en vez de +$1,676). Corregido con `Math.abs` (correcto en DEMO y objetivo).
+  - **"Rentabilidad por día" → CALENDARIO** mensual (reemplaza la tabla): cada día muestra el **retorno %**
+    destacado (verde/rojo por signo+magnitud) y, en tenue, equity de cierre + drawdown; hoy recuadrado;
+    navegación ‹ › por meses (defecto mes actual, límites = 1er día con datos … mes actual); responsivo
+    (oculta el sub-texto en móvil). Solo usa `/api/daily`, sin datos nuevos.
+  - **Logs del sistema** mejorado: (a) el botón de nivel seleccionado ahora se **resalta** (`.active`);
+    (b) **filtro por rango de fechas** (Desde/Hasta, defecto día actual en hora Lima) — `/api/logs` acepta
+    `start`/`end` y filtra por bounds del día local; (c) **descarga movida del header a la sección de logs**:
+    "⬇ Descargar rango" (día concreto o rango, vía `/api/download?start&end`) + "⬇ Todo" (histórico). El
+    header queda limpio (solo Track record). Resuelve el descargar logs de un día/rango específico.
+- ⚠️ **1 gap secundario (NO urgente):** telemetría de slippage tiene basura (un `slip_bps` de −742) → el
+  winsor (e70) no la filtra en el valor guardado; solo afecta el reporte, no la equity.
 - ❗ **PENDIENTE de housekeeping:** `.mcp.json` y `DESIGN_BRIEF.md` siguen sin commitear (untracked).
 
 ## ESTADO ACTUAL (2026-06-02)

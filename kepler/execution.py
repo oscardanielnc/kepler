@@ -129,6 +129,18 @@ def get_user_trades(symbol, start_ms):
     return d if isinstance(d, list) else []
 
 
+def get_income(start_ms, income_type=None):
+    """Income de la cuenta desde start_ms (FUNDING_FEE, COMMISSION, REALIZED_PNL...). Para el
+    accounting de costes (funding no aparece en userTrades). Read-only y blindado: [] si falla/DRY_RUN."""
+    if DRY_RUN:
+        return []
+    p = {"startTime": int(start_ms), "limit": 1000}
+    if income_type:
+        p["incomeType"] = income_type
+    d = _get("/fapi/v1/income", p)
+    return d if isinstance(d, list) else []
+
+
 def book_mid(symbol):
     d = _get("/fapi/v1/ticker/bookTicker", {"symbol": symbol})
     if isinstance(d, dict):

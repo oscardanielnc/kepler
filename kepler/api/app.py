@@ -61,11 +61,19 @@ def status():
     total_ret = (live_eq / base_eq - 1) * 100 if (live_eq and base_eq) else 0.0
     today = _q("SELECT ret_pct FROM equity_daily ORDER BY day DESC LIMIT 1")
     today_ret = today[0]["ret_pct"] if today else 0.0
+    # accounting acumulado (ledger de fills): comisiones y PnL realizado desde el inicio.
+    # Balance neto = resultado REAL de la cuenta = equity actual − equity inicial (en $).
+    cst = _q("SELECT COALESCE(SUM(fees_usd),0) f, COALESCE(SUM(pnl_usd),0) r "
+             "FROM trades WHERE reason='rebalance_fill'")
+    cum_fees = round(cst[0]["f"] or 0.0, 2)
+    cum_realized = round(cst[0]["r"] or 0.0, 2)
+    net_balance = round(live_eq - base_eq, 2) if (live_eq and base_eq) else None
     return {
         "mode": mode, "tier": det.get("tier", "—"),
         "equity": live_eq, "gross": s.get("gross"), "net": s.get("net"),
         "n_positions": s.get("n_positions", 0),
         "total_return": round(total_ret, 2), "today_return": round(today_ret, 2),
+        "cum_fees": cum_fees, "cum_realized": cum_realized, "net_balance": net_balance,
         "cb_halted": halted,
         "last_cycle": config.fmt_local((cyc[0]["ts"] if cyc else (s.get("ts") or 0))) if (cyc or s) else None,
         # backtest real del último ciclo (lo guarda el orquestador con el leverage anclado);
@@ -220,13 +228,18 @@ def track_page():
 
 
 @app.get("/api/logs")
-def logs(limit: int = 150, level: str = ""):
-    sql = "SELECT ts,level,category,symbol,title,detail FROM audit_event "
-    args = ()
+def logs(limit: int = 300, level: str = "", start: str = "", end: str = ""):
+    # filtro por nivel y por RANGO DE FECHAS (días LOCALES Lima → bounds en epoch ms, TZ-correcto).
+    sql = "SELECT ts,level,category,symbol,title,detail FROM audit_event WHERE 1=1 "
+    args = []
     if level:
-        sql += "WHERE level=? "; args = (level,)
-    sql += "ORDER BY ts DESC LIMIT ?"; args = args + (limit,)
-    rows = _q(sql, args)
+        sql += "AND level=? "; args.append(level)
+    if start:
+        sql += "AND ts>=? "; args.append(config.day_bounds_ms(start)[0])
+    if end:
+        sql += "AND ts<? "; args.append(config.day_bounds_ms(end)[1])
+    sql += "ORDER BY ts DESC LIMIT ?"; args.append(limit)
+    rows = _q(sql, tuple(args))
     for r in rows:
         r["time"] = config.fmt_local(r["ts"], "%Y-%m-%d %H:%M:%S")   # hora Lima
     return rows

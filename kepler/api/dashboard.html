@@ -69,10 +69,48 @@ tailwind.config={darkMode:"class",theme:{extend:{
   thead th{padding:8px 24px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);background:#f5f3f6;border-bottom:1px solid var(--bd)}
   tbody td{padding:9px 24px;border-bottom:1px solid var(--bd)}
   tbody tr:hover{background:rgba(245,243,246,.6)}
-  .filt button{padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.04em;border-radius:9999px;border:1px solid var(--bd);background:#fff;color:var(--mut);cursor:pointer;margin-right:5px}
+  .filt button{padding:3px 11px;font-size:10px;font-weight:700;letter-spacing:.04em;border-radius:9999px;border:1px solid var(--bd);background:#fff;color:var(--mut);cursor:pointer}
   .filt button:hover{border-color:var(--primary);color:var(--primary)}
+  .filt button.active{background:var(--primary);border-color:var(--primary);color:#fff}
+  /* toolbar de logs */
+  .logbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:10px 24px;background:#f5f3f6;border-bottom:1px solid var(--bd)}
+  .filt{display:flex;flex-wrap:wrap;gap:5px}
+  .logdates{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-left:auto}
+  .logdates label{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mut)}
+  .logdates input[type=date]{font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 7px;border:1px solid var(--bd);border-radius:6px;background:#fff;color:var(--tx)}
+  .logdl{padding:5px 11px;font-size:11px;font-weight:600;border:1px solid var(--bd);border-radius:6px;background:#fff;color:var(--tx);cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+  .logdl:hover{background:#fff;border-color:var(--primary);color:var(--primary)}
+  .logdl.solid{background:var(--primary);border-color:var(--primary);color:#fff}
+  .logdl.solid:hover{opacity:.9;color:#fff}
   .hbtn{padding:7px 13px;border:1px solid var(--bd);border-radius:.5rem;background:#fff;color:var(--tx);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
   .hbtn:hover{background:#f5f3f6}
+  /* resumen de posiciones */
+  .possum{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 26px;padding:14px 24px;background:rgba(245,243,246,.55);border-bottom:1px solid var(--bd)}
+  .pgrp{display:flex;flex-direction:column;gap:6px}
+  .pgrp-t{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);opacity:.8}
+  .pcells{display:flex;flex-wrap:wrap;gap:6px 22px}
+  .pcell{display:flex;flex-direction:column;min-width:84px;cursor:default}
+  .pcell .pv{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;font-size:16px;font-weight:600;color:var(--primary);line-height:1.2}
+  .pcell .pl{font-size:10px;color:var(--mut);margin-top:1px}
+  .psep{width:1px;align-self:stretch;background:var(--bd)}
+  /* calendario de rentabilidad diaria */
+  .calnav{display:flex;align-items:center;gap:8px}
+  .calnav button{width:26px;height:26px;border:1px solid var(--bd);border-radius:6px;background:#fff;cursor:pointer;color:var(--tx);font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center}
+  .calnav button:hover:not(:disabled){background:#f5f3f6;border-color:var(--primary)}
+  .calnav button:disabled{opacity:.3;cursor:default}
+  .calnav #cal-title{font-family:'Source Serif 4',Georgia,serif;font-size:14px;font-weight:600;min-width:120px;text-align:center;color:var(--tx)}
+  .calhead,.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .calhead{margin-bottom:6px}
+  .calhead span{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);text-align:center}
+  .calcell{border:1px solid var(--bd);border-radius:8px;min-height:80px;padding:6px 7px;display:flex;flex-direction:column;overflow:hidden}
+  .calcell.pad{border-color:transparent;background:transparent}
+  .calcell.empty{border-color:rgba(20,33,61,.06);background:transparent}
+  .calcell.nodata{background:#f7f6f7;border-style:dashed}
+  .calcell.today{outline:2px solid var(--primary);outline-offset:-2px}
+  .calcell .cd{font-size:10px;color:var(--mut);font-weight:600}
+  .calcell .cr{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;font-size:15px;font-weight:700;margin-top:auto}
+  .calcell .cs{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;font-size:9px;color:var(--mut);line-height:1.35;margin-top:2px}
+  @media(max-width:680px){.calcell{min-height:54px}.calcell .cs{display:none}.calcell .cr{font-size:12px}.calhead span{font-size:9px}}
 </style>
 </head>
 <body class="bg-background text-on-background min-h-screen">
@@ -94,8 +132,6 @@ tailwind.config={darkMode:"class",theme:{extend:{
       </div>
       <div class="flex gap-2">
         <button class="hbtn" onclick="window.location='/track'">📊 Track record</button>
-        <button class="hbtn" onclick="dl('')">⬇ Log hoy</button>
-        <button class="hbtn" onclick="dl('?full=1')">⬇ Histórico</button>
       </div>
     </div>
   </div>
@@ -188,27 +224,58 @@ tailwind.config={darkMode:"class",theme:{extend:{
 
   <!-- POSITIONS -->
   <section class="card">
-    <div class="card-h">
-      <h3 class="card-t">Posiciones activas ahora</h3>
-      <div class="flex gap-2">
-        <span class="pill" style="background:rgba(0,107,87,.1);color:var(--grn)">LONG <span id="x-long">—</span></span>
-        <span class="pill" style="background:rgba(186,26,26,.1);color:var(--red)">SHORT <span id="x-short">—</span></span>
-        <span class="pill" style="background:rgba(20,33,61,.08);color:var(--primary)">NET <span id="x-net">—</span></span>
+    <div class="card-h"><h3 class="card-t">Posiciones activas ahora</h3>
+      <span class="lbl">notional sin leverage</span></div>
+    <div class="possum">
+      <div class="pgrp">
+        <span class="pgrp-t">Exposición ($)</span>
+        <div class="pcells">
+          <div class="pcell" title="Suma en dólares de todo lo que tienes COMPRADO (apuestas a que suba).">
+            <span class="pv long" id="x-long">—</span><span class="pl">Long · comprado</span></div>
+          <div class="pcell" title="Suma en dólares de todo lo que tienes VENDIDO en corto (apuestas a que baje).">
+            <span class="pv short" id="x-short">—</span><span class="pl">Short · en corto</span></div>
+          <div class="pcell" title="Long − Short = exposición direccional neta. Kepler busca β≈0 (neutral al riesgo BTC), no $-neutral, así que un net positivo es normal.">
+            <span class="pv" id="x-net">—</span><span class="pl">Net · dirección neta (β≈0)</span></div>
+        </div>
+      </div>
+      <div class="psep"></div>
+      <div class="pgrp">
+        <span class="pgrp-t">Resultado</span>
+        <div class="pcells">
+          <div class="pcell" title="Suma del PnL no realizado de las posiciones EN GANANCIA ahora mismo.">
+            <span class="pv long" id="x-gain">—</span><span class="pl">Ganancias abiertas</span></div>
+          <div class="pcell" title="Suma del PnL no realizado de las posiciones EN PÉRDIDA ahora mismo.">
+            <span class="pv short" id="x-loss">—</span><span class="pl">Pérdidas abiertas</span></div>
+          <div class="pcell" title="Ganancias − Pérdidas del libro abierto (PnL no realizado neto).">
+            <span class="pv" id="x-upnl">—</span><span class="pl">PnL no realizado</span></div>
+          <div class="pcell" title="Comisiones reales pagadas a Binance, acumuladas desde el inicio (coste).">
+            <span class="pv short" id="x-fees">—</span><span class="pl">Comisiones (acum.)</span></div>
+          <div class="pcell" title="Resultado REAL de la cuenta = equity actual − equity inicial. Es la verdad de fondo (incluye lo ya realizado y los costes).">
+            <span class="pv" id="x-bal">—</span><span class="pl">Balance neto (desde inicio)</span></div>
+        </div>
       </div>
     </div>
     <div class="overflow-x-auto">
-      <table><thead><tr><th>Activo</th><th>Lado</th><th>USD (sin lev)</th><th>PnL</th></tr></thead>
+      <table><thead><tr><th>Activo</th><th>Lado</th><th>USD (sin lev)</th><th>PnL no realizado</th></tr></thead>
       <tbody id="pos"></tbody></table>
     </div>
     <div id="pos-src" class="num" style="color:var(--mut);font-size:11px;padding:8px 24px;background:rgba(245,243,246,.4);border-top:1px solid var(--bd)"></div>
   </section>
 
-  <!-- DAILY RETURNS -->
+  <!-- DAILY RETURNS (calendario) -->
   <section class="card">
-    <div class="card-h"><h3 class="card-t">Rentabilidad por día</h3></div>
-    <div class="overflow-x-auto">
-      <table><thead><tr><th>Día</th><th>Equity cierre</th><th>Retorno del día</th><th>Drawdown</th></tr></thead>
-      <tbody id="daily"></tbody></table>
+    <div class="card-h">
+      <h3 class="card-t">Rentabilidad por día</h3>
+      <div class="calnav">
+        <button id="cal-prev" onclick="calShift(-1)" title="Mes anterior">‹</button>
+        <span id="cal-title">—</span>
+        <button id="cal-next" onclick="calShift(1)" title="Mes siguiente">›</button>
+      </div>
+    </div>
+    <div class="px-md py-md">
+      <div class="calhead"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
+      <div class="calgrid" id="calgrid"></div>
+      <p class="how" style="font-size:11px;margin-top:10px">Cada día: <b>retorno %</b> (destacado, verde/rojo por signo). En tenue: equity de cierre y drawdown. Hoy va recuadrado.</p>
     </div>
   </section>
 
@@ -221,12 +288,20 @@ tailwind.config={darkMode:"class",theme:{extend:{
         <span class="num text-[10px] uppercase tracking-wider" style="color:#7c89aa">en vivo</span>
       </div>
     </div>
-    <div class="filt" style="padding:10px 24px;background:#f5f3f6;border-bottom:1px solid var(--bd)">
-      <button onclick="setLv('')">Todos</button>
-      <button onclick="setLv('INFO')">Info</button>
-      <button onclick="setLv('WARNING')">Avisos</button>
-      <button onclick="setLv('ERROR')">Errores</button>
-      <button onclick="setLv('CRITICAL')">Críticos</button>
+    <div class="logbar">
+      <div class="filt">
+        <button class="active" onclick="setLv('',this)">Todos</button>
+        <button onclick="setLv('INFO',this)">Info</button>
+        <button onclick="setLv('WARNING',this)">Avisos</button>
+        <button onclick="setLv('ERROR',this)">Errores</button>
+        <button onclick="setLv('CRITICAL',this)">Críticos</button>
+      </div>
+      <div class="logdates">
+        <label>Desde</label><input type="date" id="log-start" onchange="loadLogs()">
+        <label>Hasta</label><input type="date" id="log-end" onchange="loadLogs()">
+        <button class="logdl solid" onclick="dlRange()" title="Descargar los logs y datos del rango seleccionado">⬇ Descargar rango</button>
+        <button class="logdl" onclick="dl('?full=1')" title="Exportar TODO el histórico (análisis completo)">⬇ Todo</button>
+      </div>
     </div>
     <div class="logs" id="logs"></div>
   </section>
@@ -243,7 +318,18 @@ let lv="", chart=null, ddchart=null, sleevechart=null, pnlchart=null;
 const $=id=>document.getElementById(id);
 async function j(u){try{return await (await fetch(u)).json()}catch(e){return null}}
 function dl(q){window.location="/api/download"+(q||"")}
-function setLv(l){lv=l;loadLogs()}
+function setLv(l,btn){
+  lv=l;
+  document.querySelectorAll(".filt button").forEach(b=>b.classList.remove("active"));
+  if(btn) btn.classList.add("active");
+  loadLogs();
+}
+// "hoy" en hora de Lima (UTC-5, sin DST en Perú) sea cual sea la TZ del navegador
+const limaToday=()=>new Date(Date.now()-5*3600*1000).toISOString().slice(0,10);
+function dlRange(){
+  const s=$("log-start").value, e=$("log-end").value;
+  window.location="/api/download"+((s||e)?`?start=${s||e}&end=${e||s}`:"");
+}
 const PALETTE=["#14213d","#006b57","#a58359","#5b7c99","#8a6d3b","#4c6b5c","#9a6a6a"];
 const SLEEVE_LBL={mom_30d:"Momentum 30d",rev_60d:"Reversión 60d",lowvol_14d:"Low-vol 14d",
   carry:"Carry (funding)",trend:"Trend",takerflow_5d:"Taker-flow 5d",hlpos_14d:"Canal 14d"};
@@ -273,15 +359,19 @@ async function loadReport(){
   const r=await j("/api/daily_report");
   if(!r||!r.day){$("r-narr").textContent="aún sin reporte del día";return;}
   $("r-day").textContent=r.day; $("r-narr").textContent=r.narrative||"—";
-  const m=r.metrics||{}, sl=m.slippage_real||{}, top=m.top_position;
+  const m=r.metrics||{}, sl=m.slippage_real||{}, top=m.top_position, co=m.costs||{};
   const tr=m.today_return_pct??0, sgn=v=>(v>=0?"+":"")+(+v).toFixed(2);
+  const money=(v)=>`<span style="color:${v>=0?'var(--grn)':'var(--red)'}">${v>=0?'+':'-'}$${Math.abs(+v).toFixed(2)}</span>`;
   const cells=[
     [`<span style="color:${tr>=0?'var(--grn)':'var(--red)'}">${sgn(tr)}%</span>`,"Retorno hoy"],
     [`${(+(m.drawdown_pct??0)).toFixed(2)}%`,"Drawdown"],
     [`${(+(m.leverage??0)).toFixed(2)}x`,"Leverage"],
     [`${m.n_positions??"—"}`,"Posiciones"],
-    [top?`${top.symbol.replace("USDT","")} ${(top.weight*100).toFixed(0)}%`:"—","Top posición"],
+    [co.fees!=null?`<span style="color:var(--red)">-$${(+co.fees).toFixed(2)}</span>`:"s/d","Fees del día"],
+    [co.funding!=null?money(+co.funding):"s/d","Funding del día"],
+    [co.realized_pnl!=null?money(+co.realized_pnl):"s/d","Realizado (cierres)"],
     [sl.median_bps!=null?`${sl.median_bps} bps`:"s/d","Slippage (mediana)"],
+    [top?`${top.symbol.replace("USDT","")} ${(top.weight*100).toFixed(0)}%`:"—","Top posición"],
     [`${m.cycles_today??"—"}`,"Ciclos hoy"],
     [m.cb_operate===false?"⛔ HALT":"✓ OK","Circuit breaker"],
   ];
@@ -306,6 +396,12 @@ async function loadStatus(){
   $("m-sh").textContent=s.backtest.sharpe.toFixed(2);
   $("m-dd").textContent=s.backtest.maxdd+"%";
   $("m-cyc").textContent=s.last_cycle?s.last_cycle.replace("T"," ").slice(0,16):"—";
+  // resumen de cuenta (acumulado): comisiones pagadas + balance neto real
+  $("x-fees").textContent=s.cum_fees!=null?"−$"+Math.abs(+s.cum_fees).toFixed(2):"s/d";
+  if(s.net_balance!=null){const b=+s.net_balance;
+    $("x-bal").textContent=(b>=0?"+":"−")+"$"+Math.abs(b).toFixed(2);
+    $("x-bal").style.color=b>=0?"var(--grn)":"var(--red)";
+  }else $("x-bal").textContent="—";
   $("updated").textContent=new Date().toLocaleTimeString();
   loadSleeves(s.sleeves||{});
 }
@@ -323,15 +419,27 @@ async function loadPos(){
   const p=await j("/api/positions")||[];
   $("pos").innerHTML=p.map(x=>`<tr><td class="font-semibold text-primary">${x.symbol}</td>
     <td class="${x.side.toLowerCase()} font-semibold">${x.side}</td>
-    <td class="num">$${(+x.notional).toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+    <td class="num">$${Math.abs(+x.notional).toLocaleString(undefined,{maximumFractionDigits:0})}</td>
     <td class="num" style="color:${x.pnl==null?'var(--mut)':(x.pnl>=0?'var(--grn)':'var(--red)')}">${x.pnl==null?'—':(x.pnl>=0?'+':'')+'$'+(+x.pnl).toFixed(2)}</td></tr>`).join("")
     ||`<tr><td colspan=4 style="color:var(--mut)">sin posiciones</td></tr>`;
   $("pos-src").textContent=p.length&&p[0].source==="target"
     ?"⏳ mostrando el OBJETIVO (aún sin fills reales o en simulación)":(p.length?"✓ posiciones reales en Binance":"");
-  let L=0,S=0; p.forEach(x=>{x.side==="LONG"?L+=+x.notional:S+=+x.notional});
+  // |notional|: en DEMO ya viene positivo; en modo OBJETIVO viene con signo (short<0) → abs lo normaliza
+  let L=0,S=0; p.forEach(x=>{const n=Math.abs(+x.notional); x.side==="LONG"?L+=n:S+=n});
   $("x-long").textContent=usd(L); $("x-short").textContent=usd(S);
-  const net=L-S; $("x-net").textContent=(net>=0?"+":"-")+usd(Math.abs(net));
-  const wp=p.filter(x=>x.pnl!=null).sort((a,b)=>b.pnl-a.pnl);
+  const net=L-S; $("x-net").textContent=(net>=0?"+":"−")+usd(Math.abs(net));
+  // resultado del libro ABIERTO (PnL no realizado)
+  const wpAll=p.filter(x=>x.pnl!=null);
+  if(wpAll.length){
+    let g=0,l=0; wpAll.forEach(x=>{x.pnl>=0?g+=+x.pnl:l+=+x.pnl});
+    $("x-gain").textContent="+$"+g.toFixed(2);
+    $("x-loss").textContent="−$"+Math.abs(l).toFixed(2);
+    const up=g+l; $("x-upnl").textContent=(up>=0?"+":"−")+"$"+Math.abs(up).toFixed(2);
+    $("x-upnl").style.color=up>=0?"var(--grn)":"var(--red)";
+  }else{
+    $("x-gain").textContent="—"; $("x-loss").textContent="—"; $("x-upnl").textContent="—";
+  }
+  const wp=wpAll.slice().sort((a,b)=>b.pnl-a.pnl);
   loadPnl(wp);
 }
 function loadPnl(wp){
@@ -346,19 +454,61 @@ function loadPnl(wp){
       scales:{x:{ticks:{color:"#75777e",font:{size:10},maxRotation:90,minRotation:60},grid:{display:false}},
         y:{ticks:{color:"#75777e",callback:v=>"$"+v},grid:{color:"rgba(20,33,61,.06)"}}}}});
 }
+let dailyMap={}, calY=null, calM=null, calMin=null;
+const CAL_MES=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const fmtDay=dt=>dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
+const ymv=(y,m)=>y*12+m;
 async function loadDaily(){
   const d=await j("/api/daily")||[];
-  $("daily").innerHTML=d.map(x=>`<tr><td class="font-medium text-primary">${x.day}</td>
-    <td class="num">$${(+x.equity).toLocaleString(undefined,{maximumFractionDigits:2})}</td>
-    <td class="num ${x.ret_pct>=0?'long':'short'}">${(x.ret_pct>=0?'+':'')+(+x.ret_pct).toFixed(2)}%</td>
-    <td class="num" style="color:var(--mut)">${(+x.dd_pct).toFixed(2)}%</td></tr>`).join("")
-    ||`<tr><td colspan=4 style="color:var(--mut)">aún sin días registrados</td></tr>`;
+  dailyMap={}; const days=[];
+  d.forEach(x=>{dailyMap[x.day]=x; days.push(x.day);});
+  if(days.length){days.sort(); calMin=days[0];}
+  if(calY==null){const n=new Date(); calY=n.getFullYear(); calM=n.getMonth();}  // por defecto: mes actual
+  renderCal();
+}
+function renderCal(){
+  if(calY==null){const n=new Date(); calY=n.getFullYear(); calM=n.getMonth();}
+  $("cal-title").textContent=CAL_MES[calM]+" "+calY;
+  const cur=new Date(), curYM=ymv(cur.getFullYear(),cur.getMonth());
+  const minYM=calMin?ymv(+calMin.slice(0,4),+calMin.slice(5,7)-1):curYM;
+  $("cal-prev").disabled=ymv(calY,calM)<=minYM;       // no navegar antes del 1er día con datos
+  $("cal-next").disabled=ymv(calY,calM)>=curYM;       // ni más allá del mes actual
+  const startCol=(new Date(calY,calM,1).getDay()+6)%7; // semana empieza en lunes
+  const dim=new Date(calY,calM+1,0).getDate();
+  const todayStr=fmtDay(cur);
+  let html="";
+  for(let i=0;i<startCol;i++) html+='<div class="calcell pad"></div>';
+  for(let dd=1;dd<=dim;dd++){
+    const key=calY+"-"+String(calM+1).padStart(2,"0")+"-"+String(dd).padStart(2,"0");
+    const row=dailyMap[key];
+    if(!row){   // sin dato: futuro o antes del arranque = vacío; hueco dentro del periodo vivo = punteado
+      const cls=(key>todayStr||(calMin&&key<calMin))?"empty":"nodata";
+      html+=`<div class="calcell ${cls}"><span class="cd">${dd}</span></div>`; continue;
+    }
+    const r=+row.ret_pct, pos=r>=0, a=Math.min(.34,.10+Math.abs(r)/6);
+    const bg=pos?`rgba(0,107,87,${a})`:`rgba(186,26,26,${a})`, col=pos?"var(--grn)":"var(--red)";
+    html+=`<div class="calcell ${key===todayStr?'today':''}" style="background:${bg}" title="${key}">
+      <span class="cd">${dd}</span>
+      <span class="cr" style="color:${col}">${(pos?'+':'')+r.toFixed(2)}%</span>
+      <span class="cs">$${(+row.equity).toLocaleString(undefined,{maximumFractionDigits:0})}<br>dd ${(+row.dd_pct).toFixed(2)}%</span>
+    </div>`;
+  }
+  $("calgrid").innerHTML=html;
+}
+function calShift(delta){
+  if(calY==null){const n=new Date(); calY=n.getFullYear(); calM=n.getMonth();}
+  calM+=delta;
+  if(calM<0){calM=11;calY--;} else if(calM>11){calM=0;calY++;}
+  renderCal();
 }
 async function loadLogs(){
-  const l=await j("/api/logs?limit=150&level="+lv)||[];
+  const s=$("log-start").value, e=$("log-end").value;
+  let u="/api/logs?limit=300&level="+lv;
+  if(s) u+="&start="+s; if(e) u+="&end="+e;
+  const l=await j(u)||[];
   $("logs").innerHTML=l.map(x=>`<div class="log"><span class="t">${x.time}</span>
     <span class="lv-${x.level}">[${x.level}]</span><span class="cat">${x.category}</span>
-    <span>${x.title}</span></div>`).join("")||`<div style="color:#7c89aa">sin logs</div>`;
+    <span>${x.title}</span></div>`).join("")||`<div style="color:#7c89aa">sin logs en el rango/nivel seleccionado</div>`;
 }
 async function loadChart(){
   const e=await j("/api/equity")||[]; if(!e.length)return;
@@ -378,6 +528,8 @@ async function loadChart(){
     scales:{x:{ticks:{color:"#75777e",maxTicksLimit:12},grid:{display:false}},y:{ticks:{color:"#75777e",callback:v=>v+"%"},max:0,grid}}}});
 }
 function refresh(){loadStatus();loadPos();loadLogs();loadChart();loadDaily();loadHealth();loadReport()}
+// por defecto: nivel TODAS + rango del día actual (Lima)
+$("log-start").value=limaToday(); $("log-end").value=limaToday();
 refresh(); setInterval(refresh,10000);
 </script>
 </body></html>

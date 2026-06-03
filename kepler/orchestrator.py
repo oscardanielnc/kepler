@@ -25,6 +25,10 @@ MAX_REBAL_HOURS = 30        # fallback: nunca dejar el libro >30h sin rebalancea
 HEARTBEAT_MIN = 15          # registra equity cada 15 min (curva viva) sin rebalancear
 SLIP_SANITY_BPS = 200.0     # |slip| > 2% = book_mid de referencia stale/corrupto (no es slippage real):
                             # un maker GTX nunca llena tan lejos del mid → se descarta del C3 (no ensucia)
+# Flag de REBALANCEO MANUAL: si este fichero existe, el loop fuerza UN rebalanceo en el próximo heartbeat
+# (≤15min) y lo borra. Es la vía segura de forzar sin reiniciar el servicio (un reinicio YA no rebalancea).
+# Crear en la VM con:  touch /opt/kepler-app/.force_rebalance
+FORCE_FLAG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".force_rebalance")
 _log = logging.getLogger("kepler")
 
 
@@ -108,7 +112,7 @@ def _log_fills(db: DB, before: dict, after: dict, lev, target, t0_ms):
         ref = execution.book_mid(sym) or 0.0
         if abs(d) * ref < execution.MIN_ORDER_USD:   # cambio insignificante / ruido
             continue
-        fill_px, slip_bps = ref, None
+        fill_px, slip_bps, fees_usd, pnl_usd = ref, None, None, None
         try:                                          # VWAP de los fills reales del ciclo (C3)
             tr = execution.get_user_trades(sym, t0_ms)
             num = sum(float(x["price"]) * float(x["qty"]) for x in tr)
@@ -118,11 +122,15 @@ def _log_fills(db: DB, before: dict, after: dict, lev, target, t0_ms):
                 slip_bps = (1 if d > 0 else -1) * (fill_px - ref) / ref * 1e4
                 if abs(slip_bps) > SLIP_SANITY_BPS:   # ref book_mid corrupto → no es slippage real
                     fill_px, slip_bps = ref, None
+            if tr:    # ACCOUNTING DE COSTES (gratis, mismos fills): comisión + PnL realizado de Binance
+                fees_usd = round(sum(float(x.get("commission", 0) or 0) for x in tr), 4)
+                pnl_usd = round(sum(float(x.get("realizedPnl", 0) or 0) for x in tr), 4)
         except Exception:
             pass
         db.log_fill(symbol=sym, direction="BUY" if d > 0 else "SELL", qty=abs(d), price=fill_px,
                     weight=round(float(target.get(sym, 0.0)), 4), leverage=float(lev),
-                    prev_amt=b, new_amt=a, ref_px=ref, slip_bps=slip_bps)
+                    prev_amt=b, new_amt=a, ref_px=ref, slip_bps=slip_bps,
+                    fees_usd=fees_usd, pnl_usd=pnl_usd)
 
 
 def _beta_dollar(positions_detail, beta_last, equity, target):
@@ -184,6 +192,19 @@ def _save_daily_report(db: DB, tier, mode, equity, target, lev, bt, operate):
         worst = max(fills, key=lambda f: f[1])
         slip = {"n": n, "mean_bps": round(sum(v)/n, 2), "median_bps": round(v[n//2], 2),
                 "worst_bps": round(worst[1], 2), "worst_sym": worst[0]}
+    # ACCOUNTING DE COSTES del día (atribución de la pérdida): comisión + PnL realizado de los fills
+    # (ya guardados por _log_fills) + funding (income, no está en los fills). Antes el ledger era null
+    # → no se podía explicar el sangrado realizado. Ahora: fees=coste explícito, realized=mercado en
+    # cierres, funding=carry pagado/cobrado. Blindado: si falla la lectura de income, funding=None.
+    crow = db.conn.execute(
+        "SELECT COALESCE(SUM(fees_usd),0.0), COALESCE(SUM(pnl_usd),0.0) FROM trades "
+        "WHERE reason='rebalance_fill' AND open_ts BETWEEN ? AND ?", (d0, d1)).fetchone()
+    try:
+        funding_d = round(sum(float(x.get("income", 0) or 0)
+                              for x in execution.get_income(d0, "FUNDING_FEE")), 2)
+    except Exception:
+        funding_d = None
+    costs = {"fees": round(crow[0], 2), "funding": funding_d, "realized_pnl": round(crow[1], 2)}
     cycles = db.conn.execute(
         "SELECT COUNT(*) FROM audit_event WHERE category='orchestrator' AND title LIKE 'Ciclo%ok%' "
         "AND ts BETWEEN ? AND ?", (d0, d1)).fetchone()[0]
@@ -197,12 +218,15 @@ def _save_daily_report(db: DB, tier, mode, equity, target, lev, bt, operate):
                "today_return_pct": round(ret_pct, 3), "drawdown_pct": round(dd_pct, 3),
                "n_positions": npos, "gross": round(gross, 3), "net": round(net, 3),
                "leverage": round(float(lev), 3), "top_position": top, "cycles_today": int(cycles),
-               "slippage_real": slip, "cb_operate": bool(operate),
+               "slippage_real": slip, "costs": costs, "cb_operate": bool(operate),
                "backtest": {"sharpe": round(bt.get("sharpe", 0), 2), "ann": round(bt.get("ann", 0), 1),
                             "maxdd": round(bt.get("maxdd", 0), 1)}}
     narr = (f"{mode} {tier} · ${float(equity):.0f} ({ret_pct:+.2f}% hoy, dd {dd_pct:.2f}%) · "
             f"{npos} pos gross {gross:.2f} net {net:+.2f} lev {lev:.2f}x · "
             + (f"slip med {slip['median_bps']}bps (peor {slip['worst_sym']} {slip['worst_bps']}) · " if slip else "slip s/d · ")
+            + f"coste fees ${costs['fees']:.2f}"
+            + (f" funding ${costs['funding']:.2f}" if costs['funding'] is not None else "")
+            + f" realizado ${costs['realized_pnl']:.2f} · "
             + (f"top {top['symbol']} {top['weight']*100:.0f}% · " if top else "")
             + f"{cycles} ciclos hoy · CB {'OK' if operate else 'HALT'}")
     db.save_daily_report(day, metrics, narr)
@@ -375,7 +399,17 @@ def run(tier="ESTABLE", once=False):
     db = DB()
     mode = "DRY_RUN" if execution.DRY_RUN else ("DEMO" if execution.USE_DEMO else "REAL")
     _log.info(f"════ KEPLER orquestador · tier {tier} · modo {mode} · rebal {REBALANCE_HOURS}h · hb {HEARTBEAT_MIN}min ════")
-    last_rebal = 0.0
+    # Recuperar el ts del ÚLTIMO REBALANCEO REAL desde la DB (no arrancar en 0). Si arranca en 0,
+    # `hrs = (now - 0)/3600` es enorme y el fallback `hrs >= MAX_REBAL_HOURS` dispara un rebalanceo
+    # INMEDIATO en cada REINICIO del servicio — causa de la sobre-operación del 2026-06-02 (varios
+    # deploys el mismo día → 6 rebalanceos → churn/coste → −1.38% del día). Recuperándolo, un reinicio
+    # respeta la ventana y espera la hora líquida. Si no hay rebalanceo previo (DB nueva) → 0 → rebalancea
+    # al inicio (correcto la 1ª vez). Un servicio caído >MAX_REBAL_HOURS sigue disparando el fallback (ok).
+    _lr_ms = _last_rebal_ts(db)
+    last_rebal = (_lr_ms / 1000.0) if _lr_ms else 0.0
+    if _lr_ms:
+        _log.info(f"[orq] último rebalanceo recuperado de la DB: hace {(time.time()-last_rebal)/3600:.1f}h "
+                  f"→ un reinicio NO fuerza rebalanceo (se respeta la ventana de rebalanceo)")
     retry_blocked = False     # reanudación rápida: si un ciclo se bloqueó, reintenta cada heartbeat
     while True:
         try:
@@ -391,9 +425,18 @@ def run(tier="ESTABLE", once=False):
             else:
                 utc_hour = datetime.now(timezone.utc).hour
                 due = (hrs >= MIN_REBAL_HOURS and utc_hour == int(target_h)) or hrs >= MAX_REBAL_HOURS
+            # FORCE MANUAL: si existe el flag, fuerza un rebalanceo este ciclo y lo borra (one-shot).
+            force = False
+            try:
+                if os.path.exists(FORCE_FLAG):
+                    os.remove(FORCE_FLAG); force = True
+                    _log.info("[orq] 🔧 FORCE_REBALANCE (flag manual) → rebalanceo forzado este ciclo")
+                    db.audit("INFO", "orchestrator", "Rebalanceo FORZADO manualmente (flag .force_rebalance)")
+            except Exception as e:
+                _log.warning(f"[orq] no se pudo procesar el flag de force: {e}")
             # REANUDACIÓN RÁPIDA: un ciclo bloqueado/omitido NO consume la ventana → se reintenta cada
             # heartbeat (15min) hasta que los datos/condiciones se reparen (p.ej. backfill), sin esperar 24h.
-            if due or retry_blocked:                         # rebalanceo completo (1×/día, hora líquida)
+            if due or retry_blocked or force:                # rebalanceo completo (1×/día, hora líquida)
                 r = cycle(tier, db)
                 if r.get("skipped"):     # balance ilegible → NO consumir la ventana; reintentar
                     retry_blocked = True
