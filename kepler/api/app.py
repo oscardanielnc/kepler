@@ -1,16 +1,21 @@
 """
 Kepler — API del dashboard (FastAPI). Lee la DB y sirve el frontend.
 Endpoints:
-  GET /                  → dashboard.html
+  GET /                  → dashboard.html (operativo)
+  GET /track             → track.html (página de track-record presentable para inversor, F2.2)
+  GET /api/track         → métricas de track-record del equity REAL en vivo (F2.1)
   GET /api/status        → estado del sistema (modo, equity, circuit breaker, último ciclo)
   GET /api/positions     → posiciones objetivo activas
+  GET /api/health        → salud operativa (guardas checks.py: pre-trade + heartbeat, por severidad)
+  GET /api/health/history→ severidad peor por día (franja-historial)
+  GET /api/daily_report  → reporte diario templado (narrativa + métricas)
   GET /api/logs          → logs (decisiones + errores) de audit_event
   GET /api/equity        → curva de equity (snapshots)
   GET /api/download[/d]  → JSON diario descargable
 Ejecutar: python -m kepler.api   (uvicorn en DASHBOARD_PORT, default 8080)
 """
 from __future__ import annotations
-import json, os, sys
+import json, math, os, sys
 from datetime import datetime, timezone
 
 from fastapi import FastAPI
@@ -24,6 +29,7 @@ from kepler import execution
 app = FastAPI(title="Kepler Dashboard")
 _DB = DB()
 _HTML = os.path.join(os.path.dirname(__file__), "dashboard.html")
+_TRACK_HTML = os.path.join(os.path.dirname(__file__), "track.html")
 
 
 def _q(sql, args=()):
@@ -97,6 +103,120 @@ def positions():
 @app.get("/api/daily")
 def daily():
     return _q("SELECT day,equity,ret_pct,dd_pct FROM equity_daily ORDER BY day DESC")
+
+
+_SEV_RANK = {"OK": 0, "WARN": 1, "CRIT": 2}
+_SEV_INV = {0: "OK", 1: "WARN", 2: "CRIT"}
+
+
+def _latest_checks(category):
+    """Último audit de chequeos de esa categoría (severidad + resumen + resultados individuales)."""
+    row = _q("SELECT ts,detail FROM audit_event WHERE category=? ORDER BY ts DESC LIMIT 1", (category,))
+    if not row:
+        return None
+    det = json.loads(row[0]["detail"] or "{}")
+    return {"ts": row[0]["ts"], "time": config.fmt_local(row[0]["ts"], "%Y-%m-%d %H:%M"),
+            "severity": det.get("severity", "OK"), "summary": det.get("summary", ""),
+            "results": det.get("results", [])}
+
+
+@app.get("/api/health")
+def health():
+    """Salud operativa = las guardas de checks.py ya persistidas (pre-trade 'checks' + heartbeat 'checks_hb').
+    No recalcula nada: surface lo que el orquestador audita cada ciclo."""
+    pre, hb = _latest_checks("checks"), _latest_checks("checks_hb")
+    sevs = [x["severity"] for x in (pre, hb) if x]
+    overall = max(sevs, key=lambda s: _SEV_RANK.get(s, 0)) if sevs else "OK"
+    return {"overall": overall, "pretrade": pre, "heartbeat": hb}
+
+
+@app.get("/api/health/history")
+def health_history(days: int = 30):
+    """Severidad PEOR por día (hora Lima) de los últimos N días → franja-historial del dashboard."""
+    since = int(datetime.now(timezone.utc).timestamp() * 1000) - days * 86_400_000
+    rows = _q("SELECT ts,detail FROM audit_event WHERE category IN ('checks','checks_hb') AND ts>=? "
+              "ORDER BY ts ASC", (since,))
+    by_day = {}
+    for r in rows:
+        try:
+            sev = json.loads(r["detail"] or "{}").get("severity", "OK")
+        except Exception:
+            sev = "OK"
+        day = config.fmt_local(r["ts"], "%Y-%m-%d")
+        by_day[day] = max(by_day.get(day, 0), _SEV_RANK.get(sev, 0))
+    return [{"day": d, "severity": _SEV_INV[v]} for d, v in sorted(by_day.items())]
+
+
+@app.get("/api/daily_report")
+def daily_report(date: str = ""):
+    """Reporte diario templado (narrativa + métricas) — el del día dado o el más reciente."""
+    if date:
+        row = _q("SELECT day,narrative,metrics FROM daily_report WHERE day=?", (date,))
+    else:
+        row = _q("SELECT day,narrative,metrics FROM daily_report ORDER BY day DESC LIMIT 1")
+    if not row:
+        return {}
+    try:
+        metrics = json.loads(row[0]["metrics"] or "{}")
+    except Exception:
+        metrics = {}
+    return {"day": row[0]["day"], "narrative": row[0]["narrative"] or "", "metrics": metrics}
+
+
+@app.get("/api/track")
+def track():
+    """F2.1 — métricas de TRACK RECORD para inversor, calculadas del equity REAL en vivo (no backtest).
+    Code-first, cero IA: Sharpe/Sortino/maxDD/vol/% meses+ realizados + retornos mensuales + narrativa
+    templada honesta. El backtest se devuelve aparte y SIEMPRE etiquetado como referencia."""
+    rows = _q("SELECT day,equity,ret_pct,dd_pct FROM equity_daily ORDER BY day ASC")
+    snap = _q("SELECT beta,gross,net,n_positions,detail FROM portfolio_snapshot ORDER BY ts DESC LIMIT 1")
+    det = json.loads(snap[0]["detail"] or "{}") if snap else {}
+    bt = det.get("backtest", {"sharpe": 2.07, "ann": 49.3, "maxdd": -10.0})
+    beta = snap[0]["beta"] if snap else None
+    if not rows:
+        return {"days": 0, "inception": None, "backtest": bt, "beta": beta, "monthly": [],
+                "equity_curve": [], "narrative": "Track en construcción — la DEMO aún no registra días."}
+    eq0, eqN = rows[0]["equity"] or 0.0, rows[-1]["equity"] or 0.0
+    rets = [(r["ret_pct"] or 0.0) / 100.0 for r in rows]
+    n = len(rets)
+    mean = sum(rets) / n
+    sd = math.sqrt(sum((x - mean) ** 2 for x in rets) / n) if n > 1 else 0.0
+    downside = [x for x in rets if x < 0]
+    dd_sd = math.sqrt(sum(x * x for x in downside) / len(downside)) if downside else 0.0
+    sharpe = mean / sd * math.sqrt(365) if sd > 0 else 0.0
+    sortino = mean / dd_sd * math.sqrt(365) if dd_sd > 0 else 0.0
+    total_ret = (eqN / eq0 - 1) * 100 if eq0 else 0.0
+    ann = ((eqN / eq0) ** (365.0 / n) - 1) * 100 if (eq0 > 0 and eqN > 0) else 0.0
+    maxdd = min((r["dd_pct"] or 0.0) for r in rows)
+    pos_days = sum(1 for x in rets if x > 0) / n * 100
+    bym = {}
+    for r in rows:                          # rows vienen en orden cronológico → dict conserva el orden
+        m = r["day"][:7]
+        bym[m] = bym.get(m, 1.0) * (1 + (r["ret_pct"] or 0.0) / 100.0)
+    monthly = [{"month": m, "return": round((v - 1) * 100, 2)} for m, v in bym.items()]
+    pos_months = sum(1 for x in monthly if x["return"] > 0) / len(monthly) * 100 if monthly else 0.0
+    narrative = (f"DEMO · {n} día(s) en vivo desde {rows[0]['day']} · retorno total {total_ret:+.2f}% · "
+                 f"Sharpe realizado {sharpe:.2f} (referencia backtest {bt.get('sharpe')}) · "
+                 f"maxDD {maxdd:.2f}% (presupuesto −10%) · {pos_months:.0f}% meses+ · "
+                 f"β {('%+.2f' % beta) if beta is not None else '—'}. "
+                 f"Track en construcción — el número honesto se consolida con semanas, no con días.")
+    return {"days": n, "inception": rows[0]["day"],
+            "total_return": round(total_ret, 2), "ann_return": round(ann, 2),
+            "sharpe": round(sharpe, 2), "sortino": round(sortino, 2),
+            "vol_ann": round(sd * math.sqrt(365) * 100, 2),
+            "maxdd": round(maxdd, 2), "pos_days": round(pos_days, 1), "pos_months": round(pos_months, 1),
+            "beta": beta, "gross": snap[0]["gross"] if snap else None,
+            "net": snap[0]["net"] if snap else None,
+            "n_positions": snap[0]["n_positions"] if snap else None,
+            "monthly": monthly, "backtest": bt,
+            "equity_curve": [{"day": r["day"], "equity": r["equity"]} for r in rows],
+            "narrative": narrative}
+
+
+@app.get("/track", response_class=HTMLResponse)
+def track_page():
+    with open(_TRACK_HTML, encoding="utf-8") as f:
+        return f.read()
 
 
 @app.get("/api/logs")

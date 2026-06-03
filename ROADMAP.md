@@ -50,12 +50,19 @@
   clasifican (evento de mercado impredecible). Hook futuro, llamada rara/barata. No es parte de esta fase.
 
 ## FASE 2 — PRODUCTO / TRACK RECORD  ← capta AUM (depende de que Fase 0 acumule semanas)
-- **F2.1 · Reporte de transparencia para inversor:** curva equity, maxDD, Sharpe, meses+, β, exposición.
-  Auto-generado; **IA escribe el resumen mensual/semanal legible** (uso operativo válido de IA).
-- **F2.2 · Track record verificable / presentable:** exponer el dashboard actual de forma pública/limpia
-  (o página dedicada). Honestidad cruda = nuestro diferenciador vs los martingala (Btc-Panda/Flowerence).
-- **F2.3 · Preparar copy-lead:** investigar requisitos de Binance/Bybit copy-trading (cómo se publica y
-  verifica el track, profit-share, mínimos). Checklist para cuando el track real lo respalde. ← el negocio.
+- [x] **F2.1 · Reporte de transparencia para inversor** — HECHO 2026-06-03 (`/api/track`): métricas del
+  equity REAL en vivo (retorno total, Sharpe/Sortino realizados, maxDD, vol, % meses+, β, exposición,
+  retornos mensuales) + narrativa templada honesta (code-first; hook IA opcional a futuro). Backtest SIEMPRE
+  etiquetado como referencia, no promesa.
+- [x] **F2.2 · Track record verificable / presentable** — HECHO 2026-06-03 (`/track`, `track.html`): página
+  dedicada limpia (separada del dashboard operativo: sin logs ni internals), KPIs + curva equity + tabla
+  mensual + disclaimer honesto (DEMO, sin SL/TP, circuit breaker, track corto = ruidoso). Enlace desde el
+  dashboard. Honestidad cruda = diferenciador vs martingala (Btc-Panda/Flowerence). Falta: pulido visual (con calma).
+- [~] **F2.3 · Preparar copy-lead:** RESEARCH HECHO 2026-06-03 → **`COPYLEAD.md`** (requisitos Binance/Bybit/
+  Bitget/OKX, profit-share, mínimos, encaje + cautelas mecánicas + checklist). Hallazgo: bajo-maxDD es
+  premiado en ranking Y profit-share (encaje excelente); libro market-neutral multi-símbolo ES copiable;
+  cuello de botella = track real (Fase 0) + diseñar libro copiable-limpio. Falta: ejecutar el checklist
+  cuando el track real lo respalde. ← el negocio.
 
 ## FASE 3 — CAPITAL / ESCALA  ← cuando el track record real lo respalde (decisión de Oscar)
 - **F3.1 · Tier ESTABLE→BALANCEADO:** subir el presupuesto de maxDD solo con track real que lo justifique.
@@ -156,8 +163,11 @@ El objetivo no es subir el número, es que el número sea creíble (menos gap ba
 ### C. EJECUCIÓN Y COSTOS  ← cerrar el gap backtest↔vivo por el lado de los costos
 - [ ] **C1. Modelar slippage por liquidez** del símbolo (no un 2bps plano). Los símbolos chicos
       cuestan más; el backtest debe penalizarlos para no sobreestimar.
-- [ ] **C2. Optimización de turnover** a nivel cartera: hoy cada sleeve rebalancea por su cuenta;
-      netear órdenes entre sleeves antes de ejecutar reduce costos reales.
+- [x] **C2. Optimización de turnover** — netear entre sleeves YA HECHO por construcción (2026-06-03):
+      `engine.compute_target` combina a target NETO por símbolo (Σ vpᵢ·wᵢ) y `execution._place_deltas`
+      manda solo el delta neto vs posición real (piso $5). No hay órdenes por-sleeve. Lo único restante =
+      **banda de no-trade** (`simulate(band=)` ya la soporta) → DIFERIDA a capacidad/AUM (decisión Oscar:
+      payoff ~nulo a tamaño DEMO, e55: slippage~0; escala con AUM, junto a slicing e55 + cap tamaño B4).
 - [ ] **C3. Análisis de fills reales en DEMO** vs target: medir el slippage REAL y recalibrar C1.
 
 ### D. GESTIÓN DE RIESGO / RÉGIMEN

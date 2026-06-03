@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kepler — Track Record</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--bd:#30363d;--tx:#c9d1d9;--mut:#8b949e;--grn:#3fb950;--red:#f85149;--blu:#58a6ff;--yel:#d29922}
+  *{box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
+  body{margin:0;background:var(--bg);color:var(--tx)}
+  header{padding:18px 26px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  h1{font-size:20px;margin:0;color:#fff}
+  .badge{padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;background:#d2992233;color:var(--yel)}
+  .wrap{max-width:1100px;margin:auto;padding:18px}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:13px;margin:0 0 12px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px}
+  .kpi .v{font-size:26px;font-weight:800;color:#fff;line-height:1.1}
+  .kpi .l{font-size:12px;color:var(--mut);margin-top:3px}
+  .kpi .ref{font-size:11px;color:var(--mut);margin-top:2px}
+  .narr{font-size:14px;line-height:1.55;color:var(--tx)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--bd)}
+  th{color:var(--mut);font-weight:500}
+  .long{color:var(--grn)} .short{color:var(--red)}
+  .disc{font-size:12px;line-height:1.6;color:var(--mut)}
+  .disc b{color:var(--tx)}
+  .note{color:var(--yel)}
+  .foot{text-align:center;color:var(--mut);font-size:11px;padding:14px}
+  a{color:var(--blu);text-decoration:none}
+</style></head>
+<body>
+<header>
+  <h1>🛰️ KEPLER</h1>
+  <span class="badge" id="mode-badge">DEMO · track en construcción</span>
+  <span style="margin-left:auto;color:var(--mut);font-size:12px" id="updated"></span>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <h2>Resumen</h2>
+    <div class="narr" id="narr">Cargando…</div>
+  </div>
+
+  <div class="card">
+    <h2>Métricas en vivo (DEMO)</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="v" id="k-tot">—</div><div class="l">Retorno total</div></div>
+      <div class="kpi"><div class="v" id="k-sh">—</div><div class="l">Sharpe realizado</div><div class="ref" id="k-sh-ref"></div></div>
+      <div class="kpi"><div class="v" id="k-dd">—</div><div class="l">Máx. drawdown</div><div class="ref">presupuesto −10%</div></div>
+      <div class="kpi"><div class="v" id="k-mo">—</div><div class="l">Meses positivos</div></div>
+      <div class="kpi"><div class="v" id="k-beta">—</div><div class="l">β vs BTC (≈0 = neutral)</div></div>
+      <div class="kpi"><div class="v" id="k-days">—</div><div class="l">Días en vivo</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Curva de equity (DEMO)</h2>
+    <div style="position:relative;height:300px;width:100%"><canvas id="eqchart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h2>Métricas secundarias</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="v" id="k-ann">—</div><div class="l">Retorno anualizado*</div></div>
+      <div class="kpi"><div class="v" id="k-sortino">—</div><div class="l">Sortino realizado</div></div>
+      <div class="kpi"><div class="v" id="k-vol">—</div><div class="l">Volatilidad anual.</div></div>
+      <div class="kpi"><div class="v" id="k-posd">—</div><div class="l">Días positivos</div></div>
+      <div class="kpi"><div class="v" id="k-np">—</div><div class="l">Posiciones</div></div>
+      <div class="kpi"><div class="v" id="k-gross">—</div><div class="l">Gross (sin leverage)</div></div>
+    </div>
+    <div class="ref" style="margin-top:10px;font-size:11px;color:var(--mut)">*anualizado a partir de pocos días = muy ruidoso; referencial.</div>
+  </div>
+
+  <div class="card">
+    <h2>Retornos mensuales</h2>
+    <table><thead><tr><th>Mes</th><th>Retorno</th></tr></thead><tbody id="monthly"></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Cómo se gestiona el riesgo</h2>
+    <div class="disc">
+      Kepler es un sistema <b>market-neutral</b> (β≈0 contra BTC): ~20 posiciones <span class="long">long</span>/<span class="short">short</span>
+      sobre perps de Binance Futures, combinando <b>7 estrategias descorrelacionadas</b>. Rebalancea cada 24h
+      (no opera intradía). <b>Sin stop-loss por trade</b>: el riesgo es de cartera — diversificación, cobertura
+      de β y un <b>circuit breaker</b> que detiene todo si la equity cae 20% desde el pico. El objetivo es
+      <b>drawdown bajo y consistencia</b> (copy-lead honesto), no ROI llamativo.
+      <p class="note" style="margin:12px 0 0">⚠️ Operando en DEMO. Las métricas de arriba son del rendimiento REAL en vivo
+      (no backtest) y son el número honesto. Donde aparece "referencia backtest" es solo eso — referencia, no promesa.
+      Track corto = ruidoso; el valor se acumula con el tiempo.</p>
+    </div>
+  </div>
+</div>
+<div class="foot">Kepler · panel operativo en <a href="/">/</a></div>
+
+<script>
+const $=id=>document.getElementById(id);
+let eqchart=null;
+const pct=v=>(v>=0?"+":"")+(+v).toFixed(2)+"%";
+function colpct(el,v){el.textContent=pct(v);el.style.color=v>=0?"var(--grn)":"var(--red)";}
+
+async function load(){
+  let t; try{t=await(await fetch("/api/track")).json()}catch(e){return}
+  if(!t)return;
+  $("narr").textContent=t.narrative||"—";
+  $("updated").textContent="actualizado "+new Date().toLocaleString();
+  if(!t.days){
+    $("mode-badge").textContent="DEMO · sin días registrados aún";
+    return;
+  }
+  $("mode-badge").textContent="DEMO · "+t.days+" día(s) en vivo";
+  colpct($("k-tot"),t.total_return);
+  $("k-sh").textContent=(+t.sharpe).toFixed(2); $("k-sh").style.color=t.sharpe>=1?"var(--grn)":"#fff";
+  $("k-sh-ref").textContent="ref. backtest "+(t.backtest&&t.backtest.sharpe!=null?t.backtest.sharpe:"—");
+  $("k-dd").textContent=(+t.maxdd).toFixed(2)+"%"; $("k-dd").style.color=t.maxdd>-10?"var(--grn)":"var(--red)";
+  $("k-mo").textContent=(+t.pos_months).toFixed(0)+"%";
+  $("k-beta").textContent=t.beta!=null?((t.beta>=0?"+":"")+(+t.beta).toFixed(2)):"—";
+  $("k-days").textContent=t.days;
+  colpct($("k-ann"),t.ann_return);
+  $("k-sortino").textContent=(+t.sortino).toFixed(2);
+  $("k-vol").textContent=(+t.vol_ann).toFixed(1)+"%";
+  $("k-posd").textContent=(+t.pos_days).toFixed(0)+"%";
+  $("k-np").textContent=t.n_positions!=null?t.n_positions:"—";
+  $("k-gross").textContent=t.gross!=null?(+t.gross).toFixed(2)+"x":"—";
+  // monthly
+  $("monthly").innerHTML=(t.monthly||[]).slice().reverse().map(m=>
+    `<tr><td>${m.month}</td><td class="${m.return>=0?'long':'short'}">${pct(m.return)}</td></tr>`).join("")
+    ||`<tr><td colspan=2 style="color:var(--mut)">aún sin meses completos</td></tr>`;
+  // equity curve
+  const ec=t.equity_curve||[];
+  const labels=ec.map(x=>x.day), data=ec.map(x=>x.equity);
+  if(eqchart){eqchart.data.labels=labels;eqchart.data.datasets[0].data=data;eqchart.update("none");}
+  else eqchart=new Chart($("eqchart"),{type:"line",data:{labels,datasets:[{label:"equity",data,
+    borderColor:"#58a6ff",backgroundColor:"#58a6ff22",tension:.2,pointRadius:0,fill:true}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:"#8b949e",maxTicksLimit:12}},y:{ticks:{color:"#8b949e"}}}}});
+}
+load(); setInterval(load,30000);
+</script>
+</body></html>

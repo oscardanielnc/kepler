@@ -1,5 +1,5 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-02** (noche, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-03** (mañana, hora Lima).
 >
 > **🧭 PLAN A SEGUIR = `ROADMAP.md` §RUTA MAESTRA 2026-06 (Operación → Producto → Escala).** Cambio de
 > fase: la caza de alfa GRATIS está AGOTADA (verificado a fondo); la palanca ahora es OPERACIÓN + PRODUCTO
@@ -7,19 +7,21 @@
 > ROBUSTEZ OPERATIVA (prioridad, el incidente de hoy probó que es el riesgo #1)** · Fase 2 producto/track
 > · Fase 3 escala. IA = herramienta operativa, NO alfa. Negocio = copy-lead. (Memorias `kepler-news-ia-bots-decision`.)
 >
-> **⏭️ PRÓXIMA EJECUCIÓN (mañana 2026-06-03):**
+> **⏭️ PRÓXIMA EJECUCIÓN (2026-06-03):**
 >   1. **VERIFICAR EL DEPLOY de anoche** (Oscar despliega la Fase 1 pasos 1-4 + ruta maestra; ~9 commits
 >      desde el último deploy). En la VM tras desplegar: confirmar en `journalctl -u kepler` que un ciclo
 >      corre y registra `audit checks: OK` (categoría `checks`), SIN falso-bloqueo en DEMO, y heartbeat OK.
->   2. **Cerrar Fase 1 → PASO 5: reporte profesional diario templado (F1.4)**, código puro (métricas +
->      anomalías por regla + narrativa por plantilla, CERO IA). Es lo único que queda de Fase 1.
+>   2. ✅ **Fase 1 PASO 5 HECHO (F1.4): salud + reporte diario en el DASHBOARD** (no PDF — decisión Oscar:
+>      interactivo > documento; el PDF queda para Fase 2/outbound). Reusó TODO lo persistido (cero cálculo
+>      nuevo, cero IA): 3 endpoints + 2 tarjetas. **PENDIENTE PUSH+DEPLOY** + revisión visual. → **Fase 1 CERRADA.**
 >   3. Luego → Fase 2 (producto/track) cuando la DEMO acumule semanas.
 >   En paralelo corre solo: Fase 0 (E1 DEMO + sombras→sleeve #8 ~2026-07-31 + C3 slippage real).
 >
-> **ESTADO FASE 1 (robustez operativa, code-first, CERO IA):** pasos 1-4 HECHOS y verificados en DRY_RUN
-> (guarda pre-trade que bloquea+avisa en CRÍTICO · health-check runtime en heartbeat · reanudación rápida ·
-> monitor de correlación de sleeves). 1 bug cazado y corregido (sleeve_corr read-only). **PENDIENTE
-> PUSH+DEPLOY (Oscar) — hasta desplegar, las guardas NO protegen el vivo.** Falta solo el paso 5.
+> **ESTADO FASE 1 (robustez operativa, code-first, CERO IA):** pasos 1-5 HECHOS y verificados (1-4 DRY_RUN;
+> 5 vía TestClient): guarda pre-trade que bloquea+avisa en CRÍTICO · health-check runtime en heartbeat ·
+> reanudación rápida · monitor de correlación de sleeves · **salud+reporte diario en el dashboard (F1.4)**.
+> 1 bug cazado y corregido (sleeve_corr read-only). **PENDIENTE PUSH+DEPLOY (Oscar) — hasta desplegar, las
+> guardas NO protegen el vivo y el dashboard nuevo no se ve.** **Fase 1 completa, pendiente solo deploy.**
 >
 > **Estado del sistema en PRODUCCIÓN (DESPLEGADO y verificado en vivo 2026-06-02 tarde):** 7 sleeves · ancla
 > −10% · **lev 2.23x** (vol-anchor e68, tras incidente sobre-leverage 2.93x→2.23x) · haircut 0.95 · **cap
@@ -92,6 +94,81 @@
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-06-03 (mañana-4 — FASE 2 / F2.1+F2.2: página de TRACK RECORD presentable → Fase 2 núcleo HECHO)
+Implementado lo que quedaba de Fase 2 (Oscar: USDC se aparca, no encaja/promocional). Code-first, cero IA.
+- **F2.1 · `/api/track`** (en `api/app.py`): métricas de track-record del **equity REAL en vivo** (no backtest):
+  retorno total, anualizado, Sharpe/Sortino realizados, vol, maxDD, % días+ / meses+, β (del snapshot),
+  gross/net/nº posiciones, **serie de retornos mensuales** y **curva de equity diaria** + narrativa templada
+  honesta. El backtest se devuelve aparte y SIEMPRE etiquetado "referencia". Hook IA (resumen legible) dejado
+  para futuro (F2.1 lo permite), no implementado ahora (code-first).
+- **F2.2 · `/track` + `track.html`** (nuevo): página dedicada presentable para inversor, SEPARADA del
+  dashboard operativo (sin logs ni internals). KPIs (retorno/Sharpe/maxDD/meses+/β/días), curva de equity,
+  métricas secundarias, tabla de retornos mensuales y un bloque "cómo se gestiona el riesgo" + disclaimer
+  honesto (DEMO, sin SL/TP, circuit breaker, track corto=ruidoso, backtest=referencia). Enlace desde el dashboard.
+- **Verificado:** import OK, rutas `/api/track` y `/track` registradas; TestClient 200 con datos reales
+  (4 días en vivo, Sharpe realizado 0.08 (muestra ínfima), maxDD −1.22%, β +0.02, 17 pos, tabla mensual);
+  JS `node --check` OK. **PENDIENTE PUSH+DEPLOY + pulido visual (con calma, próxima sesión de frontend).**
+  → **Núcleo de Fase 2 HECHO** (F2.1+F2.2+F2.3). Falta solo activar copy-lead cuando el track real lo respalde (F2.3 checklist).
+
+## CHANGELOG 2026-06-03 (mañana-3 — USDC 0% (verdad parcial) + C2 turnover (ya hecho por construcción))
+Dos preguntas de Oscar. Respuestas con números:
+- **USDC 0% comisión — REAL pero PARCIAL y promocional (no game-changer).** Términos oficiales Binance
+  (promo desde 2025-12-10, "until further notice", ya extendida): **maker 0.0000%** todos los niveles ·
+  **taker SIGUE ~0.0400%** (regular; 0.0094% VIP9). El "0%" que ve Oscar = el MAKER. Trampa real = **liquidez**:
+  los libros USDC-M son más finos → más SLIPPAGE, que es el coste DOMINANTE de Kepler (slip~K/√vol), no el fee.
+  + cobertura parcial (finas como ZEC casi sin USDC-M) + funding USDC-M ≠ USDT-M (afecta carry).
+  - **¿Resucita lo descartado? NO.** Kepler ya es maker-first (~2bps en USDT) → el USDC solo raspa ~2bps en
+    majors líquidos. Lo intradía/order-book (e45) murió a **taker+slippage 8.6bps**; el taker sigue ~4bps en
+    USDC y el slippage es PEOR en libros finos → el muro coste×turnover sigue en pie. Único uso legítimo:
+    optimización opcional = rutar fills maker de majors líquidos por USDC-M (~2bps), si la profundidad USDC-M
+    es comparable (verificable con maquinaria e54). Ítem menor serie C, NO se persigue ahora. Memoria `kepler-usdc-fees`.
+- **C2 (netear turnover entre sleeves) — YA HECHO por construcción.** `engine.compute_target` combina a
+  **target neto por símbolo** (Σ vpᵢ·wᵢ); `execution._place_deltas` solo manda el delta neto vs posición real
+  (piso MIN_ORDER_USD=$5). No hay órdenes por-sleeve que netear. La descripción del ROADMAP asumía un diseño
+  que no es el real. **Lo único que queda = banda de no-trade** (`simulate(band=)` ya la soporta en el
+  backtester): a tamaño DEMO ahorro chico (e55: slippage ~0; solo maker 2bps × turnover), misma categoría que
+  e55 slicing (escala con AUM, ~nulo hoy). Validarla exige construir backtester del sistema combinado.
+  - **DECISIÓN OSCAR: DIFERIR C2 como e55** → C2-literal marcado "hecho por construcción"; la banda de
+    no-trade va al workstream de capacidad/AUM (revisar al escalar, junto a slicing e55 y cap de tamaño B4).
+    Hoy payoff ~nulo a tamaño DEMO. C2 CERRADO por ahora.
+
+## CHANGELOG 2026-06-03 (mañana-2 — FASE 2 / F2.3: research copy-lead → `COPYLEAD.md`)
+Tras cerrar Fase 1, Oscar pidió recomendación de rentabilidad. Encuadre honesto: la palanca grande NO es
+más alfa (gratis agotada; a $5k de DEMO un +3.5%/mes son ~$175) sino el **NEGOCIO = profit-share copy-lead
+sobre AUM** → requiere track real (tiempo) + producto. Oscar eligió arrancar **F2.3 (investigar copy-lead)**.
+- **Research hecho (web, 2026-06-03) → `COPYLEAD.md`** (entregable checklist):
+  - **Encaje EXCELENTE:** el bajo-maxDD es premiado en descubrimiento Y profit-share en todas (Bybit rankea
+    por maxDD/consistencia; Binance da 15% si maxDD 90d ≤25%). Nuestro diferenciador = su eje de pago.
+  - **Mecánica:** libro market-neutral multi-símbolo (long unos / short otros) **ES copiable** (one-way
+    proporcional; NO es hedge-mode del mismo símbolo). Mínimos de lead triviales (~500-1000 USDT).
+  - **2 cautelas:** (1) fragmentación de margen en seguidores chicos replicando ~20 posiciones (mínimo
+    notional por orden) → usar Fixed Ratio / variante "lite"; (2) turnover diario + fills taker del seguidor
+    → su retorno < track publicado (comunicar el gap con honestidad). HWM (Bybit Pro/Binance) = aliado bajo-DD.
+  - **Plataformas:** Binance (liquidez, 10→15%), Bybit (Pro hasta 30%+HWM, ranking por riesgo), Bitget
+    (comunidad mayor, hasta 20%), OKX (hasta 30%). Detalle + checklist en `COPYLEAD.md`.
+  - **Cuello de botella NO es elegibilidad** sino track real (Fase 0) + diseñar libro copiable-limpio.
+- **Recomendación de rentabilidad (registrada):** Tier1 = negocio (F2.3 ✓ + F2.1/2.2 producto); Tier2 =
+  retorno gratis estrategia (C2 netear turnover, sleeve #8, C1/C3 costes); Tier3 = pago (CryptoQuant/Santiment,
+  prematuro a este AUM) o subir tier (duplica retorno pero traiciona bajo-DD sin track → Fase 3).
+
+## CHANGELOG 2026-06-03 (mañana — FASE 1 PASO 5 / F1.4: salud + reporte diario en el DASHBOARD → Fase 1 CERRADA)
+Cierre del último paso de Fase 1. **Decisión de Oscar: interactivo en el frontend, NO PDF/texto** (el PDF
+profesional es outbound = Fase 2/track-record; hoy lo que protege es el panel que él vigila a diario).
+- **Hallazgo clave: cero lógica nueva.** Toda la data ya estaba persistida por los pasos 1-4: los checks de
+  `checks.py` se auditan cada ciclo en `audit_event` (categorías `checks` pre-trade con `results` por chequeo,
+  y `checks_hb` heartbeat), y la narrativa+métricas templadas ya viven en `daily_report`. F1.4 = **exponer +
+  pintar**, code-first, CERO IA.
+- **API (`kepler/api/app.py`), 3 endpoints nuevos:** `/api/health` (último pre-trade + heartbeat, severidad
+  por chequeo OK/WARN/CRIT + overall), `/api/health/history?days=30` (severidad PEOR por día Lima → franja),
+  `/api/daily_report` (narrativa + métricas del día más reciente o por fecha).
+- **Dashboard (`dashboard.html`), 2 tarjetas:** "Salud del sistema" (badge global + lista de chequeos con
+  ✅/🟡/🔴 y mensaje + franja-historial 30d + sello de hora) y "Reporte del día" (narrativa templada en mono +
+  8 métricas resaltadas: retorno, dd, lev, posiciones, top, slippage mediana, ciclos, CB). Auto-refresh 10s.
+- **Verificado:** `app.py` compila+importa, 3 rutas registradas; TestClient devuelve 200 con datos reales
+  (health overall OK, todos los chequeos verdes; daily_report con narrativa+métricas). JS `node --check` OK.
+  **PENDIENTE PUSH+DEPLOY + revisión visual en http://213.35.121.9:8080.** Con esto **Fase 1 queda CERRADA**
+  (pasos 1-5); siguiente fase real = Fase 2 (producto/track) cuando la DEMO acumule semanas.
 
 ## CHANGELOG 2026-06-02 (noche-2 — FASE 1 robustez: guardas pre-trade (checks.py) wired al orchestrator)
 Arranque de la Fase 1 (ROADMAP §RUTA MAESTRA), CODE-FIRST cero IA. Pasos 1 y 2 hechos:
