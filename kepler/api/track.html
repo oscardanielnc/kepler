@@ -1,97 +1,145 @@
 <!DOCTYPE html>
-<html lang="es">
+<html class="light" lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kepler — Track Record</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config={darkMode:"class",theme:{extend:{
+  colors:{"outline-variant":"#c5c6ce","error":"#ba1a1a","surface-container-high":"#eae7ea","surface-variant":"#e4e2e5",
+    "on-primary-container":"#7c89aa","on-background":"#1b1b1e","surface-container":"#f0edf0","outline":"#75777e",
+    "on-primary":"#ffffff","surface-container-lowest":"#ffffff","primary-container":"#14213d","surface-container-low":"#f5f3f6",
+    "tertiary-fixed":"#ffddb6","on-error":"#ffffff","on-surface":"#1b1b1e","secondary":"#006b57","primary":"#14213d",
+    "on-tertiary":"#ffffff","surface":"#fbf8fb","background":"#fbf8fb","on-surface-variant":"#45464d",
+    "secondary-container":"#97f4d9","on-secondary-container":"#00725d","on-tertiary-container":"#a58359","tertiary-container":"#fff2dd"},
+  borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},
+  spacing:{"gutter":"24px","container-margin":"32px","lg":"40px","xs":"4px","base":"8px","sm":"12px","md":"24px","xl":"64px"},
+  fontFamily:{"body":["Inter"],"serif":["Source Serif 4"],"mono":["JetBrains Mono"]}
+}}}
+</script>
 <style>
-  :root{--bg:#0d1117;--card:#161b22;--bd:#30363d;--tx:#c9d1d9;--mut:#8b949e;--grn:#3fb950;--red:#f85149;--blu:#58a6ff;--yel:#d29922}
-  *{box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
-  body{margin:0;background:var(--bg);color:var(--tx)}
-  header{padding:18px 26px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  h1{font-size:20px;margin:0;color:#fff}
-  .badge{padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;background:#d2992233;color:var(--yel)}
-  .wrap{max-width:1100px;margin:auto;padding:18px}
-  .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:18px}
-  .card h2{font-size:13px;margin:0 0 12px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px}
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px}
-  .kpi .v{font-size:26px;font-weight:800;color:#fff;line-height:1.1}
-  .kpi .l{font-size:12px;color:var(--mut);margin-top:3px}
-  .kpi .ref{font-size:11px;color:var(--mut);margin-top:2px}
-  .narr{font-size:14px;line-height:1.55;color:var(--tx)}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--bd)}
-  th{color:var(--mut);font-weight:500}
+  :root{--grn:#006b57;--red:#ba1a1a;--yel:#a06600;--mut:#75777e;--tx:#1b1b1e;--primary:#14213d;--bd:rgba(20,33,61,.10)}
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,sans-serif}
+  .serif{font-family:'Source Serif 4',Georgia,serif}
+  .num{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:#c5c6ce;border-radius:10px}
+  .card{background:#fff;border:1px solid var(--bd);border-radius:.75rem;padding:24px}
+  .lbl{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut)}
+  .kpi{background:#f5f3f6;border:1px solid var(--bd);border-radius:.5rem;padding:18px}
+  .kpi .v{font-family:'Source Serif 4',Georgia,serif;font-size:30px;font-weight:600;line-height:1.1;letter-spacing:-.01em;color:var(--primary)}
+  .kpi .ref{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mut);margin-top:4px}
   .long{color:var(--grn)} .short{color:var(--red)}
-  .disc{font-size:12px;line-height:1.6;color:var(--mut)}
-  .disc b{color:var(--tx)}
+  .disc{font-size:13px;line-height:1.65;color:#45464d}.disc b{color:var(--tx);font-weight:600}
   .note{color:var(--yel)}
-  .foot{text-align:center;color:var(--mut);font-size:11px;padding:14px}
-  a{color:var(--blu);text-decoration:none}
-</style></head>
-<body>
-<header>
-  <h1>🛰️ KEPLER</h1>
-  <span class="badge" id="mode-badge">DEMO · track en construcción</span>
-  <span style="margin-left:auto;color:var(--mut);font-size:12px" id="updated"></span>
-</header>
+  a{color:var(--primary)}
+  .sec-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--bd);font-size:13px}
+  .sec-row .k{color:var(--mut)} .sec-row .v{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;font-weight:500;color:var(--primary)}
+</style>
+</head>
+<body class="bg-background text-on-background">
 
-<div class="wrap">
-  <div class="card">
-    <h2>Resumen</h2>
-    <div class="narr" id="narr">Cargando…</div>
+<nav class="sticky top-0 z-40 bg-surface/90 backdrop-blur border-b border-[color:var(--bd)]">
+  <div class="max-w-[1180px] mx-auto px-container-margin h-16 flex items-center gap-base">
+    <span class="serif text-2xl font-bold tracking-tight text-primary">🛰️ KEPLER</span>
+    <span id="mode-badge" class="ml-2 pill" style="background:rgba(160,102,0,.14);color:#8a5a00;padding:3px 10px;border-radius:9999px;font-size:11px;font-weight:700;letter-spacing:.03em">DEMO · track en construcción</span>
+    <span class="ml-auto num text-xs" style="color:var(--mut)" id="updated"></span>
   </div>
+</nav>
 
-  <div class="card">
-    <h2>Métricas en vivo (DEMO)</h2>
-    <div class="kpis">
-      <div class="kpi"><div class="v" id="k-tot">—</div><div class="l">Retorno total</div></div>
-      <div class="kpi"><div class="v" id="k-sh">—</div><div class="l">Sharpe realizado</div><div class="ref" id="k-sh-ref"></div></div>
-      <div class="kpi"><div class="v" id="k-dd">—</div><div class="l">Máx. drawdown</div><div class="ref">presupuesto −10%</div></div>
-      <div class="kpi"><div class="v" id="k-mo">—</div><div class="l">Meses positivos</div></div>
-      <div class="kpi"><div class="v" id="k-beta">—</div><div class="l">β vs BTC (≈0 = neutral)</div></div>
-      <div class="kpi"><div class="v" id="k-days">—</div><div class="l">Días en vivo</div></div>
+<main class="max-w-[1180px] mx-auto px-container-margin py-lg space-y-md">
+
+  <!-- SUMMARY + NOTICE -->
+  <section class="grid grid-cols-1 lg:grid-cols-12 gap-md">
+    <div class="card lg:col-span-8">
+      <h1 class="serif text-[30px] leading-tight font-semibold text-primary mb-3">Estrategia market-neutral · track en vivo</h1>
+      <p class="disc text-[15px] max-w-3xl" id="narr">Cargando…</p>
     </div>
-  </div>
-
-  <div class="card">
-    <h2>Curva de equity (DEMO)</h2>
-    <div style="position:relative;height:300px;width:100%"><canvas id="eqchart"></canvas></div>
-  </div>
-
-  <div class="card">
-    <h2>Métricas secundarias</h2>
-    <div class="kpis">
-      <div class="kpi"><div class="v" id="k-ann">—</div><div class="l">Retorno anualizado*</div></div>
-      <div class="kpi"><div class="v" id="k-sortino">—</div><div class="l">Sortino realizado</div></div>
-      <div class="kpi"><div class="v" id="k-vol">—</div><div class="l">Volatilidad anual.</div></div>
-      <div class="kpi"><div class="v" id="k-posd">—</div><div class="l">Días positivos</div></div>
-      <div class="kpi"><div class="v" id="k-np">—</div><div class="l">Posiciones</div></div>
-      <div class="kpi"><div class="v" id="k-gross">—</div><div class="l">Gross (sin leverage)</div></div>
+    <div class="lg:col-span-4 rounded-xl p-md border border-[color:var(--bd)]" style="background:#fff2dd">
+      <div class="flex items-center gap-2 mb-1">
+        <span style="color:#a58359">⚠</span>
+        <span class="lbl" style="color:#8a6d2b">Aviso importante</span>
+      </div>
+      <p class="disc text-[13px]" style="color:#5c421e">En modo <b>DEMO</b>. Las métricas reflejan ejecución REAL en vivo (no backtest) y son el número honesto, pero no garantizan rendimiento futuro. El valor se acumula en horizontes largos.</p>
     </div>
-    <div class="ref" style="margin-top:10px;font-size:11px;color:var(--mut)">*anualizado a partir de pocos días = muy ruidoso; referencial.</div>
-  </div>
+  </section>
 
-  <div class="card">
-    <h2>Retornos mensuales</h2>
-    <table><thead><tr><th>Mes</th><th>Retorno</th></tr></thead><tbody id="monthly"></tbody></table>
-  </div>
+  <!-- HERO KPIs -->
+  <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-md">
+    <div class="kpi"><p class="lbl mb-1">Retorno total</p><div class="v" id="k-tot">—</div><div class="ref">acumulado</div></div>
+    <div class="kpi"><p class="lbl mb-1">Sharpe realizado</p><div class="v" id="k-sh">—</div><div class="ref" id="k-sh-ref"></div></div>
+    <div class="kpi"><p class="lbl mb-1">Máx. drawdown</p><div class="v" id="k-dd">—</div><div class="ref">presupuesto −10%</div></div>
+    <div class="kpi"><p class="lbl mb-1">Meses positivos</p><div class="v" id="k-mo">—</div><div class="ref">consistencia</div></div>
+    <div class="kpi"><p class="lbl mb-1">β vs BTC</p><div class="v" id="k-beta">—</div><div class="ref">≈0 = market-neutral</div></div>
+    <div class="kpi"><p class="lbl mb-1">Días en vivo</p><div class="v" id="k-days">—</div><div class="ref">ejecución continua</div></div>
+  </section>
 
-  <div class="card">
-    <h2>Cómo se gestiona el riesgo</h2>
-    <div class="disc">
-      Kepler es un sistema <b>market-neutral</b> (β≈0 contra BTC): ~20 posiciones <span class="long">long</span>/<span class="short">short</span>
-      sobre perps de Binance Futures, combinando <b>7 estrategias descorrelacionadas</b>. Rebalancea cada 24h
-      (no opera intradía). <b>Sin stop-loss por trade</b>: el riesgo es de cartera — diversificación, cobertura
-      de β y un <b>circuit breaker</b> que detiene todo si la equity cae 20% desde el pico. El objetivo es
-      <b>drawdown bajo y consistencia</b> (copy-lead honesto), no ROI llamativo.
-      <p class="note" style="margin:12px 0 0">⚠️ Operando en DEMO. Las métricas de arriba son del rendimiento REAL en vivo
-      (no backtest) y son el número honesto. Donde aparece "referencia backtest" es solo eso — referencia, no promesa.
-      Track corto = ruidoso; el valor se acumula con el tiempo.</p>
+  <!-- EQUITY + SECONDARY -->
+  <section class="grid grid-cols-1 lg:grid-cols-12 gap-md">
+    <div class="card lg:col-span-8 flex flex-col">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h3 class="serif text-2xl font-semibold text-primary">Curva de equity (NAV)</h3>
+          <p class="disc text-[13px]">Rendimiento de la ejecución en vivo · DEMO</p>
+        </div>
+        <span class="flex items-center gap-1 lbl"><span class="w-3 h-3 rounded-full" style="background:var(--grn)"></span> Kepler live</span>
+      </div>
+      <div style="position:relative;height:340px;width:100%"><canvas id="eqchart"></canvas></div>
     </div>
-  </div>
-</div>
-<div class="foot">Kepler · panel operativo en <a href="/">/</a></div>
+    <div class="card lg:col-span-4">
+      <h4 class="lbl border-b border-[color:var(--bd)] pb-2 mb-3">Métricas secundarias</h4>
+      <div class="sec-row" style="border-top:none"><span class="k">Retorno anualizado*</span><span class="v" id="k-ann">—</span></div>
+      <div class="sec-row"><span class="k">Sortino realizado</span><span class="v" id="k-sortino">—</span></div>
+      <div class="sec-row"><span class="k">Volatilidad anual.</span><span class="v" id="k-vol">—</span></div>
+      <div class="sec-row"><span class="k">Días positivos</span><span class="v" id="k-posd">—</span></div>
+      <div class="sec-row"><span class="k">Posiciones</span><span class="v" id="k-np">—</span></div>
+      <div class="sec-row"><span class="k">Gross (sin leverage)</span><span class="v" id="k-gross">—</span></div>
+      <p class="ref num mt-3" style="font-size:10px;color:var(--mut)">*anualizado a partir de pocos días = muy ruidoso; referencial.</p>
+    </div>
+  </section>
+
+  <!-- MONTHLY + RISK -->
+  <section class="grid grid-cols-1 lg:grid-cols-12 gap-md">
+    <div class="card lg:col-span-7">
+      <h3 class="serif text-2xl font-semibold text-primary mb-4">Retornos mensuales</h3>
+      <div id="monthly" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
+    </div>
+    <div class="card lg:col-span-5">
+      <h3 class="serif text-2xl font-semibold text-primary mb-4">Cómo se gestiona el riesgo</h3>
+      <ul class="space-y-3">
+        <li class="flex items-start gap-2"><span class="text-secondary font-bold mt-0.5">✓</span>
+          <div><p class="font-semibold text-primary text-[15px]">Market-neutral (β≈0)</p><p class="disc text-[13px]">Cobertura contra BTC para aislar alfa puro del mercado.</p></div></li>
+        <li class="flex items-start gap-2"><span class="text-secondary font-bold mt-0.5">✓</span>
+          <div><p class="font-semibold text-primary text-[15px]">7 estrategias descorrelacionadas</p><p class="disc text-[13px]">Combinadas por vol-parity; su baja correlación es el control de riesgo nº1.</p></div></li>
+        <li class="flex items-start gap-2"><span class="text-secondary font-bold mt-0.5">✓</span>
+          <div><p class="font-semibold text-primary text-[15px]">Rebalanceo diario, sin SL/TP por trade</p><p class="disc text-[13px]">El riesgo es de cartera: diversificación + tamaño chico, no stops por posición.</p></div></li>
+        <li class="flex items-start gap-2"><span class="short font-bold mt-0.5">●</span>
+          <div><p class="font-semibold text-primary text-[15px]">Circuit breaker −20%</p><p class="disc text-[13px]">Detiene la operación si la equity cae 20% desde el pico.</p></div></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- HONEST DISCLAIMER -->
+  <section class="rounded-xl p-md border border-[color:var(--bd)]" style="background:#fff2dd">
+    <div class="flex items-center gap-2 mb-2">
+      <span style="color:#a58359">✓</span>
+      <span class="lbl" style="color:#8a6d2b">Transparencia</span>
+    </div>
+    <p class="disc text-[13px]" style="color:#5c421e">
+      Operando en <b>DEMO</b>. Las métricas de arriba son del rendimiento <b>REAL en vivo</b> (no backtest) y son el número honesto.
+      Donde aparece "ref. backtest" es solo eso — referencia, no promesa. Un track corto es ruidoso; el valor se acumula con el tiempo.
+      Mostramos el <b>maxDD con el mismo orgullo que el retorno</b>: la promesa del producto es <b>drawdown bajo y consistencia</b>, no ROI llamativo.
+    </p>
+  </section>
+
+  <footer class="py-md text-center disc" style="font-size:12px;color:var(--mut)">
+    Kepler · panel operativo en <a class="font-semibold hover:underline" href="/">/ ↗</a>
+  </footer>
+</main>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -110,7 +158,7 @@ async function load(){
   }
   $("mode-badge").textContent="DEMO · "+t.days+" día(s) en vivo";
   colpct($("k-tot"),t.total_return);
-  $("k-sh").textContent=(+t.sharpe).toFixed(2); $("k-sh").style.color=t.sharpe>=1?"var(--grn)":"#fff";
+  $("k-sh").textContent=(+t.sharpe).toFixed(2); $("k-sh").style.color=t.sharpe>=1?"var(--grn)":"var(--primary)";
   $("k-sh-ref").textContent="ref. backtest "+(t.backtest&&t.backtest.sharpe!=null?t.backtest.sharpe:"—");
   $("k-dd").textContent=(+t.maxdd).toFixed(2)+"%"; $("k-dd").style.color=t.maxdd>-10?"var(--grn)":"var(--red)";
   $("k-mo").textContent=(+t.pos_months).toFixed(0)+"%";
@@ -122,18 +170,23 @@ async function load(){
   $("k-posd").textContent=(+t.pos_days).toFixed(0)+"%";
   $("k-np").textContent=t.n_positions!=null?t.n_positions:"—";
   $("k-gross").textContent=t.gross!=null?(+t.gross).toFixed(2)+"x":"—";
-  // monthly
-  $("monthly").innerHTML=(t.monthly||[]).slice().reverse().map(m=>
-    `<tr><td>${m.month}</td><td class="${m.return>=0?'long':'short'}">${pct(m.return)}</td></tr>`).join("")
-    ||`<tr><td colspan=2 style="color:var(--mut)">aún sin meses completos</td></tr>`;
+  // monthly heatmap
+  $("monthly").innerHTML=(t.monthly||[]).slice().reverse().map(m=>{
+    const pos=m.return>=0, a=Math.min(.32,.08+Math.abs(m.return)/40);
+    const bg=pos?`rgba(0,107,87,${a})`:`rgba(186,26,26,${a})`;
+    return `<div class="rounded-lg p-3 border border-[color:var(--bd)]" style="background:${bg}">
+      <div class="lbl">${m.month}</div>
+      <div class="num text-base font-semibold ${pos?'long':'short'}">${pct(m.return)}</div></div>`;
+  }).join("")||`<div style="color:var(--mut);font-size:13px">aún sin meses completos</div>`;
   // equity curve
   const ec=t.equity_curve||[];
   const labels=ec.map(x=>x.day), data=ec.map(x=>x.equity);
   if(eqchart){eqchart.data.labels=labels;eqchart.data.datasets[0].data=data;eqchart.update("none");}
   else eqchart=new Chart($("eqchart"),{type:"line",data:{labels,datasets:[{label:"equity",data,
-    borderColor:"#58a6ff",backgroundColor:"#58a6ff22",tension:.2,pointRadius:0,fill:true}]},
+    borderColor:"#006b57",backgroundColor:"rgba(0,107,87,.08)",borderWidth:2,tension:.2,pointRadius:0,fill:true}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},
-    scales:{x:{ticks:{color:"#8b949e",maxTicksLimit:12}},y:{ticks:{color:"#8b949e"}}}}});
+    scales:{x:{ticks:{color:"#75777e",maxTicksLimit:12},grid:{display:false}},
+      y:{ticks:{color:"#75777e"},grid:{color:"rgba(20,33,61,.06)"}}}}});
 }
 load(); setInterval(load,30000);
 </script>

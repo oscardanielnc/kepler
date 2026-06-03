@@ -1,151 +1,227 @@
 <!DOCTYPE html>
-<html lang="es">
+<html class="light" lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Kepler — Panel</title>
+<title>Kepler — Panel operativo</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config={darkMode:"class",theme:{extend:{
+  colors:{"outline-variant":"#c5c6ce","error":"#ba1a1a","secondary-fixed":"#97f4d9","on-secondary":"#ffffff",
+    "surface-container-high":"#eae7ea","surface-variant":"#e4e2e5","surface-bright":"#fbf8fb","primary-fixed":"#d9e2ff",
+    "on-primary-container":"#7c89aa","on-background":"#1b1b1e","surface-tint":"#525e7d","inverse-on-surface":"#f2f0f3",
+    "tertiary-fixed":"#ffddb6","surface-container":"#f0edf0","outline":"#75777e","on-primary":"#ffffff",
+    "surface-container-lowest":"#ffffff","inverse-surface":"#303033","surface-dim":"#dbd9dc","primary-container":"#14213d",
+    "surface-container-low":"#f5f3f6","secondary-fixed-dim":"#7bd7bd","error-container":"#ffdad6","on-secondary-fixed":"#002019",
+    "on-error":"#ffffff","tertiary":"#130900","on-surface":"#1b1b1e","secondary":"#006b57","primary":"#14213d",
+    "on-tertiary":"#ffffff","on-error-container":"#93000a","surface":"#fbf8fb","background":"#fbf8fb",
+    "inverse-primary":"#b9c6ea","surface-container-highest":"#e4e2e5","on-surface-variant":"#45464d",
+    "secondary-container":"#97f4d9","on-secondary-container":"#00725d","on-tertiary-container":"#a58359"},
+  borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},
+  spacing:{"gutter":"24px","container-margin":"32px","lg":"40px","xs":"4px","base":"8px","sm":"12px","md":"24px","xl":"64px"},
+  fontFamily:{"body":["Inter"],"serif":["Source Serif 4"],"mono":["JetBrains Mono"]}
+}}}
+</script>
 <style>
-  :root{--bg:#0d1117;--card:#161b22;--bd:#30363d;--tx:#c9d1d9;--mut:#8b949e;--grn:#3fb950;--red:#f85149;--blu:#58a6ff;--yel:#d29922}
-  *{box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
-  body{margin:0;background:var(--bg);color:var(--tx)}
-  header{padding:14px 22px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-  h1{font-size:18px;margin:0;color:#fff}
-  .badge{padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
-  .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;padding:16px;max-width:1400px;margin:auto}
-  .card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px}
-  .card h2{font-size:14px;margin:0 0 4px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
-  .card .hint{font-size:11px;color:var(--mut);margin:0 0 10px;font-style:italic}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--bd)}
-  th{color:var(--mut);font-weight:500}
+  :root{--grn:#006b57;--red:#ba1a1a;--yel:#a06600;--mut:#75777e;--tx:#1b1b1e;--primary:#14213d;--bd:rgba(20,33,61,.10)}
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,sans-serif}
+  .serif{font-family:'Source Serif 4',Georgia,serif}
+  .num{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+  ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:#c5c6ce;border-radius:10px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:9999px;flex:none}
+  .card{background:#fff;border:1px solid var(--bd);border-radius:.75rem;overflow:hidden}
+  .card-h{padding:12px 24px;background:rgba(234,231,234,.4);border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center}
+  .card-t{font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:var(--tx)}
+  .lbl{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut)}
+  .pill{padding:3px 10px;border-radius:9999px;font-size:11px;font-weight:700;letter-spacing:.03em}
   .long{color:var(--grn)} .short{color:var(--red)}
-  .metric{display:inline-block;margin-right:22px;margin-bottom:4px}
-  .metric .v{font-size:20px;font-weight:700;color:#fff} .metric .l{font-size:11px;color:var(--mut)}
-  .logs{max-height:520px;overflow-y:auto;font-family:ui-monospace,monospace;font-size:12px}
-  .log{padding:4px 6px;border-bottom:1px solid #21262d;display:flex;gap:8px}
-  .log .t{color:var(--mut);white-space:nowrap}
-  .lv-INFO{color:var(--tx)} .lv-WARNING{color:var(--yel)} .lv-ERROR,.lv-CRITICAL{color:var(--red);font-weight:600}
-  .cat{color:var(--blu)}
-  button{background:#21262d;color:var(--tx);border:1px solid var(--bd);padding:7px 14px;border-radius:7px;cursor:pointer;font-size:13px}
-  button:hover{border-color:var(--blu)}
-  .full{grid-column:1/-1}
-  .filt{margin-bottom:8px} .filt button{padding:3px 9px;font-size:11px;margin-right:4px}
-  .how{font-size:13px;line-height:1.55;color:var(--tx)} .how b{color:#fff}
-  .how .note{color:var(--yel);font-size:12px;margin-top:8px;display:block}
-  .expo{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-  .expo .ch{position:relative;height:220px;flex:1 1 220px;min-width:200px}
-  .chips{display:flex;gap:18px;flex-wrap:wrap;margin-top:6px}
-  .chip .v{font-size:17px;font-weight:700} .chip .l{font-size:11px;color:var(--mut)}
-  .chk{display:flex;align-items:baseline;gap:8px;padding:5px 2px;border-bottom:1px solid #21262d;font-size:13px}
-  .chk .ic{flex:none} .chk b{flex:none;min-width:120px} .chk .msg{color:var(--mut);font-size:12px}
-  .hstrip{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
-  .hd{width:15px;height:15px;border-radius:3px;cursor:default}
+  .status-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  /* KPI */
+  .kpi{padding:12px 14px;background:#f5f3f6;border:1px solid var(--bd);border-radius:.5rem}
+  .kpi .l{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut)}
+  .kpi .v{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;font-size:21px;font-weight:600;color:var(--primary);line-height:1.15;display:block;margin-top:3px}
+  /* health */
   .ovr{font-size:15px;font-weight:700}
-  .narr{font-size:13px;line-height:1.5;background:#0d1117;border:1px solid var(--bd);border-radius:7px;padding:9px 11px;font-family:ui-monospace,monospace}
-  .rmet{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
-  .rmet .v{font-size:16px;font-weight:700} .rmet .l{font-size:11px;color:var(--mut)}
-</style></head>
-<body>
-<header>
-  <h1>🛰️ KEPLER</h1>
-  <span id="mode" class="badge">—</span>
-  <span id="tier" class="badge" style="background:#1f6feb33;color:var(--blu)">—</span>
-  <span id="cb" class="badge">—</span>
-  <span style="margin-left:auto;color:var(--mut);font-size:12px" id="updated"></span>
-  <button onclick="window.location='/track'">📊 Track record (público)</button>
-  <button onclick="dl('')">⬇ Log de hoy</button>
-  <button onclick="dl('?full=1')">⬇ Histórico completo (análisis)</button>
+  .chk{display:flex;align-items:baseline;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:13px}
+  .chk .ic{flex:none} .chk b{flex:none;min-width:118px;font-weight:600;color:var(--tx)}
+  .chk .msg{color:var(--mut);font-size:12px;font-family:'JetBrains Mono',monospace}
+  .hstrip{display:flex;gap:3px;flex-wrap:wrap;margin-top:6px}
+  .hd{width:13px;height:13px;border-radius:3px}
+  /* daily report */
+  .narr{font-size:13px;line-height:1.55;background:#f5f3f6;border-left:2px solid #a58359;padding:9px 12px;font-style:italic;color:#45464d;border-radius:0 6px 6px 0}
+  .rmet{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px}
+  .rmet .v{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;color:var(--primary)}
+  .rmet .l{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mut)}
+  /* how */
+  .how{font-size:13px;line-height:1.6;color:#45464d}.how b{color:var(--tx);font-weight:600}
+  .how .note{color:var(--yel);font-size:12px;margin-top:8px;display:block}
+  /* logs */
+  .logs{max-height:340px;overflow-y:auto;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;background:#14213d;color:#b9c6ea;padding:14px}
+  .log{padding:3px 4px;display:flex;gap:10px;opacity:.92}
+  .log .t{color:#7c89aa;white-space:nowrap} .log .cat{color:#7bd7bd}
+  .lv-INFO{color:#b9c6ea} .lv-WARNING{color:#e7c092} .lv-ERROR,.lv-CRITICAL{color:#ff9d96;font-weight:600}
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{padding:8px 24px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);background:#f5f3f6;border-bottom:1px solid var(--bd)}
+  tbody td{padding:9px 24px;border-bottom:1px solid var(--bd)}
+  tbody tr:hover{background:rgba(245,243,246,.6)}
+  .filt button{padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.04em;border-radius:9999px;border:1px solid var(--bd);background:#fff;color:var(--mut);cursor:pointer;margin-right:5px}
+  .filt button:hover{border-color:var(--primary);color:var(--primary)}
+  .hbtn{padding:7px 13px;border:1px solid var(--bd);border-radius:.5rem;background:#fff;color:var(--tx);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .hbtn:hover{background:#f5f3f6}
+</style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+
+<header class="sticky top-0 z-40 bg-surface/90 backdrop-blur border-b border-[color:var(--bd)]">
+  <div class="max-w-[1440px] mx-auto px-container-margin h-16 flex items-center gap-md">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl">🛰️</span>
+      <span class="serif text-2xl font-bold tracking-tight text-primary">KEPLER</span>
+    </div>
+    <div class="h-6 w-px bg-[color:var(--bd)]"></div>
+    <span id="mode" class="pill">—</span>
+    <span id="tier" class="pill" style="background:rgba(20,33,61,.08);color:var(--primary)">—</span>
+    <span id="cb" class="pill">—</span>
+    <div class="ml-auto flex items-center gap-md">
+      <div class="hidden lg:flex flex-col items-end leading-tight">
+        <span class="lbl opacity-70">Actualizado</span>
+        <span id="updated" class="num text-xs text-primary">—</span>
+      </div>
+      <div class="flex gap-2">
+        <button class="hbtn" onclick="window.location='/track'">📊 Track record</button>
+        <button class="hbtn" onclick="dl('')">⬇ Log hoy</button>
+        <button class="hbtn" onclick="dl('?full=1')">⬇ Histórico</button>
+      </div>
+    </div>
+  </div>
 </header>
 
-<div class="grid">
-  <div class="card full">
-    <span class="metric"><span class="v" id="m-eq">—</span><br><span class="l">Equity</span></span>
-    <span class="metric"><span class="v" id="m-tot">—</span><br><span class="l">Rentabilidad total</span></span>
-    <span class="metric"><span class="v" id="m-tod">—</span><br><span class="l">Hoy</span></span>
-    <span class="metric"><span class="v" id="m-np">—</span><br><span class="l">Posiciones</span></span>
-    <span class="metric"><span class="v" id="m-gr">—</span><br><span class="l">Gross (sin lev)</span></span>
-    <span class="metric"><span class="v" id="m-lev">—</span><br><span class="l">Leverage estrategia</span></span>
-    <span class="metric"><span class="v" id="m-sh">—</span><br><span class="l">Sharpe (backtest)</span></span>
-    <span class="metric"><span class="v" id="m-dd">—</span><br><span class="l">maxDD (backtest)</span></span>
-    <span class="metric"><span class="v" id="m-cyc" style="font-size:13px">—</span><br><span class="l">Último ciclo</span></span>
-  </div>
+<main class="max-w-[1440px] mx-auto px-container-margin py-md space-y-md">
 
-  <div class="card full">
-    <h2>¿Cómo funciona Kepler?</h2>
-    <div class="how">
-      Sistema <b>market-neutral</b> (β≈0 contra BTC): mantiene ~20 posiciones <span class="long">long</span>/<span class="short">short</span>
-      sobre 32 perps de Binance Futures, combinando <b>7 estrategias descorrelacionadas</b> por vol-parity.
-      <b>Rebalancea cada 24h</b> — no opera intradía (los edges son lentos, de días). <b>Sin stop-loss por trade:</b>
-      el riesgo se gestiona a nivel cartera — diversificación + cobertura de β + un <b>circuit breaker</b> que
-      detiene todo si la equity cae 20% desde el pico. Objetivo: <b>drawdown bajo y consistencia</b> (copy-lead
-      honesto), no ROI llamativo.
-      <span class="note">⚠️ El Sharpe y maxDD mostrados son de BACKTEST; el rendimiento en vivo será menor. El número honesto es el de la demo.</span>
+  <!-- KPI ROW -->
+  <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-base">
+    <div class="kpi"><span class="l">Equity</span><span class="v" id="m-eq">—</span></div>
+    <div class="kpi"><span class="l">Rent. total</span><span class="v" id="m-tot">—</span></div>
+    <div class="kpi"><span class="l">Hoy</span><span class="v" id="m-tod">—</span></div>
+    <div class="kpi"><span class="l">Posiciones</span><span class="v" id="m-np">—</span></div>
+    <div class="kpi"><span class="l">Gross</span><span class="v" id="m-gr">—</span></div>
+    <div class="kpi"><span class="l">Leverage</span><span class="v" id="m-lev">—</span></div>
+    <div class="kpi"><span class="l">Sharpe (BT)</span><span class="v" id="m-sh">—</span></div>
+    <div class="kpi"><span class="l">maxDD (BT)</span><span class="v" id="m-dd">—</span></div>
+    <div class="kpi"><span class="l">Último ciclo</span><span class="v num" id="m-cyc" style="font-size:13px">—</span></div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="card">
+    <div class="px-md py-3">
+      <div class="how">
+        Sistema <b>market-neutral</b> (β≈0 contra BTC): mantiene ~20 posiciones <span class="long">long</span>/<span class="short">short</span>
+        sobre 32 perps de Binance Futures, combinando <b>7 estrategias descorrelacionadas</b> por vol-parity.
+        <b>Rebalancea cada 24h</b> — no opera intradía (los edges son lentos, de días). <b>Sin stop-loss por trade:</b>
+        el riesgo se gestiona a nivel cartera — diversificación + cobertura de β + un <b>circuit breaker</b> que detiene todo
+        si la equity cae 20% desde el pico. Objetivo: <b>drawdown bajo y consistencia</b> (copy-lead honesto), no ROI llamativo.
+        <span class="note">⚠️ El Sharpe y maxDD mostrados son de BACKTEST; el rendimiento en vivo será menor. El número honesto es el de la demo.</span>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="card">
-    <h2>Salud del sistema</h2>
-    <p class="hint">Guardas automáticas (código, sin IA) que vigilan datos, leverage, concentración y β en cada ciclo. <span class="long">✅ OK</span> · <span style="color:var(--yel)">🟡 aviso</span> · <span class="short">🔴 crítico (bloquea el rebalanceo)</span>.</p>
-    <div class="ovr" id="h-overall">—</div>
-    <div id="h-list" style="margin-top:8px"></div>
-    <div id="h-hb" style="color:var(--mut);font-size:12px;margin-top:8px"></div>
-    <div style="margin-top:12px"><span class="l" style="color:var(--mut);font-size:11px">Últimos 30 días</span>
-      <div class="hstrip" id="h-strip"></div></div>
-    <div id="h-time" style="color:var(--mut);font-size:11px;margin-top:8px"></div>
-  </div>
-
-  <div class="card">
-    <h2>Reporte del día</h2>
-    <p class="hint">Resumen templado del día <span id="r-day" style="color:var(--blu)">—</span> (retorno, exposición, leverage, slippage real).</p>
-    <div class="narr" id="r-narr">aún sin reporte del día</div>
-    <div class="rmet" id="r-met"></div>
-  </div>
-
-  <div class="card full">
-    <h2>Curva de equity</h2>
-    <p class="hint">Valor de la cuenta en el tiempo (heartbeat cada 15 min).</p>
-    <div style="position:relative;height:280px;width:100%"><canvas id="chart"></canvas></div>
-  </div>
-
-  <div class="card full">
-    <h2>Drawdown (caída desde el pico)</h2>
-    <p class="hint">Cuánto está por debajo de su máximo histórico. La promesa del producto es mantenerlo bajo (objetivo backtest −10%).</p>
-    <div style="position:relative;height:170px;width:100%"><canvas id="ddchart"></canvas></div>
-  </div>
-
-  <div class="card">
-    <h2>Diversificación por estrategia</h2>
-    <p class="hint">Peso (vol-parity) de cada uno de los 7 sleeves. Su baja correlación es el control de riesgo nº1.</p>
-    <div class="expo"><div class="ch"><canvas id="sleevechart"></canvas></div></div>
-  </div>
-
-  <div class="card">
-    <h2>PnL por posición (en vivo)</h2>
-    <p class="hint">Ganancia/pérdida no realizada de cada posición abierta ahora mismo.</p>
-    <div style="position:relative;height:220px;width:100%"><canvas id="pnlchart"></canvas></div>
-  </div>
-
-  <div class="card full">
-    <h2>Posiciones activas ahora</h2>
-    <div class="chips">
-      <span class="chip"><span class="v long" id="x-long">—</span><br><span class="l">Long $</span></span>
-      <span class="chip"><span class="v short" id="x-short">—</span><br><span class="l">Short $</span></span>
-      <span class="chip"><span class="v" id="x-net">—</span><br><span class="l">Net $ (≈ exposición direccional)</span></span>
+  <!-- HEALTH + DAILY REPORT -->
+  <section class="grid grid-cols-1 lg:grid-cols-12 gap-md">
+    <div class="card lg:col-span-5 flex flex-col">
+      <div class="card-h"><h3 class="card-t">Salud del sistema</h3>
+        <span class="lbl">guardas automáticas</span></div>
+      <div class="px-md py-md flex-grow">
+        <p class="how" style="font-size:11px;margin-bottom:8px">Guardas automáticas (código, sin IA) que vigilan datos, leverage, concentración y β en cada ciclo.
+          <span class="long">✅ OK</span> · <span style="color:var(--yel)">🟡 aviso</span> · <span class="short">🔴 crítico (bloquea)</span>.</p>
+        <div class="ovr" id="h-overall">—</div>
+        <div id="h-list" class="mt-2"></div>
+        <div id="h-hb" class="num" style="color:var(--mut);font-size:11px;margin-top:8px"></div>
+        <div class="mt-3"><span class="lbl">Últimos 30 días</span><div class="hstrip" id="h-strip"></div></div>
+        <div id="h-time" class="num" style="color:var(--mut);font-size:11px;margin-top:8px"></div>
+      </div>
     </div>
-    <table style="margin-top:10px"><thead><tr><th>Activo</th><th>Lado</th><th>USD (sin lev)</th><th>PnL</th></tr></thead>
-    <tbody id="pos"></tbody></table>
-    <div id="pos-src" style="color:var(--mut);font-size:11px;margin-top:6px"></div>
-  </div>
+    <div class="card lg:col-span-7 flex flex-col">
+      <div class="card-h"><h3 class="card-t">Reporte del día <span id="r-day" class="num text-sm font-normal text-secondary ml-1">—</span></h3></div>
+      <div class="px-md py-md flex-grow">
+        <div class="narr" id="r-narr">aún sin reporte del día</div>
+        <div class="rmet" id="r-met"></div>
+      </div>
+    </div>
+  </section>
 
-  <div class="card full">
-    <h2>Rentabilidad por día</h2>
-    <table><thead><tr><th>Día</th><th>Equity cierre</th><th>Retorno del día</th><th>Drawdown</th></tr></thead>
-    <tbody id="daily"></tbody></table>
-  </div>
+  <!-- EQUITY -->
+  <section class="card">
+    <div class="card-h"><h3 class="card-t">Curva de equity</h3>
+      <span class="lbl">heartbeat 15 min</span></div>
+    <div class="px-md py-md"><div style="position:relative;height:300px;width:100%"><canvas id="chart"></canvas></div></div>
+  </section>
 
-  <div class="card full">
-    <h2>Logs del sistema — decisiones y errores</h2>
-    <div class="filt">
+  <!-- DRAWDOWN -->
+  <section class="card">
+    <div class="card-h"><h3 class="card-t">Drawdown (caída desde el pico)</h3>
+      <span class="lbl">objetivo backtest −10%</span></div>
+    <div class="px-md py-md"><div style="position:relative;height:180px;width:100%"><canvas id="ddchart"></canvas></div></div>
+  </section>
+
+  <!-- DOUGHNUT + PNL -->
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-md">
+    <div class="card">
+      <div class="card-h"><h3 class="card-t">Diversificación por estrategia</h3></div>
+      <div class="px-md py-md">
+        <p class="how" style="font-size:11px;margin-bottom:6px">Peso (vol-parity) de los 7 sleeves. Su baja correlación es el control de riesgo nº1.</p>
+        <div style="position:relative;height:230px;width:100%"><canvas id="sleevechart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3 class="card-t">PnL por posición (en vivo)</h3></div>
+      <div class="px-md py-md">
+        <p class="how" style="font-size:11px;margin-bottom:6px">Ganancia/pérdida no realizada de cada posición abierta ahora mismo.</p>
+        <div style="position:relative;height:230px;width:100%"><canvas id="pnlchart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- POSITIONS -->
+  <section class="card">
+    <div class="card-h">
+      <h3 class="card-t">Posiciones activas ahora</h3>
+      <div class="flex gap-2">
+        <span class="pill" style="background:rgba(0,107,87,.1);color:var(--grn)">LONG <span id="x-long">—</span></span>
+        <span class="pill" style="background:rgba(186,26,26,.1);color:var(--red)">SHORT <span id="x-short">—</span></span>
+        <span class="pill" style="background:rgba(20,33,61,.08);color:var(--primary)">NET <span id="x-net">—</span></span>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table><thead><tr><th>Activo</th><th>Lado</th><th>USD (sin lev)</th><th>PnL</th></tr></thead>
+      <tbody id="pos"></tbody></table>
+    </div>
+    <div id="pos-src" class="num" style="color:var(--mut);font-size:11px;padding:8px 24px;background:rgba(245,243,246,.4);border-top:1px solid var(--bd)"></div>
+  </section>
+
+  <!-- DAILY RETURNS -->
+  <section class="card">
+    <div class="card-h"><h3 class="card-t">Rentabilidad por día</h3></div>
+    <div class="overflow-x-auto">
+      <table><thead><tr><th>Día</th><th>Equity cierre</th><th>Retorno del día</th><th>Drawdown</th></tr></thead>
+      <tbody id="daily"></tbody></table>
+    </div>
+  </section>
+
+  <!-- LOGS -->
+  <section class="card">
+    <div class="card-h" style="background:#14213d;border-bottom-color:rgba(255,255,255,.08)">
+      <h3 class="card-t" style="color:#fff">Logs del sistema — decisiones y errores</h3>
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-secondary-fixed-dim status-pulse"></span>
+        <span class="num text-[10px] uppercase tracking-wider" style="color:#7c89aa">en vivo</span>
+      </div>
+    </div>
+    <div class="filt" style="padding:10px 24px;background:#f5f3f6;border-bottom:1px solid var(--bd)">
       <button onclick="setLv('')">Todos</button>
       <button onclick="setLv('INFO')">Info</button>
       <button onclick="setLv('WARNING')">Avisos</button>
@@ -153,8 +229,14 @@
       <button onclick="setLv('CRITICAL')">Críticos</button>
     </div>
     <div class="logs" id="logs"></div>
-  </div>
-</div>
+  </section>
+
+  <footer class="py-md border-t border-[color:var(--bd)] flex flex-col md:flex-row justify-between items-center gap-2">
+    <span class="lbl text-primary">Kepler · sala de control</span>
+    <span class="how" style="font-size:11px;max-width:560px;border-left:2px solid #a58359;padding-left:12px">
+      Operación en cripto: alto riesgo, posible pérdida de principal. Las cifras de backtest son referencia, no promesa.</span>
+  </footer>
+</main>
 
 <script>
 let lv="", chart=null, ddchart=null, sleevechart=null, pnlchart=null;
@@ -162,7 +244,7 @@ const $=id=>document.getElementById(id);
 async function j(u){try{return await (await fetch(u)).json()}catch(e){return null}}
 function dl(q){window.location="/api/download"+(q||"")}
 function setLv(l){lv=l;loadLogs()}
-const PALETTE=["#58a6ff","#3fb950","#d29922","#bc8cff","#f778ba","#56d4dd","#ff7b72"];
+const PALETTE=["#14213d","#006b57","#a58359","#5b7c99","#8a6d3b","#4c6b5c","#9a6a6a"];
 const SLEEVE_LBL={mom_30d:"Momentum 30d",rev_60d:"Reversión 60d",lowvol_14d:"Low-vol 14d",
   carry:"Carry (funding)",trend:"Trend",takerflow_5d:"Taker-flow 5d",hlpos_14d:"Canal 14d"};
 const usd=v=>"$"+(+v).toLocaleString(undefined,{maximumFractionDigits:0});
@@ -209,11 +291,11 @@ async function loadReport(){
 async function loadStatus(){
   const s=await j("/api/status"); if(!s)return;
   const mb=$("mode"); mb.textContent=s.mode;
-  mb.style.background=s.mode==="REAL"?"#f8514933":s.mode==="DEMO"?"#d2992233":"#3fb95033";
-  mb.style.color=s.mode==="REAL"?"#f85149":s.mode==="DEMO"?"#d29922":"#3fb950";
+  const modeStyle={REAL:["rgba(186,26,26,.12)","#ba1a1a"],DEMO:["rgba(160,102,0,.14)","#8a5a00"]}[s.mode]||["rgba(0,107,87,.12)","#006b57"];
+  mb.style.background=modeStyle[0]; mb.style.color=modeStyle[1];
   $("tier").textContent="Tier "+s.tier;
   const cb=$("cb"); cb.textContent=s.cb_halted?"⛔ HALT":"✓ Operando";
-  cb.style.background=s.cb_halted?"#f8514933":"#3fb95033"; cb.style.color=s.cb_halted?"#f85149":"#3fb950";
+  cb.style.background=s.cb_halted?"rgba(186,26,26,.12)":"rgba(0,107,87,.12)"; cb.style.color=s.cb_halted?"#ba1a1a":"#006b57";
   $("m-eq").textContent=s.equity?("$"+(+s.equity).toLocaleString(undefined,{maximumFractionDigits:2})):"—";
   const pct=(v)=>(v>=0?"+":"")+(+v).toFixed(2)+"%";
   const col=(el,v)=>{el.textContent=pct(v);el.style.color=v>=0?"var(--grn)":"var(--red)"};
@@ -224,7 +306,7 @@ async function loadStatus(){
   $("m-sh").textContent=s.backtest.sharpe.toFixed(2);
   $("m-dd").textContent=s.backtest.maxdd+"%";
   $("m-cyc").textContent=s.last_cycle?s.last_cycle.replace("T"," ").slice(0,16):"—";
-  $("updated").textContent="actualizado "+new Date().toLocaleTimeString();
+  $("updated").textContent=new Date().toLocaleTimeString();
   loadSleeves(s.sleeves||{});
 }
 function loadSleeves(vp){
@@ -232,70 +314,68 @@ function loadSleeves(vp){
   const labels=keys.map(k=>SLEEVE_LBL[k]||k), data=keys.map(k=>+(vp[k]*100).toFixed(1));
   if(sleevechart){sleevechart.data.labels=labels;sleevechart.data.datasets[0].data=data;sleevechart.update("none");return;}
   sleevechart=new Chart($("sleevechart"),{type:"doughnut",
-    data:{labels,datasets:[{data,backgroundColor:PALETTE,borderColor:"#161b22",borderWidth:2}]},
+    data:{labels,datasets:[{data,backgroundColor:PALETTE,borderColor:"#ffffff",borderWidth:2}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",
-      labels:{color:"#c9d1d9",font:{size:11},boxWidth:12}},
+      labels:{color:"#45464d",font:{size:11},boxWidth:12}},
       tooltip:{callbacks:{label:c=>c.label+": "+c.parsed+"%"}}}}});
 }
 async function loadPos(){
   const p=await j("/api/positions")||[];
-  $("pos").innerHTML=p.map(x=>`<tr><td>${x.symbol}</td>
-    <td class="${x.side.toLowerCase()}">${x.side}</td>
-    <td>$${(+x.notional).toLocaleString(undefined,{maximumFractionDigits:0})}</td>
-    <td style="color:${x.pnl==null?'var(--mut)':(x.pnl>=0?'var(--grn)':'var(--red)')}">${x.pnl==null?'—':(x.pnl>=0?'+':'')+'$'+(+x.pnl).toFixed(2)}</td></tr>`).join("")
+  $("pos").innerHTML=p.map(x=>`<tr><td class="font-semibold text-primary">${x.symbol}</td>
+    <td class="${x.side.toLowerCase()} font-semibold">${x.side}</td>
+    <td class="num">$${(+x.notional).toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+    <td class="num" style="color:${x.pnl==null?'var(--mut)':(x.pnl>=0?'var(--grn)':'var(--red)')}">${x.pnl==null?'—':(x.pnl>=0?'+':'')+'$'+(+x.pnl).toFixed(2)}</td></tr>`).join("")
     ||`<tr><td colspan=4 style="color:var(--mut)">sin posiciones</td></tr>`;
   $("pos-src").textContent=p.length&&p[0].source==="target"
     ?"⏳ mostrando el OBJETIVO (aún sin fills reales o en simulación)":(p.length?"✓ posiciones reales en Binance":"");
-  // long/short/net
   let L=0,S=0; p.forEach(x=>{x.side==="LONG"?L+=+x.notional:S+=+x.notional});
   $("x-long").textContent=usd(L); $("x-short").textContent=usd(S);
-  const net=L-S; $("x-net").textContent=(net>=0?"+":"-")+usd(Math.abs(net)); $("x-net").style.color=net>=0?"var(--grn)":"var(--red)";
-  // pnl por posición (solo si hay PnL real)
+  const net=L-S; $("x-net").textContent=(net>=0?"+":"-")+usd(Math.abs(net));
   const wp=p.filter(x=>x.pnl!=null).sort((a,b)=>b.pnl-a.pnl);
   loadPnl(wp);
 }
 function loadPnl(wp){
   if(!wp.length){if(pnlchart){pnlchart.destroy();pnlchart=null;} return;}
   const labels=wp.map(x=>x.symbol.replace("USDT","")), data=wp.map(x=>+(+x.pnl).toFixed(2));
-  const colors=data.map(v=>v>=0?"#3fb950":"#f85149");
+  const colors=data.map(v=>v>=0?"#006b57":"#ba1a1a");
   if(pnlchart){pnlchart.data.labels=labels;pnlchart.data.datasets[0].data=data;pnlchart.data.datasets[0].backgroundColor=colors;pnlchart.update("none");return;}
   pnlchart=new Chart($("pnlchart"),{type:"bar",
     data:{labels,datasets:[{data,backgroundColor:colors}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
       tooltip:{callbacks:{label:c=>"$"+c.parsed.y}}},
-      scales:{x:{ticks:{color:"#8b949e",font:{size:10},maxRotation:90,minRotation:60}},
-        y:{ticks:{color:"#8b949e",callback:v=>"$"+v}}}}});
+      scales:{x:{ticks:{color:"#75777e",font:{size:10},maxRotation:90,minRotation:60},grid:{display:false}},
+        y:{ticks:{color:"#75777e",callback:v=>"$"+v},grid:{color:"rgba(20,33,61,.06)"}}}}});
 }
 async function loadDaily(){
   const d=await j("/api/daily")||[];
-  $("daily").innerHTML=d.map(x=>`<tr><td>${x.day}</td>
-    <td>$${(+x.equity).toLocaleString(undefined,{maximumFractionDigits:2})}</td>
-    <td class="${x.ret_pct>=0?'long':'short'}">${(x.ret_pct>=0?'+':'')+(+x.ret_pct).toFixed(2)}%</td>
-    <td style="color:var(--mut)">${(+x.dd_pct).toFixed(2)}%</td></tr>`).join("")
+  $("daily").innerHTML=d.map(x=>`<tr><td class="font-medium text-primary">${x.day}</td>
+    <td class="num">$${(+x.equity).toLocaleString(undefined,{maximumFractionDigits:2})}</td>
+    <td class="num ${x.ret_pct>=0?'long':'short'}">${(x.ret_pct>=0?'+':'')+(+x.ret_pct).toFixed(2)}%</td>
+    <td class="num" style="color:var(--mut)">${(+x.dd_pct).toFixed(2)}%</td></tr>`).join("")
     ||`<tr><td colspan=4 style="color:var(--mut)">aún sin días registrados</td></tr>`;
 }
 async function loadLogs(){
   const l=await j("/api/logs?limit=150&level="+lv)||[];
   $("logs").innerHTML=l.map(x=>`<div class="log"><span class="t">${x.time}</span>
     <span class="lv-${x.level}">[${x.level}]</span><span class="cat">${x.category}</span>
-    <span>${x.title}</span></div>`).join("")||`<div style="color:var(--mut)">sin logs</div>`;
+    <span>${x.title}</span></div>`).join("")||`<div style="color:#7c89aa">sin logs</div>`;
 }
 async function loadChart(){
   const e=await j("/api/equity")||[]; if(!e.length)return;
   const labels=e.map(x=>x.time), data=e.map(x=>x.equity);
-  // drawdown desde el pico
   let peak=-Infinity; const dd=data.map(v=>{peak=Math.max(peak,v);return +((v/peak-1)*100).toFixed(3)});
+  const grid={color:"rgba(20,33,61,.06)"};
   if(chart){chart.data.labels=labels;chart.data.datasets[0].data=data;chart.update("none");}
   else chart=new Chart($("chart"),{type:"line",data:{labels,datasets:[{label:"equity",data,
-    borderColor:"#58a6ff",backgroundColor:"#58a6ff22",tension:.2,pointRadius:0,fill:true}]},
+    borderColor:"#006b57",backgroundColor:"rgba(0,107,87,.08)",borderWidth:2,tension:.2,pointRadius:0,fill:true}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},
-    scales:{x:{ticks:{color:"#8b949e",maxTicksLimit:12}},y:{ticks:{color:"#8b949e"}}}}});
+    scales:{x:{ticks:{color:"#75777e",maxTicksLimit:12},grid:{display:false}},y:{ticks:{color:"#75777e"},grid}}}});
   if(ddchart){ddchart.data.labels=labels;ddchart.data.datasets[0].data=dd;ddchart.update("none");}
   else ddchart=new Chart($("ddchart"),{type:"line",data:{labels,datasets:[{label:"drawdown",data:dd,
-    borderColor:"#f85149",backgroundColor:"#f8514922",tension:.2,pointRadius:0,fill:true}]},
+    borderColor:"#ba1a1a",backgroundColor:"rgba(186,26,26,.12)",borderWidth:1.5,tension:.2,pointRadius:0,fill:true}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},
       tooltip:{callbacks:{label:c=>c.parsed.y+"%"}}},
-    scales:{x:{ticks:{color:"#8b949e",maxTicksLimit:12}},y:{ticks:{color:"#8b949e",callback:v=>v+"%"},max:0}}}});
+    scales:{x:{ticks:{color:"#75777e",maxTicksLimit:12},grid:{display:false}},y:{ticks:{color:"#75777e",callback:v=>v+"%"},max:0,grid}}}});
 }
 function refresh(){loadStatus();loadPos();loadLogs();loadChart();loadDaily();loadHealth();loadReport()}
 refresh(); setInterval(refresh,10000);

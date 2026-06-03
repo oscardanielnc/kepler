@@ -1,5 +1,5 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-03** (mañana, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-03** (sesión integración frontend Stitch, hora Lima).
 >
 > **🧭 PLAN A SEGUIR = `ROADMAP.md` §RUTA MAESTRA 2026-06 (Operación → Producto → Escala).** Cambio de
 > fase: la caza de alfa GRATIS está AGOTADA (verificado a fondo); la palanca ahora es OPERACIÓN + PRODUCTO
@@ -7,21 +7,29 @@
 > ROBUSTEZ OPERATIVA (prioridad, el incidente de hoy probó que es el riesgo #1)** · Fase 2 producto/track
 > · Fase 3 escala. IA = herramienta operativa, NO alfa. Negocio = copy-lead. (Memorias `kepler-news-ia-bots-decision`.)
 >
-> **⏭️ PRÓXIMA EJECUCIÓN (2026-06-03):**
->   1. **VERIFICAR EL DEPLOY de anoche** (Oscar despliega la Fase 1 pasos 1-4 + ruta maestra; ~9 commits
->      desde el último deploy). En la VM tras desplegar: confirmar en `journalctl -u kepler` que un ciclo
->      corre y registra `audit checks: OK` (categoría `checks`), SIN falso-bloqueo en DEMO, y heartbeat OK.
->   2. ✅ **Fase 1 PASO 5 HECHO (F1.4): salud + reporte diario en el DASHBOARD** (no PDF — decisión Oscar:
->      interactivo > documento; el PDF queda para Fase 2/outbound). Reusó TODO lo persistido (cero cálculo
->      nuevo, cero IA): 3 endpoints + 2 tarjetas. **PENDIENTE PUSH+DEPLOY** + revisión visual. → **Fase 1 CERRADA.**
->   3. Luego → Fase 2 (producto/track) cuando la DEMO acumule semanas.
+> **⏭️ PRÓXIMA EJECUCIÓN (tras 2026-06-03):**
+>   1. **PUSH + DEPLOY (Oscar)** de TODOS los commits locales de hoy (Fase 1 pasos 1-5 + Fase 2 F2.1/2.2/2.3
+>      + docs). En la VM tras desplegar: `journalctl -u kepler` → ciclo con `audit checks: OK`, sin
+>      falso-bloqueo en DEMO, heartbeat OK; revisar dashboard y la nueva página `/track`.
+>   2. **REDISEÑO FRONTEND con Stitch → ✅ HECHO (2026-06-03, commits locales pendientes PUSH+DEPLOY).**
+>      `dashboard.html` + `track.html` reconstruidos sobre el sistema de diseño *Kepler Institutional*
+>      (claro, sobrio, premium; serif Source Serif 4 + Inter + JetBrains Mono tabular). Cableado de datos
+>      vivo INTACTO (mismos `id`, fetch + Chart.js a todos los `/api`). Al desplegar: abrir `/` y `/track`
+>      y confirmar que se ven con el nuevo estilo. (Detalle en ESTADO ACTUAL abajo.)
+>   3. **Activar copy-lead (F2.3)** cuando el track real lo respalde (checklist en `COPYLEAD.md`).
 >   En paralelo corre solo: Fase 0 (E1 DEMO + sombras→sleeve #8 ~2026-07-31 + C3 slippage real).
 >
-> **ESTADO FASE 1 (robustez operativa, code-first, CERO IA):** pasos 1-5 HECHOS y verificados (1-4 DRY_RUN;
-> 5 vía TestClient): guarda pre-trade que bloquea+avisa en CRÍTICO · health-check runtime en heartbeat ·
-> reanudación rápida · monitor de correlación de sleeves · **salud+reporte diario en el dashboard (F1.4)**.
-> 1 bug cazado y corregido (sleeve_corr read-only). **PENDIENTE PUSH+DEPLOY (Oscar) — hasta desplegar, las
-> guardas NO protegen el vivo y el dashboard nuevo no se ve.** **Fase 1 completa, pendiente solo deploy.**
+> **🎨 COMANDO PARA LA SESIÓN DE INTEGRACIÓN DE DISEÑOS (pegar cuando los diseños de Stitch estén listos):**
+> _"Ya tengo los diseños en Stitch. Trae las pantallas por el MCP de Stitch (`get_screen_code` +
+> `get_screen_image`), intégralas en `dashboard.html` y `track.html` respetando la doctrina de diseño
+> (`kepler-design-doctrine`: elegante/premium, NO casino), y MANTÉN todo el cableado de datos vivo (Chart.js
+> + fetch a los `/api`). Lee `DESIGN_BRIEF.md` §Notas de integración antes de empezar."_
+>
+> **ESTADO FASES (2026-06-03):** **Fase 1 (robustez) CERRADA** (pasos 1-5, verificados). **Fase 2 núcleo
+> HECHO** (F2.1 `/api/track` + F2.2 `/track` + F2.3 research copy-lead `COPYLEAD.md`); queda activar copy-lead
+> con track real + el rediseño visual con Stitch. **TODO en commits locales — PENDIENTE PUSH+DEPLOY (Oscar);
+> hasta desplegar, las guardas NO protegen el vivo y el frontend nuevo no se ve.** C2 cerrado (ya hecho por
+> construcción; banda no-trade diferida a AUM). USDC aparcado (solo maker + promo, no game-changer).
 >
 > **Estado del sistema en PRODUCCIÓN (DESPLEGADO y verificado en vivo 2026-06-02 tarde):** 7 sleeves · ancla
 > −10% · **lev 2.23x** (vol-anchor e68, tras incidente sobre-leverage 2.93x→2.23x) · haircut 0.95 · **cap
@@ -31,6 +39,25 @@
 > **⏰ RECORDATORIO ~2026-07-31:** cerrar ciclo sombras (≥60-90d → `e33_shadow_tvl_analyze` → ¿sleeve #8?).
 
 ---
+
+## ESTADO ACTUAL (2026-06-03)
+- 🎨 **SESIÓN FRONTEND (2026-06-03): rediseño Stitch integrado en `dashboard.html` + `track.html`.**
+  Tomadas las 2 pantallas del proyecto Stitch *Kepler Institutional Design System* (vía MCP) y reescritas
+  ambas páginas con su sistema de diseño (tema CLARO institucional ivory/navy, tarjetas hairline, **Source
+  Serif 4** titulares + **Inter** cuerpo + **JetBrains Mono** tabular en cifras; color solo semántico:
+  teal=ganancia, rojo=pérdida, oro=aviso). **Doctrina respetada** (`kepler-design-doctrine`): premium, NO casino.
+  - **Cableado de datos VIVO intacto:** mismos `id`, mismo bucle fetch + auto-refresh, mismas gráficas Chart.js
+    (equity, drawdown, doughnut 7 sleeves, PnL, heatmap mensual) — solo re-estilizadas a los tokens. Endpoints
+    sin tocar (`/api/status|health|daily_report|positions|daily|equity|logs|track`).
+  - **Aparté del mock de Stitch** (por §Notas de `DESIGN_BRIEF.md` + honestidad): quité sidebar/nav falsa
+    (Strategies/Compliance/etc.), claim "Member FINRA/SIPC", botón "Trade", tarjeta "Platinum Quant" y fotos
+    decorativas. Quité la dependencia de icon-font Material Symbols (fallaba mostrando el nombre del icono como
+    texto) → glifos simples (✓ ⚠ ●). Dependencia nueva: **Tailwind por CDN** (+ Chart.js que ya estaba).
+  - **Verificado sin bugs:** levanté la API local y rendericé `/` y `/track` en Chrome headless → ambas cargan,
+    fetchean datos reales y dibujan todas las gráficas sin errores JS. Archivos siguen autocontenidos (1 .html).
+  - **PENDIENTE (Oscar):** PUSH+DEPLOY y mirar `/` y `/track` en la VM. Futuro (anotado, no urgente): ampliar
+    el bloque "cómo se gestiona el riesgo" y algún contenido más en `/track`.
+- ❗ **PENDIENTE de housekeeping:** `.mcp.json` y `DESIGN_BRIEF.md` siguen sin commitear (untracked).
 
 ## ESTADO ACTUAL (2026-06-02)
 - 🟢 **SESIÓN DE RIESGO/CALIDAD (2026-06-02): D0 + D1 + concentración TRX + monedas finas — TODO cerrado.**
@@ -94,6 +121,23 @@
   Oscar pushea/despliega. Si hay un commit local de docs posterior, lo subirá la próxima vez.
 
 ---
+
+## CHANGELOG 2026-06-03 (mañana-5 — Rediseño frontend: Stitch MCP configurado + design briefs)
+Oscar quiere rediseñar el frontend con Google Stitch (sus diseños le gustan). Verificado: el MCP de Stitch
+existe e integra con Claude Code (`@_davideast/stitch-mcp`, community de David East; tools `build_site`/
+`get_screen_code`/`get_screen_image`). Decisión de flujo: **Oscar+Stitch hacen el diseño/estética; Claude
+integra el HTML en las páginas VIVAS y cablea los datos** (Stitch da el cascarón, no sabe de `/api` ni Chart.js).
+- **`.mcp.json`** creado (servidor stitch, API key por `${STITCH_API_KEY}` — NO en el repo). **Key de Oscar
+  configurada por Claude** (persistida como var de entorno de USUARIO en Windows, no en el repo) y **VERIFICADA**:
+  `npx @_davideast/stitch-mcp doctor` → "API Key Detected + Stitch API Healthy (200), All checks passed".
+  Pendiente Oscar: **reiniciar Claude Code** para que cargue el `.mcp.json` y aprobar el server → `/mcp` healthy.
+- **`DESIGN_BRIEF.md`** creado: 3 prompts listos para pegar en Stitch (§0 sistema de diseño → DESIGN.md;
+  §1 dashboard operativo; §2 track record) + notas de integración.
+- **🔑 Doctrina de diseño (memoria `kepler-design-doctrine`) — ACTUALIZADA (Oscar 2026-06-03):** NO tiene que
+  ser oscuro; **claro U oscuro**, lo que prime es **elegante/premium que inspire confianza a inversores de ALTO
+  CAPITAL** (estética banca privada / gestión de patrimonio). Sigue: NO casino, sobriedad, maxDD con tanto
+  orgullo como el retorno. Briefs actualizados a esa dirección (track tiende a premium en variante clara).
+- PENDIENTE: ejecutar el rediseño cuando Oscar tenga los diseños de Stitch (próxima sesión de frontend, "con calma").
 
 ## CHANGELOG 2026-06-03 (mañana-4 — FASE 2 / F2.1+F2.2: página de TRACK RECORD presentable → Fase 2 núcleo HECHO)
 Implementado lo que quedaba de Fase 2 (Oscar: USDC se aparca, no encaja/promocional). Code-first, cero IA.
