@@ -131,9 +131,7 @@ def run_shadow(db=None) -> dict:
                       score=(None if sc is None or np.isnan(sc) else round(sc, 6)),
                       detail={"asof": str(asof), "lookback_d": LOOKBACK_DAYS})
         n += 1
-    db.audit("INFO", "shadow_onchain", f"Sombra TVL registrada ({n} posiciones)",
-             detail={"sleeve": SLEEVE, "asof": str(asof)})
-    return {"logged": n, "asof": str(asof)}
+    return {"logged": n, "asof": str(asof)}   # confirmación consolidada por el orquestador (1 línea/ciclo)
 
 
 def _blend_target_weights():
@@ -189,9 +187,7 @@ def run_blend_shadow(db=None) -> dict:
         db.log_shadow(sleeve=BLEND_SLEEVE, symbol=sym, weight=round(float(wt), 4),
                       score=None, detail={"asof": str(asof)})
         n += 1
-    db.audit("INFO", "shadow_blend", f"Sombra BLEND registrada ({n} posiciones)",
-             detail={"sleeve": BLEND_SLEEVE, "asof": str(asof)})
-    return {"logged": n, "asof": str(asof)}
+    return {"logged": n, "asof": str(asof)}   # confirmación consolidada por el orquestador (1 línea/ciclo)
 
 
 # ─── SOMBRA on-chain TX (Coin Metrics Community, GRATIS sin key) — candidato a sleeve #8 DIRECTO ──────
@@ -302,9 +298,7 @@ def run_tx_shadow(db=None) -> dict:
                       score=(None if sc is None or np.isnan(sc) else round(sc, 6)),
                       detail={"asof": str(asof), "lookback_d": TX_LOOKBACK_D})
         n += 1
-    db.audit("INFO", "shadow_tx", f"Sombra tx_pxdiv registrada ({n} posiciones)",
-             detail={"sleeve": TX_SLEEVE, "asof": str(asof)})
-    return {"logged": n, "asof": str(asof)}
+    return {"logged": n, "asof": str(asof)}   # confirmación consolidada por el orquestador (1 línea/ciclo)
 
 
 # ─── SOMBRA on-chain MVRV (Coin Metrics) — 2º candidato a sleeve #8, de VALOR (≠ tx que es ACTIVIDAD) ──
@@ -406,9 +400,7 @@ def run_mvrv_shadow(db=None) -> dict:
                       score=(None if sc is None or np.isnan(sc) else round(sc, 6)),
                       detail={"asof": str(asof), "hold_d": MVRV_HOLD_D})
         n += 1
-    db.audit("INFO", "shadow_mvrv", f"Sombra mvrv_lvl registrada ({n} posiciones)",
-             detail={"sleeve": MVRV_SLEEVE, "asof": str(asof)})
-    return {"logged": n, "asof": str(asof)}
+    return {"logged": n, "asof": str(asof)}   # confirmación consolidada por el orquestador (1 línea/ciclo)
 
 
 if __name__ == "__main__":

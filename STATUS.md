@@ -100,8 +100,15 @@
     `start`/`end` y filtra por bounds del día local; (c) **descarga movida del header a la sección de logs**:
     "⬇ Descargar rango" (día concreto o rango, vía `/api/download?start&end`) + "⬇ Todo" (histórico). El
     header queda limpio (solo Track record). Resuelve el descargar logs de un día/rango específico.
-- ⚠️ **1 gap secundario (NO urgente):** telemetría de slippage tiene basura (un `slip_bps` de −742) → el
-  winsor (e70) no la filtra en el valor guardado; solo afecta el reporte, no la equity.
+- ✅ **SLIPPAGE BASURA + RUIDO DE LOG limpiados (2026-06-03):**
+  - **Slippage −742bps:** era LEGADO (fills previos al winsor e70). El winsor en vivo (`SLIP_SANITY_BPS=200`)
+    ya lo evita; añadí **limpieza idempotente en `DB.__init__`** que anula `slip_bps` con `|slip|>200` (one-shot
+    al desplegar). Verificado: −742→NULL, 12.5 y −199 intactos.
+  - **Ruido de log:** las 4 audit INFO de sombra por ciclo ("Sombra X registrada (N pos)") = ~60% del log y
+    NO validan nada (la validación vive en la tabla `shadow_signal`, la analiza e33). Quitadas de `onchain.py`;
+    el orquestador deja **UNA** línea/ciclo de pulso (`Sombras registradas: TVL.. BLEND.. tx.. mvrv..`). Las
+    WARNING por sombra fallida (omitida/sin datos) **permanecen** (son banderas reales). Log ahora = ciclos +
+    checks + engine + 1 pulso de sombra + errores/avisos. Sin perder datos (shadow_signal intacta).
 - ❗ **PENDIENTE de housekeeping:** `.mcp.json` y `DESIGN_BRIEF.md` siguen sin commitear (untracked).
 
 ## ESTADO ACTUAL (2026-06-02)

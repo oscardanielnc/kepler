@@ -89,6 +89,10 @@ class DB:
         for col in ("ref_px REAL", "slip_bps REAL"):
             try: self.conn.execute(f"ALTER TABLE trades ADD COLUMN {col}")
             except Exception: pass
+        # limpieza idempotente: anula slip_bps BASURA (|slip|>200bps = book_mid de ref corrupto, no
+        # slippage real de un maker GTX). El winsor en vivo (orchestrator.SLIP_SANITY_BPS) ya lo evita,
+        # pero quedaron valores legado de fills previos a e70 (p.ej. −742bps del 2026-06-02). Una sola pasada.
+        self.conn.execute("UPDATE trades SET slip_bps=NULL WHERE slip_bps IS NOT NULL AND ABS(slip_bps)>200")
         self.conn.commit()
 
     # ── escritura ──────────────────────────────────────────────────────────

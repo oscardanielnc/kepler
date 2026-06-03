@@ -374,19 +374,20 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
     #    point-in-time, e26/e27). Totalmente aislado: si falla, no afecta el ciclo que opera.
     try:
         from kepler import onchain
-        sh = onchain.run_shadow(db)
-        _log.info(f"[orq] sombra on-chain TVL: {sh.get('logged', 0)} señales registradas")
-        # blend candidato a sleeve #8 (lotería+tvl+illiq, e40/e41): valida forward antes de promover
-        shb = onchain.run_blend_shadow(db)
-        _log.info(f"[orq] sombra BLEND: {shb.get('logged', 0)} señales registradas")
-        # tx_pxdiv_14d (Coin Metrics, e59/e60/e61): candidato a sleeve #8 DIRECTO (más fuerte que el TVL)
-        sht = onchain.run_tx_shadow(db)
-        _log.info(f"[orq] sombra tx_pxdiv: {sht.get('logged', 0)} señales registradas")
-        # mvrv_lvl (Coin Metrics, e65/e66): 2º candidato on-chain, de VALOR (ortogonal a tx; corr +0.02)
-        shm = onchain.run_mvrv_shadow(db)
-        _log.info(f"[orq] sombra mvrv_lvl: {shm.get('logged', 0)} señales registradas")
+        sh = onchain.run_shadow(db)         # TVL (e26/e27)
+        shb = onchain.run_blend_shadow(db)  # blend candidato sleeve #8 (lotería+tvl+illiq, e40/e41)
+        sht = onchain.run_tx_shadow(db)     # tx_pxdiv_14d (Coin Metrics, e59/e60/e61) — candidato directo
+        shm = onchain.run_mvrv_shadow(db)   # mvrv_lvl (Coin Metrics, e65/e66) — valor, ortogonal a tx
+        # UNA línea de confirmación por ciclo (antes 4 audit/ciclo = ~60% del log eran confirmaciones de
+        # sombra que no validan nada). La validación real vive en la tabla shadow_signal (la analiza e33);
+        # aquí solo dejamos un pulso de salud. Las WARNING por sombra fallida siguen saltando individualmente.
+        summ = (f"TVL {sh.get('logged',0)} · BLEND {shb.get('logged',0)} · "
+                f"tx {sht.get('logged',0)} · mvrv {shm.get('logged',0)}")
+        _log.info(f"[orq] sombras registradas: {summ}")
+        db.audit("INFO", "shadow", f"Sombras registradas: {summ}")
     except Exception as e:
         _log.warning(f"[orq] sombra on-chain omitida: {e}")
+        db.audit("WARNING", "shadow", f"Sombras omitidas: {str(e)[:120]}")
     notify.alert_cycle(equity, n_target, float(target.abs().sum()), operate, mode)
     return {"equity": equity, "n_target": n_target, "operate": operate, "mode": mode}
 
