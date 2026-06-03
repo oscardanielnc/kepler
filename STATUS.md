@@ -109,6 +109,16 @@
     el orquestador deja **UNA** línea/ciclo de pulso (`Sombras registradas: TVL.. BLEND.. tx.. mvrv..`). Las
     WARNING por sombra fallida (omitida/sin datos) **permanecen** (son banderas reales). Log ahora = ciclos +
     checks + engine + 1 pulso de sombra + errores/avisos. Sin perder datos (shadow_signal intacta).
+- 🛣️ **RUTA DE SALIDA A COPY-LEAD acordada (2026-06-03) → documentada en `ROADMAP.md §RUTA DE SALIDA` +
+  `COPYLEAD.md §Mecánica de cuenta lead`.** Resumen: DEMO limpio ~3-4 sem (gate = 0 incidentes 30d + costes≈
+  backtest + β≈0/DD ok) → Binance capital PROPIO chico (aquí arranca el track real, ~4-8 sem) → copy-lead
+  modesto → escalar. El reloj de credibilidad corre en REAL, no en DEMO → no alargar la DEMO. Una sola
+  plataforma al inicio (Binance; el track no se transfiere entre exchanges).
+- 📐 **PRINCIPIO DE EVALUACIÓN CON BUGS (acordado, no eliminar/ocultar nada):** los tramos con bug quedan como
+  aprendizaje. **PENDIENTE de implementar cuando Oscar pida analizar las 3-4 sem:** marcador de inicio limpio
+  (`2026-06-04`, post-fix churn) y/o exclusión de rangos con bug en `/api/track`, SIEMPRE etiquetado ("desde
+  operación estable"). Sharpe con <30-60d = ruido; el −9.69 del tramo 06-02 no juzga el edge. Detalle en
+  `ROADMAP.md §PRINCIPIO DE EVALUACIÓN CON BUGS`.
 - ❗ **PENDIENTE de housekeeping:** `.mcp.json` y `DESIGN_BRIEF.md` siguen sin commitear (untracked).
 
 ## ESTADO ACTUAL (2026-06-02)

@@ -23,6 +23,25 @@
 | **Bitget** | por tier | hasta 20% (Legend); 30% 14d nuevos | 50 USDT | — | Comunidad copy más grande (~190k traders) |
 | **OKX** | — | hasta 30% comisión | 50 USDT | — | Métricas de riesgo detalladas en el perfil |
 
+## Mecánica de la cuenta lead — ¿qué métricas se muestran? (re-verificar 2026-06)
+- **NO es tu histórico personal.** En todas, el copy-lead opera desde un **portafolio/cuenta de "lead
+  trading" DEDICADO**, separado de tu trading personal. Las métricas públicas (ROI, PnL, maxDD, AUM, días,
+  win-rate) se calculan **desde que te das de alta como lead, sobre ESA cuenta** — no tus trades previos ni
+  otras cuentas. ✅ **Ventaja para Kepler:** arranque limpio (el tramo con bug de la DEMO NUNCA toca el track
+  real), y controlas exactamente qué capital/qué libro se mide. Binance: el lead usa un wallet de copy
+  dedicado; el track = ese wallet desde el día 1 de lead.
+- **¿Una o varias estrategias por cuenta?** Binance ≈ **un perfil de lead por cuenta** y **una cuenta por
+  KYC** → no puedes correr 2 servicios independientes bajo la misma identidad; para 2 estrategias distintas
+  harían falta 2 cuentas (difícil en una identidad) o 2 plataformas. Algunas (Bitget/OKX) históricamente
+  permiten varios "portafolios/estrategias" por trader — **re-verificar**. Para Kepler da igual: hay **UNA
+  estrategia** (7 sleeves), no necesitamos multi-estrategia.
+- **¿Igual en todas?** El MODELO es el mismo (cuenta lead dedicada, métricas desde el inicio del lead). Lo
+  que **difiere**: settlement, HWM, % de profit-share, mínimos y si permiten múltiples estrategias (ver tabla).
+- **¿Solo Binance o varias plataformas?** Empezar con **UNA (Binance)**: mayor audiencia + el bot ya corre
+  ahí. **El track NO se transfiere entre plataformas** — cada una se construye desde cero, con su propio
+  capital y ops. Abrir en 2 a la vez = duplicar capital/atención y partir 2 tracks de cero. → **Probar en
+  Binance primero; expandir a una 2ª (p.ej. Bybit Pro: hasta 30% + ranking por maxDD) cuando esté probado.**
+
 ## Cautelas mecánicas (lo que hay que diseñar en el libro)
 1. **Fragmentación de margen en seguidores chicos.** Copy mínimo 10-100 USDT replicando ~20 posiciones →
    cada una minúscula → choca con el **mínimo notional por orden** en algunos símbolos → tracking error.

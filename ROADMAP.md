@@ -28,6 +28,34 @@
 - **F0.3 · C3 slippage real:** telemetría ya limpia (winsor ZEC). Recalibrar el modelo de coste con fills
   reales cuando se acumulen (`e21_fill_slippage <db>`).
 
+### 🛣️ RUTA DE SALIDA A COPY-LEAD (acordada con Oscar 2026-06-03)
+El cuello de botella NO es "terminar el proyecto" (ya casi no hay qué hacer salvo correr); es acumular
+**TIEMPO con el sistema OPERATIVAMENTE ESTABLE**. Las 4 sombras + el pulido corren en paralelo, NO bloquean.
+| Etapa | Duración | Gate de salida (objetivo) |
+|---|---|---|
+| **DEMO limpio** (ahora) | ~3-4 semanas | (a) 0 incidentes operativos en 30d · (b) slippage/fees reales ≈ backtest (ya medible con el accounting de costes) · (c) β≈0 y maxDD dentro de presupuesto |
+| **Binance capital PROPIO chico** | al pasar el gate | AQUÍ arranca el track que cuenta; ~4-8 sem en real antes de abrir copy. Real ≠ demo (slippage/funding/fills/liquidez reales) → primero TU dinero, no el de seguidores |
+| **Copy-lead** | tras ~1-2 meses reales de bajo-DD | abrir modesto → escalar con el track |
+- **Insight de compresión:** el reloj de credibilidad de seguidores (≥3-6 meses, COPYLEAD) corre sobre la
+  cuenta **REAL de Binance, NO sobre la DEMO**. Cada día extra en DEMO pasada la validación operativa es reloj
+  desperdiciado → DEMO corta, mover a real cuanto antes. **Copy-lead creíble en ~3 meses, no 6.**
+- **Por qué propio antes que copy:** la primera impresión del copy-lead es **IRREVERSIBLE**. Acabamos de
+  encontrar 2 bugs (leverage 06-02 + churn por reinicio) → confirmar que las correcciones aguantan ANTES de
+  arriesgar dinero/reputación real.
+
+### 📐 PRINCIPIO DE EVALUACIÓN CON BUGS (acordado 2026-06-03) — la honestidad ES el producto
+- **No se elimina ni se oculta NADA.** Los tramos con bug quedan en el registro como **APRENDIZAJE**.
+- Al analizar las 3-4 semanas de DEMO, **considerar los bugs**: calcular métricas "limpias" desde
+  `2026-06-04` (post-fix del churn) **o excluyendo fechas con bug conocido**, SIEMPRE etiquetado ("desde
+  operación estable" / "excluye días X por bug Y corregido Z"). Es el estándar honesto *"since inception of
+  stable operation"*, no esconder. (Implementación pendiente cuando Oscar pida el análisis: marcador de
+  fecha de inicio limpio + exclusión de rangos, en `/api/track`.)
+- **Sharpe/maxDD con <30-60 días = RUIDO**; no decidir el edge con pocos días (el −9.69 del tramo 06-02 NO
+  dice nada del sistema). El peligro real NO es el bug, es **el hábito de resetear cuando algo se ve feo** →
+  eso destruye la credibilidad. Reiniciar el reloj solo por razón documentada y **una sola vez**.
+- La DEMO es **ENSAYO desechable**; el track que ven los inversores arranca **FRESCO en Binance** → el bug
+  de DEMO no mancha el track real.
+
 ## FASE 1 — ROBUSTEZ OPERATIVA  ← PRIORIDAD ALTA (barato, protege TODO; el riesgo #1 hoy es operativo)
 > Motivo: el incidente 2026-06-02 (VM sobre-apalancada 2.93x por backfill faltante) probó que el riesgo
 > real ya NO es de alfa sino OPERATIVO. **TODO ESTO ES CÓDIGO DETERMINÍSTICO — CERO IA** (chequeos por
