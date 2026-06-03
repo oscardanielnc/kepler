@@ -1,5 +1,5 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-03** (sesión integración frontend Stitch, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-03** (cierre de sesión: frontend Stitch + 2 bugs operativos corregidos + accounting de costes + ruta copy-lead acordada, hora Lima).
 >
 > **🧭 PLAN A SEGUIR = `ROADMAP.md` §RUTA MAESTRA 2026-06 (Operación → Producto → Escala).** Cambio de
 > fase: la caza de alfa GRATIS está AGOTADA (verificado a fondo); la palanca ahora es OPERACIÓN + PRODUCTO
@@ -7,27 +7,24 @@
 > ROBUSTEZ OPERATIVA (prioridad, el incidente de hoy probó que es el riesgo #1)** · Fase 2 producto/track
 > · Fase 3 escala. IA = herramienta operativa, NO alfa. Negocio = copy-lead. (Memorias `kepler-news-ia-bots-decision`.)
 >
-> **⏭️ PRÓXIMA EJECUCIÓN (tras 2026-06-03):**
->   1. **PUSH + DEPLOY (Oscar)** de TODOS los commits locales de hoy (Fase 1 pasos 1-5 + Fase 2 F2.1/2.2/2.3
->      + docs). En la VM tras desplegar: `journalctl -u kepler` → ciclo con `audit checks: OK`, sin
->      falso-bloqueo en DEMO, heartbeat OK; revisar dashboard y la nueva página `/track`.
->   2. **REDISEÑO FRONTEND con Stitch → ✅ HECHO (2026-06-03, commits locales pendientes PUSH+DEPLOY).**
->      `dashboard.html` + `track.html` reconstruidos sobre el sistema de diseño *Kepler Institutional*
->      (claro, sobrio, premium; serif Source Serif 4 + Inter + JetBrains Mono tabular). Cableado de datos
->      vivo INTACTO (mismos `id`, fetch + Chart.js a todos los `/api`). Al desplegar: abrir `/` y `/track`
->      y confirmar que se ven con el nuevo estilo. (Detalle en ESTADO ACTUAL abajo.)
->   3. **Activar copy-lead (F2.3)** cuando el track real lo respalde (checklist en `COPYLEAD.md`).
->   En paralelo corre solo: Fase 0 (E1 DEMO + sombras→sleeve #8 ~2026-07-31 + C3 slippage real).
->
-> **🎨 COMANDO PARA LA SESIÓN DE INTEGRACIÓN DE DISEÑOS (pegar cuando los diseños de Stitch estén listos):**
-> _"Ya tengo los diseños en Stitch. Trae las pantallas por el MCP de Stitch (`get_screen_code` +
-> `get_screen_image`), intégralas en `dashboard.html` y `track.html` respetando la doctrina de diseño
-> (`kepler-design-doctrine`: elegante/premium, NO casino), y MANTÉN todo el cableado de datos vivo (Chart.js
-> + fetch a los `/api`). Lee `DESIGN_BRIEF.md` §Notas de integración antes de empezar."_
+> **⏭️ PRÓXIMA EJECUCIÓN (tras cierre 2026-06-03):**
+>   1. **PUSH + DEPLOY (Oscar)** de los commits locales de hoy (4: `2034e74` frontend+robustez · `c009226`
+>      telemetría · `7609b9f` docs ruta · + el de cierre). En la VM tras desplegar: `journalctl -u kepler` →
+>      al reiniciar debe decir `último rebalanceo recuperado de la DB … no fuerza rebalanceo` (fix churn);
+>      ciclo con `checks: OK`, heartbeat OK; abrir `/` y `/track` con el estilo nuevo; la limpieza de slippage
+>      basura corre sola al instanciar la DB.
+>   2. **FASE 0 = DEMO LIMPIO ~3-4 semanas** (reloj limpio desde **2026-06-04**, post-fixes). Gate de salida:
+>      0 incidentes operativos en 30d + slippage/fees reales ≈ backtest + β≈0/maxDD dentro de presupuesto.
+>      **CADENCIA acordada: Oscar trae los logs CADA DÍA** → verificar estado, vigilar que no reaparezcan
+>      bugs, medir el edge en vivo (Sharpe/maxDD/β) con el PRINCIPIO DE EVALUACIÓN CON BUGS (`ROADMAP.md`).
+>   3. **Luego: Binance capital PROPIO chico** (arranca el track real) → **copy-lead** modesto → escala.
+>      Ruta completa + gates en `ROADMAP.md §RUTA DE SALIDA`; mecánica de cuenta lead en `COPYLEAD.md`.
+>   En paralelo corre solo: sombras→sleeve #8 (~2026-07-31) + C3 slippage real.
 >
 > **ESTADO FASES (2026-06-03):** **Fase 1 (robustez) CERRADA** (pasos 1-5, verificados). **Fase 2 núcleo
-> HECHO** (F2.1 `/api/track` + F2.2 `/track` + F2.3 research copy-lead `COPYLEAD.md`); queda activar copy-lead
-> con track real + el rediseño visual con Stitch. **TODO en commits locales — PENDIENTE PUSH+DEPLOY (Oscar);
+> HECHO** (F2.1 `/api/track` + F2.2 `/track` + F2.3 research copy-lead `COPYLEAD.md` + **rediseño Stitch YA
+> hecho** + ruta de salida acordada/documentada); queda solo **acumular track real** y activar copy-lead.
+> **TODO en commits locales — PENDIENTE PUSH+DEPLOY (Oscar);
 > hasta desplegar, las guardas NO protegen el vivo y el frontend nuevo no se ve.** C2 cerrado (ya hecho por
 > construcción; banda no-trade diferida a AUM). USDC aparcado (solo maker + promo, no game-changer).
 >
