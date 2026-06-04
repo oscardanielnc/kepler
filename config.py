@@ -48,6 +48,11 @@ SLIPPAGE  = 0.0002     # 2 bps en órdenes a mercado (conservador)
 
 # ─── Riesgo / portafolio (dials — se calibran en backtest) ───────────────────
 CAPITAL_USD        = 5000.0    # ejemplo demo; todo el sizing es % del 100%
+# TRACK RECORD — inicio de la VENTANA LIMPIA para las métricas realizadas (Sharpe/maxDD/β en vivo).
+# Los días anteriores tuvieron bugs operativos (churn por reinicio, 06-02) y la equity era wallet,
+# no MTM → contaminan el número. El reloj honesto arranca con la operación estable post-fixes.
+# Regla ROADMAP §PRINCIPIO DE EVALUACIÓN CON BUGS: no se borra el pasado, se ETIQUETA y se excluye.
+TRACK_INCEPTION    = "2026-06-04"
 MAX_WEIGHT_NORMAL  = 0.25      # tope normal por activo (por-sleeve, pre vol-parity)
 # CAP de concentración del LIBRO COMBINADO (e69, Oscar 2026-06-02): el cap 0.25 es POR-SLEEVE; tras
 # combinar (vp·Σ) + leverage, un nombre puede acumular de varios sleeves (incidente: TRX 23% del equity

@@ -24,7 +24,7 @@ from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import config  # noqa
 from kepler.db import DB
-from kepler import execution
+from kepler import execution, track
 
 app = FastAPI(title="Kepler Dashboard")
 _DB = DB()
@@ -177,6 +177,7 @@ def track():
     Code-first, cero IA: Sharpe/Sortino/maxDD/vol/% meses+ realizados + retornos mensuales + narrativa
     templada honesta. El backtest se devuelve aparte y SIEMPRE etiquetado como referencia."""
     rows = _q("SELECT day,equity,ret_pct,dd_pct FROM equity_daily ORDER BY day ASC")
+    ticks = _q("SELECT ts,equity FROM equity_tick ORDER BY ts ASC")
     snap = _q("SELECT beta,gross,net,n_positions,detail FROM portfolio_snapshot ORDER BY ts DESC LIMIT 1")
     det = json.loads(snap[0]["detail"] or "{}") if snap else {}
     bt = det.get("backtest", {"sharpe": 2.07, "ann": 49.3, "maxdd": -10.0})
@@ -184,39 +185,30 @@ def track():
     if not rows:
         return {"days": 0, "inception": None, "backtest": bt, "beta": beta, "monthly": [],
                 "equity_curve": [], "narrative": "Track en construcción — la DEMO aún no registra días."}
-    eq0, eqN = rows[0]["equity"] or 0.0, rows[-1]["equity"] or 0.0
-    rets = [(r["ret_pct"] or 0.0) / 100.0 for r in rows]
-    n = len(rets)
-    mean = sum(rets) / n
-    sd = math.sqrt(sum((x - mean) ** 2 for x in rets) / n) if n > 1 else 0.0
-    downside = [x for x in rets if x < 0]
-    dd_sd = math.sqrt(sum(x * x for x in downside) / len(downside)) if downside else 0.0
-    sharpe = mean / sd * math.sqrt(365) if sd > 0 else 0.0
-    sortino = mean / dd_sd * math.sqrt(365) if dd_sd > 0 else 0.0
-    total_ret = (eqN / eq0 - 1) * 100 if eq0 else 0.0
-    ann = ((eqN / eq0) ** (365.0 / n) - 1) * 100 if (eq0 > 0 and eqN > 0) else 0.0
-    maxdd = min((r["dd_pct"] or 0.0) for r in rows)
-    pos_days = sum(1 for x in rets if x > 0) / n * 100
-    bym = {}
-    for r in rows:                          # rows vienen en orden cronológico → dict conserva el orden
-        m = r["day"][:7]
-        bym[m] = bym.get(m, 1.0) * (1 + (r["ret_pct"] or 0.0) / 100.0)
-    monthly = [{"month": m, "return": round((v - 1) * 100, 2)} for m, v in bym.items()]
-    pos_months = sum(1 for x in monthly if x["return"] > 0) / len(monthly) * 100 if monthly else 0.0
-    narrative = (f"DEMO · {n} día(s) en vivo desde {rows[0]['day']} · retorno total {total_ret:+.2f}% · "
-                 f"Sharpe realizado {sharpe:.2f} (referencia backtest {bt.get('sharpe')}) · "
-                 f"maxDD {maxdd:.2f}% (presupuesto −10%) · {pos_months:.0f}% meses+ · "
+    # Métricas HONESTAS sobre la VENTANA LIMPIA (desde config.TRACK_INCEPTION, post-fixes) + maxDD
+    # INTRADÍA de los ticks MTM. Si la ventana limpia aún no tiene días, cae a todo el historial (etiquetado).
+    daily_rows = [(r["day"], r["equity"], r["ret_pct"], r["dd_pct"]) for r in rows]
+    tick_rows = [(t["ts"], t["equity"]) for t in ticks]
+    m = track.realized(daily_rows, tick_rows, config.TRACK_INCEPTION)
+    clean = m.get("days", 0) > 0
+    if not clean:
+        m = track.realized(daily_rows, tick_rows, None)
+    narrative = (f"DEMO · {m['days']} día(s) en vivo desde {m['inception']}"
+                 f"{' (ventana limpia post-fixes)' if clean else ' (historial completo; ventana limpia aún vacía)'} · "
+                 f"retorno total {m['total_return']:+.2f}% · Sharpe realizado {m['sharpe']:.2f} "
+                 f"(referencia backtest {bt.get('sharpe')}) · maxDD {m['maxdd']:.2f}% "
+                 f"(intradía {m['maxdd_intraday']:.2f}%, presupuesto −10%) · {m['pos_months']:.0f}% meses+ · "
                  f"β {('%+.2f' % beta) if beta is not None else '—'}. "
                  f"Track en construcción — el número honesto se consolida con semanas, no con días.")
-    return {"days": n, "inception": rows[0]["day"],
-            "total_return": round(total_ret, 2), "ann_return": round(ann, 2),
-            "sharpe": round(sharpe, 2), "sortino": round(sortino, 2),
-            "vol_ann": round(sd * math.sqrt(365) * 100, 2),
-            "maxdd": round(maxdd, 2), "pos_days": round(pos_days, 1), "pos_months": round(pos_months, 1),
+    return {"days": m["days"], "days_all": len(rows), "inception": m["inception"], "clean_window": clean,
+            "total_return": m["total_return"], "ann_return": m["ann_return"],
+            "sharpe": m["sharpe"], "sortino": m["sortino"], "vol_ann": m["vol_ann"],
+            "maxdd": m["maxdd"], "maxdd_intraday": m["maxdd_intraday"], "maxdd_daily": m["maxdd_daily"],
+            "pos_days": m["pos_days"], "pos_months": m["pos_months"],
             "beta": beta, "gross": snap[0]["gross"] if snap else None,
             "net": snap[0]["net"] if snap else None,
             "n_positions": snap[0]["n_positions"] if snap else None,
-            "monthly": monthly, "backtest": bt,
+            "monthly": m["monthly"], "backtest": bt,
             "equity_curve": [{"day": r["day"], "equity": r["equity"]} for r in rows],
             "narrative": narrative}
 

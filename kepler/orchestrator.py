@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config  # noqa
-from kepler import fetch, execution, circuit_breaker, notify, checks
+from kepler import fetch, execution, circuit_breaker, notify, checks, track, monitor
 from kepler.engine import compute_target, TIERS, load as load_panel_close
 from kepler.portfolio import metrics as pf_metrics
 from kepler.db import DB
@@ -221,6 +221,32 @@ def _save_daily_report(db: DB, tier, mode, equity, target, lev, bt, operate):
                "slippage_real": slip, "costs": costs, "cb_operate": bool(operate),
                "backtest": {"sharpe": round(bt.get("sharpe", 0), 2), "ann": round(bt.get("ann", 0), 1),
                             "maxdd": round(bt.get("maxdd", 0), 1)}}
+    # MÉTRICAS DE TRACK REALIZADAS (A, ventana limpia + maxDD intradía MTM) — lo HONESTO, junto al backtest.
+    # Blindado: si falla, el reporte sale igual (no es crítico para operar).
+    live = None
+    try:
+        d_rows = db.conn.execute("SELECT day,equity,ret_pct,dd_pct FROM equity_daily ORDER BY day").fetchall()
+        t_rows = db.conn.execute("SELECT ts,equity FROM equity_tick ORDER BY ts").fetchall()
+        live = track.realized(d_rows, t_rows, config.TRACK_INCEPTION)
+        metrics["live"] = live
+    except Exception as e:
+        _log.warning(f"[report] métricas de track omitidas (no fatal): {e}")
+    # DIGEST DIARIO DE ANOMALÍAS (B) — vigila la watch-list, loguea y avisa en TRANSICIÓN.
+    dig = None
+    try:
+        brow = db.conn.execute("SELECT beta FROM portfolio_snapshot ORDER BY ts DESC LIMIT 1").fetchone()
+        dig = monitor.daily_digest(metrics, live, brow[0] if brow else None)
+        metrics["monitor"] = dig
+        lvl = {"CRIT": "CRITICAL", "WARN": "WARNING"}.get(dig["severity"], "INFO")
+        db.audit(lvl, "monitor", f"Monitor diario: {dig['severity']}", detail=dig)
+        if dig["severity"] in ("WARN", "CRIT") and dig["severity"] != _last_check_severity(db, "monitor"):
+            notify.alert_checks_warn("Monitor diario — " + dig["summary"])
+    except Exception as e:
+        _log.warning(f"[report] monitor diario omitido (no fatal): {e}")
+    live_txt = ""
+    if live and live.get("days", 0) >= 1:
+        live_txt = (f"track {live['days']}d Sharpe {live.get('sharpe')} maxDD {live.get('maxdd')}% "
+                    f"(desde {live.get('inception')}) · ")
     narr = (f"{mode} {tier} · ${float(equity):.0f} ({ret_pct:+.2f}% hoy, dd {dd_pct:.2f}%) · "
             f"{npos} pos gross {gross:.2f} net {net:+.2f} lev {lev:.2f}x · "
             + (f"slip med {slip['median_bps']}bps (peor {slip['worst_sym']} {slip['worst_bps']}) · " if slip else "slip s/d · ")
@@ -228,7 +254,9 @@ def _save_daily_report(db: DB, tier, mode, equity, target, lev, bt, operate):
             + (f" funding ${costs['funding']:.2f}" if costs['funding'] is not None else "")
             + f" realizado ${costs['realized_pnl']:.2f} · "
             + (f"top {top['symbol']} {top['weight']*100:.0f}% · " if top else "")
-            + f"{cycles} ciclos hoy · CB {'OK' if operate else 'HALT'}")
+            + live_txt
+            + f"{cycles} ciclos hoy · CB {'OK' if operate else 'HALT'}"
+            + (f" · 🩺 {dig['severity']}" if dig and dig["severity"] != "OK" else ""))
     db.save_daily_report(day, metrics, narr)
     return narr
 
