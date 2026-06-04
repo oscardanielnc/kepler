@@ -72,7 +72,7 @@ tailwind.config={darkMode:"class",theme:{extend:{
   <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-md">
     <div class="kpi"><p class="lbl mb-1">Retorno total</p><div class="v" id="k-tot">—</div><div class="ref">acumulado</div></div>
     <div class="kpi"><p class="lbl mb-1">Sharpe realizado</p><div class="v" id="k-sh">—</div><div class="ref" id="k-sh-ref"></div></div>
-    <div class="kpi"><p class="lbl mb-1">Máx. drawdown</p><div class="v" id="k-dd">—</div><div class="ref">presupuesto −10%</div></div>
+    <div class="kpi"><p class="lbl mb-1">Máx. drawdown</p><div class="v" id="k-dd">—</div><div class="ref" id="k-dd-ref">presupuesto −10%</div></div>
     <div class="kpi"><p class="lbl mb-1">Meses positivos</p><div class="v" id="k-mo">—</div><div class="ref">consistencia</div></div>
     <div class="kpi"><p class="lbl mb-1">β vs BTC</p><div class="v" id="k-beta">—</div><div class="ref">≈0 = market-neutral</div></div>
     <div class="kpi"><p class="lbl mb-1">Días en vivo</p><div class="v" id="k-days">—</div><div class="ref">ejecución continua</div></div>
@@ -89,12 +89,15 @@ tailwind.config={darkMode:"class",theme:{extend:{
         <span class="flex items-center gap-1 lbl"><span class="w-3 h-3 rounded-full" style="background:var(--grn)"></span> Kepler live</span>
       </div>
       <div style="position:relative;height:340px;width:100%"><canvas id="eqchart"></canvas></div>
+      <p class="ref num mt-2" id="eq-caption" style="font-size:10px;color:var(--mut)"></p>
     </div>
     <div class="card lg:col-span-4">
       <h4 class="lbl border-b border-[color:var(--bd)] pb-2 mb-3">Métricas secundarias</h4>
       <div class="sec-row" style="border-top:none"><span class="k">Retorno anualizado*</span><span class="v" id="k-ann">—</span></div>
       <div class="sec-row"><span class="k">Sortino realizado</span><span class="v" id="k-sortino">—</span></div>
       <div class="sec-row"><span class="k">Volatilidad anual.</span><span class="v" id="k-vol">—</span></div>
+      <div class="sec-row"><span class="k">maxDD intradía (MTM)</span><span class="v" id="k-dd-intra">—</span></div>
+      <div class="sec-row"><span class="k">maxDD cierre diario</span><span class="v" id="k-dd-daily">—</span></div>
       <div class="sec-row"><span class="k">Días positivos</span><span class="v" id="k-posd">—</span></div>
       <div class="sec-row"><span class="k">Posiciones</span><span class="v" id="k-np">—</span></div>
       <div class="sec-row"><span class="k">Gross (sin leverage)</span><span class="v" id="k-gross">—</span></div>
@@ -143,9 +146,10 @@ tailwind.config={darkMode:"class",theme:{extend:{
 
 <script>
 const $=id=>document.getElementById(id);
-let eqchart=null;
+let eqchart=null, curLabels=[], curInc=null;
 const pct=v=>(v>=0?"+":"")+(+v).toFixed(2)+"%";
 function colpct(el,v){el.textContent=pct(v);el.style.color=v>=0?"var(--grn)":"var(--red)";}
+const isPre=i=>curInc&&curLabels[i]&&curLabels[i]<curInc;   // punto del tramo pre-inception (excluido)
 
 async function load(){
   let t; try{t=await(await fetch("/api/track")).json()}catch(e){return}
@@ -156,11 +160,14 @@ async function load(){
     $("mode-badge").textContent="DEMO · sin días registrados aún";
     return;
   }
-  $("mode-badge").textContent="DEMO · "+t.days+" día(s) en vivo";
+  $("mode-badge").textContent="DEMO · "+t.days+" día(s)"+(t.clean_window&&t.inception?" · desde "+t.inception:"");
   colpct($("k-tot"),t.total_return);
   $("k-sh").textContent=(+t.sharpe).toFixed(2); $("k-sh").style.color=t.sharpe>=1?"var(--grn)":"var(--primary)";
   $("k-sh-ref").textContent="ref. backtest "+(t.backtest&&t.backtest.sharpe!=null?t.backtest.sharpe:"—");
   $("k-dd").textContent=(+t.maxdd).toFixed(2)+"%"; $("k-dd").style.color=t.maxdd>-10?"var(--grn)":"var(--red)";
+  $("k-dd-ref").textContent="peor caso · presupuesto −10%";
+  if($("k-dd-intra"))$("k-dd-intra").textContent=t.maxdd_intraday!=null?(+t.maxdd_intraday).toFixed(2)+"%":"—";
+  if($("k-dd-daily"))$("k-dd-daily").textContent=t.maxdd_daily!=null?(+t.maxdd_daily).toFixed(2)+"%":"—";
   $("k-mo").textContent=(+t.pos_months).toFixed(0)+"%";
   $("k-beta").textContent=t.beta!=null?((t.beta>=0?"+":"")+(+t.beta).toFixed(2)):"—";
   $("k-days").textContent=t.days;
@@ -178,12 +185,21 @@ async function load(){
       <div class="lbl">${m.month}</div>
       <div class="num text-base font-semibold ${pos?'long':'short'}">${pct(m.return)}</div></div>`;
   }).join("")||`<div style="color:var(--mut);font-size:13px">aún sin meses completos</div>`;
-  // equity curve
+  // equity curve — el tramo PRE-inception (ventana sucia, excluido de métricas) va en gris punteado
   const ec=t.equity_curve||[];
   const labels=ec.map(x=>x.day), data=ec.map(x=>x.equity);
-  if(eqchart){eqchart.data.labels=labels;eqchart.data.datasets[0].data=data;eqchart.update("none");}
+  curLabels=labels; curInc=t.inception;
+  const hasPre=t.clean_window&&(t.days_all||0)>(t.days||0);
+  $("eq-caption").textContent=hasPre
+    ?("Línea sólida = track honesto desde "+t.inception+" (ventana limpia post-fixes). "
+      +"Tramo gris punteado = pre-operación estable, excluido de las métricas.")
+    :"";
+  const seg={borderColor:c=>isPre(c.p1DataIndex)?"#bfc1c9":"#006b57",
+             borderDash:c=>isPre(c.p1DataIndex)?[4,4]:undefined};
+  if(eqchart){eqchart.data.labels=labels;eqchart.data.datasets[0].data=data;
+    eqchart.data.datasets[0].segment=seg;eqchart.update("none");}
   else eqchart=new Chart($("eqchart"),{type:"line",data:{labels,datasets:[{label:"equity",data,
-    borderColor:"#006b57",backgroundColor:"rgba(0,107,87,.08)",borderWidth:2,tension:.2,pointRadius:0,fill:true}]},
+    borderColor:"#006b57",backgroundColor:"rgba(0,107,87,.08)",borderWidth:2,tension:.2,pointRadius:0,fill:true,segment:seg}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},
     scales:{x:{ticks:{color:"#75777e",maxTicksLimit:12},grid:{display:false}},
       y:{ticks:{color:"#75777e"},grid:{color:"rgba(20,33,61,.06)"}}}}});

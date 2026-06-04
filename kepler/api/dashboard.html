@@ -182,7 +182,8 @@ tailwind.config={darkMode:"class",theme:{extend:{
       </div>
     </div>
     <div class="card lg:col-span-7 flex flex-col">
-      <div class="card-h"><h3 class="card-t">Reporte del día <span id="r-day" class="num text-sm font-normal text-secondary ml-1">—</span></h3></div>
+      <div class="card-h"><h3 class="card-t">Reporte del día <span id="r-day" class="num text-sm font-normal text-secondary ml-1">—</span></h3>
+        <span id="r-monitor" class="lbl" title="Monitor de anomalías (watch-list)"></span></div>
       <div class="px-md py-md flex-grow">
         <div class="narr" id="r-narr">aún sin reporte del día</div>
         <div class="rmet" id="r-met"></div>
@@ -360,6 +361,20 @@ async function loadReport(){
   if(!r||!r.day){$("r-narr").textContent="aún sin reporte del día";return;}
   $("r-day").textContent=r.day; $("r-narr").textContent=r.narrative||"—";
   const m=r.metrics||{}, sl=m.slippage_real||{}, top=m.top_position, co=m.costs||{};
+  // Badge del MONITOR de anomalías (B): color por severidad + resumen en tooltip
+  const mon=m.monitor; const mb=$("r-monitor");
+  if(mb){
+    if(mon&&mon.severity){
+      const sty={OK:["rgba(0,107,87,.14)","#006b57","✓ sin anomalías"],
+                 INFO:["rgba(20,33,61,.10)","#14213d","ℹ aviso"],
+                 WARN:["rgba(160,102,0,.16)","#8a5a00","⚠ vigilar"],
+                 CRIT:["rgba(186,26,26,.14)","#ba1a1a","⛔ crítico"]}[mon.severity]
+                 ||["rgba(117,119,126,.14)","#75777e",mon.severity];
+      mb.textContent=sty[2]; mb.style.background=sty[0]; mb.style.color=sty[1];
+      mb.style.padding="3px 10px"; mb.style.borderRadius="9999px";
+      mb.title="Monitor: "+(mon.summary||mon.severity);
+    } else { mb.textContent=""; mb.removeAttribute("style"); }
+  }
   const tr=m.today_return_pct??0, sgn=v=>(v>=0?"+":"")+(+v).toFixed(2);
   const money=(v)=>`<span style="color:${v>=0?'var(--grn)':'var(--red)'}">${v>=0?'+':'-'}$${Math.abs(+v).toFixed(2)}</span>`;
   const cells=[

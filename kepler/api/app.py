@@ -24,7 +24,8 @@ from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import config  # noqa
 from kepler.db import DB
-from kepler import execution, track
+from kepler import execution
+from kepler import track as trackmod   # alias: el endpoint /api/track se llama track() y lo sombrearía
 
 app = FastAPI(title="Kepler Dashboard")
 _DB = DB()
@@ -189,10 +190,10 @@ def track():
     # INTRADÍA de los ticks MTM. Si la ventana limpia aún no tiene días, cae a todo el historial (etiquetado).
     daily_rows = [(r["day"], r["equity"], r["ret_pct"], r["dd_pct"]) for r in rows]
     tick_rows = [(t["ts"], t["equity"]) for t in ticks]
-    m = track.realized(daily_rows, tick_rows, config.TRACK_INCEPTION)
+    m = trackmod.realized(daily_rows, tick_rows, config.TRACK_INCEPTION)
     clean = m.get("days", 0) > 0
     if not clean:
-        m = track.realized(daily_rows, tick_rows, None)
+        m = trackmod.realized(daily_rows, tick_rows, None)
     narrative = (f"DEMO · {m['days']} día(s) en vivo desde {m['inception']}"
                  f"{' (ventana limpia post-fixes)' if clean else ' (historial completo; ventana limpia aún vacía)'} · "
                  f"retorno total {m['total_return']:+.2f}% · Sharpe realizado {m['sharpe']:.2f} "
