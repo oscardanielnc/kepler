@@ -72,6 +72,18 @@
   balance SÍ se lee, pero es el campo equivocado.)
 - 📌 **Vigilancia que sigue abierta del crash:** concentración en 3 longs de trend (TRX 15% cap, NEAR 14.6%,
   ZEC 11.1% = ~41% del gross). Esta vez salvaron el día; son la fuente de varianza nº1. Vigilar `top_position`.
+- ✅ **MEJORAS NO-EDGE (2026-06-04, local, PENDIENTE DEPLOY) — A: track honesto + B: monitor de anomalías.**
+  - **A (`kepler/track.py`):** métricas realizadas (Sharpe/Sortino/maxDD/vol/meses+) sobre la **ventana limpia**
+    (`config.TRACK_INCEPTION=2026-06-04`, post-fixes) → el tramo con bugs ya no contamina (Sharpe de todo el
+    historial = −8.31 basura vs ventana limpia que arranca fresca). **maxDD medido con la curva INTRADÍA de
+    ticks MTM** (más honesto). Reusado en `/api/track` (+`maxdd_intraday`, `clean_window`) y en el reporte
+    diario (`metrics.live`). **Pendiente frontend:** `track.html` puede sombrear el tramo pre-inception (diferido).
+  - **B (`kepler/monitor.py`):** digest diario de anomalías (code-first) que formaliza la watch-list de
+    `MONITOREO §2` (CB, drawdown vs ancla, churn/cycles, slippage, concentración, diversificación, deriva β).
+    Loguea `audit 'monitor'` + ntfy en transición. **Habría cazado solo el bug de churn del 06-02.**
+  - **Bundle pendiente push+deploy (Oscar):** `5152e7e` equity-MTM · `33813da` track+monitor · + docs.
+    No tocan edge/sizing → sin backtest. **Verificar tras deploy:** `/api/track` muestra ventana limpia;
+    el log diario trae `metrics.live` + `metrics.monitor`; ntfy avisa si el digest pasa a WARN/CRIT.
 
 ---
 
