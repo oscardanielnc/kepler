@@ -20,11 +20,12 @@
 >      (cycles_today: 06-02=8 → 06-03=2 → **06-04=0** hasta 14 UTC) y **0 escalones de churn**. La firma del
 >      bug desapareció. **Falta solo** ver el log de **después de las 14 UTC del 06-04** para confirmar el
 >      rebalanceo programado limpio (=1 ciclo) y que el accounting de costes (fees/funding/realized) puebla.
->   1. **🔴 NUEVO (prioridad ANTES del track real): la curva de equity del heartbeat parece WALLET/realizado,
->      no MTM.** `equity_tick` queda plano a 7 decimales por horas y salta en escalones que caen cerca del
->      funding (00/08/16 UTC) → no incluye PnL no realizado → **el maxDD intradía está SUBESTIMADO**. Como el
->      maxDD bajo es TODO el argumento del copy-lead, confirmar qué campo de Binance se muestrea (walletBalance
->      vs marginBalance/equity) y, si procede, registrar el MTM real. Ver `MONITOREO §4`.
+>   1. **✅ CORREGIDO (local, commit `5152e7e`, PENDIENTE PUSH+DEPLOY): equity MTM.** `get_balance()` usaba
+>      `totalWalletBalance` (sin PnL no realizado) → curva plana entre fundings → maxDD subestimado. Ahora usa
+>      `totalMarginBalance` (NAV = wallet + unrealized) en la única fuente (heartbeat, ciclo y sizing). Robusto:
+>      None si falta el campo → omite el punto. **Salvedad al desplegar:** el 1er tick MTM saltará por el PnL no
+>      realizado acumulado (~+$87, una vez) → escalón cosmético en la curva; el reloj limpio arranca igual.
+>      **Verificar tras deploy:** la curva deja de ser plana entre ciclos (se mueve con el mark). Ver `MONITOREO §4`.
 >   2. **FASE 0 = DEMO LIMPIO ~3-4 semanas** (reloj limpio desde **2026-06-04**, post-fixes). Gate de salida:
 >      0 incidentes operativos en 30d + slippage/fees reales ≈ backtest + β≈0/maxDD dentro de presupuesto.
 >      **CADENCIA acordada: Oscar trae los logs CADA DÍA** → verificar estado, vigilar que no reaparezcan

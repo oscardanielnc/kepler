@@ -160,14 +160,14 @@ datos; rellenar al revisar logs):
 - [x] ~~**Concentración trend/TRX:** evaluar cap por activo en trend~~ → **HECHO (e52, 2026-06-02):** cap
       0.25 en `engine.trend_sleeve` (TRX 20%→9.6%, Sharpe intacto). Pendiente deploy. Si reaparece >15% =
       apilamiento multi-sleeve → cap AGREGADO al target (no testeado aún).
-- [ ] **🔴 NUEVO (2026-06-04) — `equity_tick` muestrea wallet/realizado, no MTM.** La curva del heartbeat
-      queda plana a 7 decimales por horas y salta en escalones que coinciden ~con el funding (00/08/16 UTC);
-      con 17-20 posiciones abiertas en mercado volátil una curva real NO sería plana. → registra balance
-      realizado/wallet, no equity con PnL no realizado → **maxDD intradía SUBESTIMADO.** Crítico para el
-      copy-lead (su argumento ES el maxDD bajo). **Acción:** en `orchestrator`/`execution` confirmar el campo
-      de Binance que se lee (¿`totalWalletBalance` vs `totalMarginBalance`?) y registrar el MTM real (o ambos:
-      wallet para caja, margin para la curva/maxDD). Distinto del fix viejo "no inventar 5000" (ahí el balance
-      no se leía; aquí SÍ se lee, pero es el campo equivocado). Arreglar ANTES del track con capital propio.
+- [x] ~~**🔴 NUEVO (2026-06-04) — `equity_tick` muestrea wallet/realizado, no MTM.**~~ → **CORREGIDO (local,
+      commit `5152e7e`, PENDIENTE DEPLOY).** `execution.get_balance()` leía `totalWalletBalance` (sin PnL no
+      realizado) → curva plana entre fundings (escalones cada 8h) → **maxDD intradía SUBESTIMADO** (crítico
+      para el copy-lead). Ahora lee **`totalMarginBalance`** (NAV = wallet + unrealized) en la única fuente
+      (heartbeat, ciclo y sizing). Robusto: None si falta el campo → omite el punto. Distinto del fix viejo
+      "no inventar 5000" (ahí no se leía; aquí se leía el campo equivocado). **Verificar tras deploy:** la
+      curva deja de ser plana entre ciclos. **Salvedad:** 1er tick MTM salta una vez por el PnL no realizado
+      acumulado (~+$87) → escalón cosmético.
 - [x] ~~**Churn por reinicio (cycles_today ≥3 sin causa):**~~ → **RESUELTO Y VERIFICADO EN VIVO (2026-06-04).**
       Fix `2034e74` (recupera `last_rebal` de la DB en vez de 0). Prueba: 06-04 = 0 ciclos espurios en ~18h
       post-deploy incl. reinicio del deploy (cycles_today 8→2→0). Falta solo confirmar el rebal programado
