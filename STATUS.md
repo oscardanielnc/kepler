@@ -1,5 +1,11 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-03** (cierre de sesión: frontend Stitch + 2 bugs operativos corregidos + accounting de costes + ruta copy-lead acordada, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-04** (revisión de logs: **fix de churn VERIFICADO en vivo**, crash global cripto absorbido por β≈0, **hallazgo nuevo: la curva de equity del heartbeat parece wallet/realizado, no MTM → maxDD subestimado**, hora Lima).
+>
+> **⚠️ PARA QUIEN ANALICE LOGS (lección 2026-06-04, NO repetir):** leer este STATUS y el diagnóstico previo
+> ANTES de concluir. El 06-04 se re-analizó el crash en frío, se mis-atribuyó la pérdida al mercado (era
+> **churn auto-infligido**, ya diagnosticado el 06-03) y se trató un bug conocido como hallazgo nuevo.
+> Regla: (1) separar pérdida REALIZADA (costes/churn) de MTM no realizada; (2) confirmar qué commit está
+> vivo en la VM y el rango temporal del log antes de afirmar si un fix funcionó. (Memoria `analisis-logs-leer-status-primero`.)
 >
 > **🧭 PLAN A SEGUIR = `ROADMAP.md` §RUTA MAESTRA 2026-06 (Operación → Producto → Escala).** Cambio de
 > fase: la caza de alfa GRATIS está AGOTADA (verificado a fondo); la palanca ahora es OPERACIÓN + PRODUCTO
@@ -7,12 +13,18 @@
 > ROBUSTEZ OPERATIVA (prioridad, el incidente de hoy probó que es el riesgo #1)** · Fase 2 producto/track
 > · Fase 3 escala. IA = herramienta operativa, NO alfa. Negocio = copy-lead. (Memorias `kepler-news-ia-bots-decision`.)
 >
-> **⏭️ PRÓXIMA EJECUCIÓN (tras cierre 2026-06-03):**
->   1. **PUSH + DEPLOY (Oscar)** de los commits locales de hoy (4: `2034e74` frontend+robustez · `c009226`
->      telemetría · `7609b9f` docs ruta · + el de cierre). En la VM tras desplegar: `journalctl -u kepler` →
->      al reiniciar debe decir `último rebalanceo recuperado de la DB … no fuerza rebalanceo` (fix churn);
->      ciclo con `checks: OK`, heartbeat OK; abrir `/` y `/track` con el estilo nuevo; la limpieza de slippage
->      basura corre sola al instanciar la DB.
+> **⏭️ PRÓXIMA EJECUCIÓN (tras revisión 2026-06-04):**
+>   0. **✅ DEPLOY HECHO Y FIX DE CHURN VERIFICADO EN VIVO.** VM en `HEAD c009226` (incluye `2034e74` fix
+>      churn + `c009226` telemetría; los commits de docs `9bcc10f`/`7609b9f` NO están en la VM, da igual).
+>      Prueba: el 06-04, en ~18h post-deploy **incluido el reinicio del propio deploy, 0 rebalanceos espurios**
+>      (cycles_today: 06-02=8 → 06-03=2 → **06-04=0** hasta 14 UTC) y **0 escalones de churn**. La firma del
+>      bug desapareció. **Falta solo** ver el log de **después de las 14 UTC del 06-04** para confirmar el
+>      rebalanceo programado limpio (=1 ciclo) y que el accounting de costes (fees/funding/realized) puebla.
+>   1. **🔴 NUEVO (prioridad ANTES del track real): la curva de equity del heartbeat parece WALLET/realizado,
+>      no MTM.** `equity_tick` queda plano a 7 decimales por horas y salta en escalones que caen cerca del
+>      funding (00/08/16 UTC) → no incluye PnL no realizado → **el maxDD intradía está SUBESTIMADO**. Como el
+>      maxDD bajo es TODO el argumento del copy-lead, confirmar qué campo de Binance se muestrea (walletBalance
+>      vs marginBalance/equity) y, si procede, registrar el MTM real. Ver `MONITOREO §4`.
 >   2. **FASE 0 = DEMO LIMPIO ~3-4 semanas** (reloj limpio desde **2026-06-04**, post-fixes). Gate de salida:
 >      0 incidentes operativos en 30d + slippage/fees reales ≈ backtest + β≈0/maxDD dentro de presupuesto.
 >      **CADENCIA acordada: Oscar trae los logs CADA DÍA** → verificar estado, vigilar que no reaparezcan
@@ -34,6 +46,31 @@
 > slippage telemetría limpia (e70 winsor). 4 sombras registrando (tx/mvrv/tvl/blend).
 > ⚠️ **La Fase 1 (guardas/checks) está en commits locales, NO en la VM todavía** (≠ el bloque de arriba que sí está vivo).
 > **⏰ RECORDATORIO ~2026-07-31:** cerrar ciclo sombras (≥60-90d → `e33_shadow_tvl_analyze` → ¿sleeve #8?).
+
+---
+
+## ESTADO ACTUAL (2026-06-04) — revisión de logs + crash global cripto
+- 🌍 **CRASH GLOBAL CRIPTO (2026-06-02/03): BTC −22% intrasemana (~$75.850→$66.650), ~$2.000M en
+  liquidaciones (≈$1.500M LONGS vs $233M shorts), venta de ballenas + 1ª venta de BTC de Strategy desde 2022
+  + salidas de ETF + macro.** Kepler lo **ABSORBIÓ por diseño (β≈0):** equity casi plana mientras BTC −22%.
+  **El libro net-verde no realizado** (NEAR +$110, ZEC +$53 cubrieron BCH −$72). Confirma la tesis del proyecto.
+- ✅ **FIX DE CHURN VERIFICADO EN VIVO (el bug que causó el grueso de la caída 4943→4860 = −1.7%).**
+  Recordatorio del diagnóstico (06-03): el reinicio del servicio forzaba un rebalanceo inmediato
+  (`last_rebal=0` en memoria → fallback) → el 06-02 hubo **8 ciclos** (deploys del crash) → churn → pérdida
+  REALIZADA. **Fix `2034e74`** (recupera `last_rebal` de la DB) desplegado ~16 UTC del 06-03. **Prueba en
+  vivo (06-04):** 0 ciclos espurios en ~18h post-deploy, incluido el reinicio del deploy; 0 escalones de churn.
+  cycles_today: **8 (06-02) → 2 (06-03, pre-fix) → 0 (06-04, post-fix)**. **PENDIENTE:** ver el log post-14 UTC
+  del 06-04 (1 rebalanceo programado limpio + accounting de costes poblado) para cerrar al 100%.
+- 🔴 **HALLAZGO NUEVO — equity del heartbeat = wallet/realizado, NO mark-to-market.** `equity_tick` se queda
+  plano a 7 decimales durante horas y solo salta en escalones discretos que coinciden ~con el funding
+  (00/08/16 UTC). Con 17-20 posiciones abiertas en mercado volátil, una curva de equity real NO sería plana.
+  → el heartbeat muestrea balance realizado/wallet, no equity con PnL no realizado → **el maxDD intradía
+  queda SUBESTIMADO.** No afecta al trading, pero **sí al track record de copy-lead (cuyo argumento ES el
+  maxDD bajo).** Acción: confirmar campo Binance (walletBalance vs marginBalance) y registrar el MTM real
+  antes de arrancar el track con capital propio. (Ojo: distinto del fix viejo "no inventar 5000" — aquí el
+  balance SÍ se lee, pero es el campo equivocado.)
+- 📌 **Vigilancia que sigue abierta del crash:** concentración en 3 longs de trend (TRX 15% cap, NEAR 14.6%,
+  ZEC 11.1% = ~41% del gross). Esta vez salvaron el día; son la fuente de varianza nº1. Vigilar `top_position`.
 
 ---
 

@@ -61,12 +61,37 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
    si crece mucho = más beta-de-mercado latente (cruzar con la concentración de TRX).
 6. **Equity ilegible / balance falso.** Ya blindado (heartbeat y ciclo OMITEN si el balance no se lee, no
    inventan 5000). Si ves escalones planos a 5000 exactos → regresión de ese fix.
+   **⚠️ MATIZ (2026-06-04):** la curva SÍ se lee pero parece ser **wallet/realizado, no MTM** — queda plana a
+   7 decimales por horas y salta en escalones ~funding. Eso **subestima el maxDD intradía**. Hasta arreglarlo
+   (§4), el maxDD del heartbeat es un piso, no el real; el maxDD honesto del track exige equity con PnL no realizado.
 7. **Circuit breaker.** `cb_operate=false` = HALT por −20%. Debe ser rarísimo en ESTABLE. Si salta,
    investigar a fondo (no debería con maxDD objetivo −10%).
 
 ---
 
 ## 3. BITÁCORA (registro por día — el más nuevo arriba)
+
+### 2026-06-04 (DEMO — FIX DE CHURN VERIFICADO EN VIVO + hallazgo equity-wallet)
+- **VM confirmada en `HEAD c009226`** (incluye `2034e74` fix churn). El fix se desplegó ~16 UTC del 06-03.
+- **✅ FIX DE CHURN FUNCIONA:** log del 06-04 (04:31–10:32 UTC) = **solo heartbeats, 0 ciclos** (`signals`,
+  `portfolio_snapshot`, `audit`, `shadow` vacíos → aún no llega el rebal de 14 UTC). En ~18h post-deploy,
+  **incluido el reinicio del propio deploy, NO se forzó ningún rebalanceo** (pre-fix habría disparado uno).
+  `cycles_today`: **8 (06-02) → 2 (06-03 pre-fix) → 0 (06-04 post-fix hasta 14 UTC)**. Equity plana/+ (4868.08
+  → 4869.86), sin escalones de churn. **PENDIENTE:** log post-14 UTC para ver el rebalanceo programado limpio.
+- **🔴 HALLAZGO: `equity_tick` = wallet/realizado, no MTM** (ver §4, bug nuevo). Curva plana a 7 decimales por
+  horas, escalones ~funding (00/08/16 UTC). maxDD intradía subestimado → arreglar antes del track real.
+- **Reloj limpio del copy-lead arranca HOY (2026-06-04), post-fixes.** Gate: 0 incidentes 30d + costes≈backtest.
+
+### 2026-06-03 (DEMO — crash global cripto, día PRE-fix de churn)
+- **🌍 CRASH GLOBAL:** BTC −22% intrasemana, ~$2.000M liquidaciones (≈$1.500M longs). **Kepler lo absorbió por
+  β≈0:** equity de 4943 (pico 05-31) a 4860 (06-02) = **−1.7% maxDD**, ya recuperando (+0.17% el 06-03). El
+  libro quedó **net-verde no realizado** (NEAR +$110, ZEC +$53 vs BCH −$72). El crash NO fue el problema.
+- **⚠️ LA PÉRDIDA FUE CHURN, NO MERCADO:** el grueso del −1.7% es REALIZADO por sobre-rebalanceo del 06-02
+  (8 ciclos por deploys del crash, fix aún no desplegado). El libro abierto está verde; el sangrado está en lo
+  ya cerrado. **No confundir MTM no realizado (verde) con la pérdida en cuenta (realizada).**
+- **2 ciclos (13:00 y 14:00 UTC), PRE-fix** (el de 13:00 es espurio, firma del bug). El deploy del fix fue
+  después (~16 UTC), así que estos 2 ciclos NO testean el fix. Slippage limpio el 06-02 (mediana 0.65 bps).
+- **Concentración:** TRX 15% (cap), NEAR 14.6%, ZEC 11.1% = ~41% del gross en 3 longs de trend. Vigilar.
 
 ### 2026-06-02 (DEPLOY del bundle riesgo/calidad + ejecución — VALIDACIÓN PENDIENTE)
 Desplegados 2 commits (`e2f0505` + `55a429a`). Cambia el SIZING y CUÁNDO se rebalancea → el primer ciclo y
@@ -135,6 +160,18 @@ datos; rellenar al revisar logs):
 - [x] ~~**Concentración trend/TRX:** evaluar cap por activo en trend~~ → **HECHO (e52, 2026-06-02):** cap
       0.25 en `engine.trend_sleeve` (TRX 20%→9.6%, Sharpe intacto). Pendiente deploy. Si reaparece >15% =
       apilamiento multi-sleeve → cap AGREGADO al target (no testeado aún).
+- [ ] **🔴 NUEVO (2026-06-04) — `equity_tick` muestrea wallet/realizado, no MTM.** La curva del heartbeat
+      queda plana a 7 decimales por horas y salta en escalones que coinciden ~con el funding (00/08/16 UTC);
+      con 17-20 posiciones abiertas en mercado volátil una curva real NO sería plana. → registra balance
+      realizado/wallet, no equity con PnL no realizado → **maxDD intradía SUBESTIMADO.** Crítico para el
+      copy-lead (su argumento ES el maxDD bajo). **Acción:** en `orchestrator`/`execution` confirmar el campo
+      de Binance que se lee (¿`totalWalletBalance` vs `totalMarginBalance`?) y registrar el MTM real (o ambos:
+      wallet para caja, margin para la curva/maxDD). Distinto del fix viejo "no inventar 5000" (ahí el balance
+      no se leía; aquí SÍ se lee, pero es el campo equivocado). Arreglar ANTES del track con capital propio.
+- [x] ~~**Churn por reinicio (cycles_today ≥3 sin causa):**~~ → **RESUELTO Y VERIFICADO EN VIVO (2026-06-04).**
+      Fix `2034e74` (recupera `last_rebal` de la DB en vez de 0). Prueba: 06-04 = 0 ciclos espurios en ~18h
+      post-deploy incl. reinicio del deploy (cycles_today 8→2→0). Falta solo confirmar el rebal programado
+      limpio en el log post-14 UTC del 06-04.
 - [ ] **`r_multiple`/`exit_px` quedan null** (sistema de rebalanceo rodante, sin ciclo open→close clásico).
       El ciclo de vida de trade completo sería otro proyecto. Los fills+snapshots ya permiten analizar.
 - [ ] **Deploy del fix ffill de sombra (noche-2):** `kepler/onchain.py` — endurece el día-boundary (TVL
