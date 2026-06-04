@@ -82,10 +82,24 @@ def _delete(path, params):
 # ─── Estado de cuenta ─────────────────────────────────────────────────────────
 
 def get_balance():
+    """Equity REAL de la cuenta = NAV mark-to-market = totalMarginBalance
+    (= totalWalletBalance + totalUnrealizedProfit). Es lo que alimenta la curva de
+    equity, el maxDD y el sizing del libro.
+
+    ⚠️ NO usar totalWalletBalance: excluye el PnL no realizado → la curva del heartbeat
+    queda plana entre liquidaciones de funding (escalones cada 8h) y el maxDD intradía
+    se SUBESTIMA. Como el maxDD bajo es el argumento del copy-lead, la curva debe ser MTM.
+    (Bug detectado 2026-06-04; antes devolvía totalWalletBalance.)
+
+    Devuelve None si la respuesta es ilegible/sin el campo → el heartbeat OMITE el punto
+    (no inventa un valor) y el ciclo cae a su fallback. Mejor un hueco que una curva falsa."""
     if DRY_RUN:
         return config.CAPITAL_USD
     d = _get("/fapi/v2/account", {"recvWindow": 5000})
-    return float(d.get("totalWalletBalance", 0)) if isinstance(d, dict) else None
+    if not isinstance(d, dict):
+        return None
+    v = d.get("totalMarginBalance")
+    return float(v) if v is not None else None
 
 
 def get_positions():
