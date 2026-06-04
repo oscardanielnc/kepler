@@ -84,6 +84,12 @@
   - **Bundle pendiente push+deploy (Oscar):** `5152e7e` equity-MTM · `33813da` track+monitor · + docs.
     No tocan edge/sizing → sin backtest. **Verificar tras deploy:** `/api/track` muestra ventana limpia;
     el log diario trae `metrics.live` + `metrics.monitor`; ntfy avisa si el digest pasa a WARN/CRIT.
+- ✅ **DESPLEGADO 2026-06-04 ~13:40 UTC** (`c009226..42a4dad`): equity-MTM + track + monitor + frontend vivos.
+- ✅ **#4 COBERTURA DE DATOS CONFIRMADA EN VM (2026-06-04):** `engine.load()` = **2022-01-01 → presente,
+  38.631 filas horarias**. El ancla usa la ventana completa (con 2022) → el sobre-apalancamiento 2.93x quedó
+  atrás. No hay que backfillear. (Memoria `kepler-anchor-window-overleverage` cerrada.)
+- ⏳ **PENDIENTE verificación en vivo (log post-14 UTC del 06-04):** 1 solo ciclo (churn cerrado def.),
+  `/api/track` en ventana limpia desde 06-04, bloques `costs` + `monitor` poblados, curva MTM ya no plana.
 
 ---
 
