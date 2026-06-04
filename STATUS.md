@@ -93,6 +93,18 @@
   - **Competencia REAL = copy-leaders de cripto** (Binance/Bybit), mayoría **martingalas que revientan** (Btc-Panda,
     Brayan, Flowerence29). **Nuestro hueco ganable: supervivencia + bajo-DD + honestidad + track verificable.**
     (Memoria `kepler-competitive-positioning`.)
+  - **2 competidores analizados (casos en `COPYLEAD.md`):** "Jóvenes chinos" (martingala 20x, win 100%/MDD 38% →
+    explota) y "Rey de las Órdenes" (scalper HFT, líder +110% pero copiadores −$187 en 90d → edge muere al copiarse,
+    valida que seamos DIARIOS). Memorias `copytrader-jovenes-chinos-rojo`, `copytrader-rey-ordenes-no-copiable`.
+- 💸 **SCAN DATOS DE PAGO (2026-06-04):** único candidato que encaja = **CryptoQuant $99/mes (netflow de exchange)**,
+  ortogonal a lo que ya tenemos. Glassnode/Santiment solapan lo gratis; Kaiko/CoinGlass = intradía descartado;
+  Nansen no sistematizable. → lista "revisar información pagada" vía TRIAL+backtest, **pero PREMATURO** (primero
+  track limpio). NO comprar aún. (Memoria `kepler-next-new-data-sources`.) Computación cuántica evaluada = sin uso para Kepler (martillo sin clavo).
+- 🛑 **CIERRE DE SESIÓN 2026-06-04.** Próxima sesión (Oscar trae logs hoy noche/mañana):
+  1. **Verificación en vivo #2** con el log post-14 UTC: `cycles_today`=1 (churn def.), `costs` poblado, `metrics.monitor`, curva MTM no plana.
+  2. **Revisión diaria** del log (principio de evaluación con bugs; reloj limpio desde 06-04).
+  3. **`e33` semanal** de sombras (one-liner en `MONITOREO §3`) — sin conclusión hasta ≥5-8 días.
+  Nada urgente de código pendiente. NO hunting de edges (prematuro). Falta solo **push** de commits docs/research locales.
 - ✅ **FIX DE CHURN VERIFICADO EN VIVO (el bug que causó el grueso de la caída 4943→4860 = −1.7%).**
   Recordatorio del diagnóstico (06-03): el reinicio del servicio forzaba un rebalanceo inmediato
   (`last_rebal=0` en memoria → fallback) → el 06-02 hubo **8 ciclos** (deploys del crash) → churn → pérdida
