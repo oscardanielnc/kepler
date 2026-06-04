@@ -1,5 +1,8 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-04** (revisión de logs: **fix de churn VERIFICADO en vivo**, crash global cripto absorbido por β≈0, **hallazgo nuevo: la curva de equity del heartbeat parece wallet/realizado, no MTM → maxDD subestimado**, hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-04** (sesión larga: crash global
+> cripto + **3 fixes desplegados** (churn verificado, equity MTM, track honesto + monitor), **maxDD real MTM
+> −4.5% (no −1.7%)**, **#4 cobertura 2022 confirmada**, **e60: cap de concentración NO se toca**, análisis
+> estratégico SP500/QQQ/Medallion/competidores, sombras al día (4, sin conclusión aún). Hora Lima).
 >
 > **⚠️ PARA QUIEN ANALICE LOGS (lección 2026-06-04, NO repetir):** leer este STATUS y el diagnóstico previo
 > ANTES de concluir. El 06-04 se re-analizó el crash en frío, se mis-atribuyó la pérdida al mercado (era
@@ -13,26 +16,23 @@
 > ROBUSTEZ OPERATIVA (prioridad, el incidente de hoy probó que es el riesgo #1)** · Fase 2 producto/track
 > · Fase 3 escala. IA = herramienta operativa, NO alfa. Negocio = copy-lead. (Memorias `kepler-news-ia-bots-decision`.)
 >
-> **⏭️ PRÓXIMA EJECUCIÓN (tras revisión 2026-06-04):**
->   0. **✅ DEPLOY HECHO Y FIX DE CHURN VERIFICADO EN VIVO.** VM en `HEAD c009226` (incluye `2034e74` fix
->      churn + `c009226` telemetría; los commits de docs `9bcc10f`/`7609b9f` NO están en la VM, da igual).
->      Prueba: el 06-04, en ~18h post-deploy **incluido el reinicio del propio deploy, 0 rebalanceos espurios**
->      (cycles_today: 06-02=8 → 06-03=2 → **06-04=0** hasta 14 UTC) y **0 escalones de churn**. La firma del
->      bug desapareció. **Falta solo** ver el log de **después de las 14 UTC del 06-04** para confirmar el
->      rebalanceo programado limpio (=1 ciclo) y que el accounting de costes (fees/funding/realized) puebla.
->   1. **✅ CORREGIDO (local, commit `5152e7e`, PENDIENTE PUSH+DEPLOY): equity MTM.** `get_balance()` usaba
->      `totalWalletBalance` (sin PnL no realizado) → curva plana entre fundings → maxDD subestimado. Ahora usa
->      `totalMarginBalance` (NAV = wallet + unrealized) en la única fuente (heartbeat, ciclo y sizing). Robusto:
->      None si falta el campo → omite el punto. **Salvedad al desplegar:** el 1er tick MTM saltará por el PnL no
->      realizado acumulado (~+$87, una vez) → escalón cosmético en la curva; el reloj limpio arranca igual.
->      **Verificar tras deploy:** la curva deja de ser plana entre ciclos (se mueve con el mark). Ver `MONITOREO §4`.
->   2. **FASE 0 = DEMO LIMPIO ~3-4 semanas** (reloj limpio desde **2026-06-04**, post-fixes). Gate de salida:
+> **⏭️ PRÓXIMA EJECUCIÓN (tras sesión 2026-06-04):**
+>   0. **✅ TODO DESPLEGADO Y VIVO (VM `HEAD 42a4dad`, deploy 06-04 13:40 UTC):** fix churn (verificado: 0 ciclos
+>      espurios), equity MTM, track honesto, monitor. Solo faltan PUSH de los commits de docs/research locales
+>      (`276f240`…`3037b53`) — código ya vivo.
+>   1. **⏳ ÚNICO PENDIENTE DE VERIFICACIÓN EN VIVO: el log post-14 UTC del 06-04** (el ciclo de hoy YA corrió —
+>      las sombras tienen dato 06-04). Confirmar: `cycles_today`=1 (churn cerrado def.), bloque `costs`
+>      (fees/funding/realizado) poblado, `metrics.monitor` con severidad, curva MTM ya no plana.
+>   2. **🔴 RECORDAR — equity MTM destapó el dd real −4.5% (no −1.7%):** la curva vieja (wallet) lo escondía.
+>      El −4.5% es MAYORÍA mercado (crash + sesgo net-long β-dólar +0.49), parte menor el bug churn; el −3.06%
+>      del 06-04 NO es pérdida nueva, es el cambio wallet→MTM destapando lo no realizado. Dentro de −10%, no halt.
+>   3. **FASE 0 = DEMO LIMPIO ~3-4 semanas** (reloj limpio desde **2026-06-04**, post-fixes). Gate de salida:
 >      0 incidentes operativos en 30d + slippage/fees reales ≈ backtest + β≈0/maxDD dentro de presupuesto.
 >      **CADENCIA acordada: Oscar trae los logs CADA DÍA** → verificar estado, vigilar que no reaparezcan
 >      bugs, medir el edge en vivo (Sharpe/maxDD/β) con el PRINCIPIO DE EVALUACIÓN CON BUGS (`ROADMAP.md`).
->   3. **Luego: Binance capital PROPIO chico** (arranca el track real) → **copy-lead** modesto → escala.
+>   4. **Luego: Binance capital PROPIO chico** (arranca el track real) → **copy-lead** modesto → escala.
 >      Ruta completa + gates en `ROADMAP.md §RUTA DE SALIDA`; mecánica de cuenta lead en `COPYLEAD.md`.
->   En paralelo corre solo: sombras→sleeve #8 (~2026-07-31) + C3 slippage real.
+>   En paralelo corre solo: sombras→sleeve #8 (~2026-07-31, **cadencia SEMANAL `e33`** ver §06-04) + C3 slippage real.
 >
 > **ESTADO FASES (2026-06-03):** **Fase 1 (robustez) CERRADA** (pasos 1-5, verificados). **Fase 2 núcleo
 > HECHO** (F2.1 `/api/track` + F2.2 `/track` + F2.3 research copy-lead `COPYLEAD.md` + **rediseño Stitch YA
@@ -75,6 +75,24 @@
   ⚠️ **Método (honesto):** la reconstrucción a nivel-nombre de e60 reconcilia razonable con el motor (desajuste
   máx 0.07) pero da lev 1.49x vs 2.16x del motor (serie multi-horizonte + vol-anchor) → los **absolutos NO son
   de producción**; lo fiable es la COMPARACIÓN relativa entre esquemas (dirección robusta).
+- 🌓 **SOMBRAS verificadas EN VIVO (VM, 06-04):** las 4 registran al día y β-neutral (hedge BTC +0.01..+0.11):
+  TVL 4d, BLEND 4d, TX 3d, MVRV 3d. **Demasiado pocos días para concluir nada** (e33 no calcula <5 retornos;
+  lectura tentativa ≥60d). Funcionan en estructura, sin lectura de rendimiento aún. **Cadencia SEMANAL:** correr
+  `e33` (one-liner en `MONITOREO`) cada semana y comparar Sharpe realizado vs baseline (tx +1.46%/mes, mvrv
+  +1.41%, tvl +0.6%). Promoción a sleeve #8 no antes de ~8-12 semanas (regla de oro).
+- 🧭 **CONCLUSIONES ESTRATÉGICAS (análisis 06-04 — posicionamiento competitivo):**
+  - **vs SP500/QQQ:** NO competimos en retorno absoluto en un bull. Nuestra ventaja = **drawdown bajo (−10% vs
+    −34/−83%) + correlación ≈0 (diversificador) + funciona en cualquier régimen**. Si el edge vivo sale ~1.5-2%/mes
+    a −10%/β0, bate ajustado por riesgo; si sale ~0, no hay caso (aún no descartado → por eso DEMO antes de real).
+  - **vs Medallion:** inalcanzable en retorno (39% neto, HFT, moat) **pero CERRADO desde 2005** (capacidad mata
+    el edge si crece) → ningún inversor puede entrar → **no es competencia real**. Robamos su MÉTODO, no su número:
+    amplitud de señales pequeñas ortogonales (50.75% de Mercer) + obsesión de coste + falsación + disciplina de capacidad.
+  - **vs RIEF** (el fondo RenTech investible): acciones con beta, mediocre (2025 −7.5%, −14% en oct) → prueba de
+    que el genio no se transfiere a un producto escalado con beta. Nosotros apuntamos al cuadrante correcto
+    (neutral + bajo-DD + chico), sin su moat HFT.
+  - **Competencia REAL = copy-leaders de cripto** (Binance/Bybit), mayoría **martingalas que revientan** (Btc-Panda,
+    Brayan, Flowerence29). **Nuestro hueco ganable: supervivencia + bajo-DD + honestidad + track verificable.**
+    (Memoria `kepler-competitive-positioning`.)
 - ✅ **FIX DE CHURN VERIFICADO EN VIVO (el bug que causó el grueso de la caída 4943→4860 = −1.7%).**
   Recordatorio del diagnóstico (06-03): el reinicio del servicio forzaba un rebalanceo inmediato
   (`last_rebal=0` en memoria → fallback) → el 06-02 hubo **8 ciclos** (deploys del crash) → churn → pérdida

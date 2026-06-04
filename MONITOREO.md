@@ -80,7 +80,13 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
   → 4869.86), sin escalones de churn. **PENDIENTE:** log post-14 UTC para ver el rebalanceo programado limpio.
 - **🔴 HALLAZGO: `equity_tick` = wallet/realizado, no MTM** (ver §4, bug nuevo). Curva plana a 7 decimales por
   horas, escalones ~funding (00/08/16 UTC). maxDD intradía subestimado → arreglar antes del track real.
+  **→ CORREGIDO Y DESPLEGADO mismo día** (`5152e7e`, `totalMarginBalance`). Al activarse destapó el dd real
+  **−4.5% MTM** (la curva wallet escondía −$140 no realizado del crash). NO es pérdida nueva; es honestidad.
 - **Reloj limpio del copy-lead arranca HOY (2026-06-04), post-fixes.** Gate: 0 incidentes 30d + costes≈backtest.
+- **🌓 SOMBRAS (cadencia SEMANAL, code-first):** correr `e33` cada semana sobre la DB viva y comparar el Sharpe
+  realizado (cuando ≥5-8 días; fiable ≥60) vs baseline (tx +1.46%/mes, mvrv +1.41%, tvl +0.6%). Comando VM:
+  `source /opt/kepler-app/venv/bin/activate && cd /opt/kepler-app/kepler && D=$(python -c "import config;print(config.DB_PATH)") && for s in onchain_tvl_pxdiv_14d onchain_tx_pxdiv_14d onchain_mvrv_lvl blend_lottery_tvl_illiq_v1; do echo "== $s =="; python -m research.e33_shadow_tvl_analyze "$D" $s; done`
+  Estado 06-04: 4 sombras al día, β-neutral, 2-4 días → SIN conclusión (esperado). Promoción a sleeve #8 no antes de ~8-12 sem.
 
 ### 2026-06-03 (DEMO — crash global cripto, día PRE-fix de churn)
 - **🌍 CRASH GLOBAL:** BTC −22% intrasemana, ~$2.000M liquidaciones (≈$1.500M longs). **Kepler lo absorbió por
