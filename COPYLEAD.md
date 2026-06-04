@@ -64,6 +64,28 @@
 - [ ] Reporte de transparencia (F2.1/F2.2) público y honesto: curva, maxDD, Sharpe, β, gap track↔seguidor.
 - [ ] Política de profit-share y comunicación: vender bajo-DD/consistencia, NO ROI llamativo.
 
+## CASOS REALES DE COMPETENCIA — los 2 modos de fallo (qué NO hacer)
+Dos copy-leaders de Binance analizados 2026-06-04. Ilustran los dos modos en que la competencia falla, y
+por contraste, el diferencial honesto de Kepler. **Material para `/track` / pitch: "esto es lo que NO hacemos".**
+
+**Modo 1 — MARTINGALA disfrazado · "Jóvenes chinos"** (ROI 90d **+416%**, win **100%**, MDD **38%**, **20x**, solo ETH).
+- *Tell:* win-rate 100% + MDD 38% = **nunca cierra en rojo, aguanta/promedia las perdedoras** a 20x → ruina es
+  *cuándo*, no *si* (a 20x un ~5% en contra liquida; el 38% ya rozó la liquidación). Sharpe 8.82 = falso (sin
+  pérdidas realizadas). Líder arriesga **0.7%** del AUM ($2.582 vs $346.837). +416% en ~47 días = lotería a mitad de racha.
+- *Falla:* **explota** → los copiadores se arruinan con él. (Memoria `copytrader-jovenes-chinos-rojo`.)
+- *Kepler difiere:* β≈0, ~2x, −10% maxDD, **realiza** pérdidas, 20 nombres.
+
+**Modo 2 — SCALPER HFT no-copiable · "Rey de las Órdenes"** (ROI 90d **+110%**, win ~90%, MDD 1.3%, **3x**, ~67 trades/día en micro-caps).
+- *Tell decisivo:* en 90d el **líder +$3.317 (+110%) pero los copiadores −$187.79 (NEGATIVO).** El edge **muere al
+  copiarse**: scalpea coins ilíquidas con tickets de **$13-40** → slippage + capacidad se comen la ventaja cuando
+  el seguidor (taker, tarde) entra detrás. Sharpe **19.65** = artefacto imposible; capacidad ≈ cero; cola oculta en coins finas.
+- *Falla:* NO explota, pero es **value-destructive para el copiador** (su número no transfiere). (Memoria `copytrader-rey-ordenes-no-copiable`.)
+- *Kepler difiere:* edge **DIARIO** (lento), maker-first GTX, capacidad pensada → **SÍ sobrevive a la copia**.
+  Es la prueba empírica de por qué descartamos el intradía: el coste se come el edge replicado.
+
+**Lección de producto:** el track del líder ≠ el resultado del copiador. Kepler vende con honestidad el GAP
+(cautela mecánica #2) y un edge que SÍ transfiere por ser lento y de bajo-slippage — el diferencial real vs el casino.
+
 ## Fuentes (2026-06, re-verificar)
 - Binance copy trading rules / lead trade / how-to-use FAQ (binance.com/en/support).
 - Bybit copy trading profit-sharing + Coin Bureau review (bybit.com/help-center, coinbureau.com).
