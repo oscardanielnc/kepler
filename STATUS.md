@@ -53,8 +53,28 @@
 ## ESTADO ACTUAL (2026-06-04) — revisión de logs + crash global cripto
 - 🌍 **CRASH GLOBAL CRIPTO (2026-06-02/03): BTC −22% intrasemana (~$75.850→$66.650), ~$2.000M en
   liquidaciones (≈$1.500M LONGS vs $233M shorts), venta de ballenas + 1ª venta de BTC de Strategy desde 2022
-  + salidas de ETF + macro.** Kepler lo **ABSORBIÓ por diseño (β≈0):** equity casi plana mientras BTC −22%.
-  **El libro net-verde no realizado** (NEAR +$110, ZEC +$53 cubrieron BCH −$72). Confirma la tesis del proyecto.
+  + salidas de ETF + macro.**
+- ⚖️ **BALANCE HONESTO DEL DRAWDOWN (corrige el optimismo del 06-03): el maxDD real MTM es −4.5%, NO −1.7%.**
+  El −1.7% que se citó el 06-03 era la curva WALLET, que escondía el PnL no realizado. Con la equity MTM ya
+  desplegada (06-04), el dd real desde el pico (4943→4719) es **−4.5%**. Desglose honesto, sin redondear:
+  - **La mayor parte = MERCADO**, no bug: el crash golpeó las posiciones (largos concentrados en NEAR/ZEC/TRX/BCH).
+    β-modelo ≈0 pero **β-dólar +0.49** (net-long en $) → en un crash fuerte el tilt net-long + concentración
+    SÍ duele. La "neutralidad" tiene un sesgo net-long que muerde en caídas.
+  - **Parte menor = el bug de churn del 06-02** (ya corregido).
+  - El −3.06% "de hoy" (06-04) **NO es pérdida nueva ni un rebalanceo que rompió algo** (no corrió ningún ciclo):
+    es el cambio wallet→MTM destapando la pérdida no realizada que YA existía. Mismo dinero, por fin bien medido.
+  - Es **no realizado** (reversible) y **dentro del presupuesto −10%**, lejos del CB (−20%). Pero −4.5% en una
+    semana NO es bueno; coincidió con un crash y **aún NO hay ventana limpia para juzgar el edge** (empieza hoy).
+- 🎯 **CONCENTRACIÓN combinada (TRX 15%+NEAR 14.6%+ZEC 11.1% ≈ 41%): backtesteada → NO se toca.**
+  `research/e60` (cap agregado, re-anclando lev a maxDD −10%, flywheel) da resultado claro y robusto:
+  **apretar el cap CUESTA retorno monótono y apenas baja la concentración.** A igual maxDD −10%:
+  sin cap 2.26%/mes · cap 0.15 (actual) 1.88% · cap 0.10 1.45% (top3 30%→28%) · cap 0.08 1.21% (top3 24%).
+  Bajar el top-3 de 30%→24% cuesta ~35% del retorno → **mal trato. La concentración es el PRECIO del edge de
+  trend** (coincide con e52). **DECISIÓN: mantener cap 0.15, no tocar** (regla de oro). El −4.5% NO es un cap
+  mal calibrado; es el perfil de riesgo normal en un crash, dentro de presupuesto.
+  ⚠️ **Método (honesto):** la reconstrucción a nivel-nombre de e60 reconcilia razonable con el motor (desajuste
+  máx 0.07) pero da lev 1.49x vs 2.16x del motor (serie multi-horizonte + vol-anchor) → los **absolutos NO son
+  de producción**; lo fiable es la COMPARACIÓN relativa entre esquemas (dirección robusta).
 - ✅ **FIX DE CHURN VERIFICADO EN VIVO (el bug que causó el grueso de la caída 4943→4860 = −1.7%).**
   Recordatorio del diagnóstico (06-03): el reinicio del servicio forzaba un rebalanceo inmediato
   (`last_rebal=0` en memoria → fallback) → el 06-02 hubo **8 ciclos** (deploys del crash) → churn → pérdida
