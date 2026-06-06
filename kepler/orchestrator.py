@@ -23,6 +23,8 @@ REBALANCE_HOURS = 24
 MIN_REBAL_HOURS = 18        # no rebalancear dos veces dentro de la ventana del mismo día
 MAX_REBAL_HOURS = 30        # fallback: nunca dejar el libro >30h sin rebalancear (si se pierde la ventana)
 HEARTBEAT_MIN = 15          # registra equity cada 15 min (curva viva) sin rebalancear
+SKIP_ALERT_THRESHOLD = 3    # ciclos omitidos SEGUIDOS (balance ilegible) antes de escalar (≈45min) →
+                            # tapa el punto ciego: un rebalanceo del día perdido EN SILENCIO (hallazgo 06-06)
 SLIP_SANITY_BPS = 200.0     # |slip| > 2% = book_mid de referencia stale/corrupto (no es slippage real):
                             # un maker GTX nunca llena tan lejos del mid → se descarta del C3 (no ensucia)
 # Flag de REBALANCEO MANUAL: si este fichero existe, el loop fuerza UN rebalanceo en el próximo heartbeat
@@ -64,9 +66,12 @@ def heartbeat(db: DB):
     # Solo AVISA (el CB es la red dura); ntfy en TRANSICIÓN (categoría 'checks_hb', sin spam).
     try:
         positions = execution.get_positions() if not execution.DRY_RUN else None
+        # pico del equity MTM (incluye el tick recién registrado) → drawdown vs ancla en cada heartbeat
+        prow = db.conn.execute("SELECT MAX(equity) FROM equity_daily WHERE equity IS NOT NULL").fetchone()
+        peak_eq = float(prow[0]) if prow and prow[0] else None
         hb = checks.run_heartbeat_checks(prev_eq, equity, _last_rebal_ts(db), int(time.time() * 1000),
                                          MAX_REBAL_HOURS + checks.CYCLE_RECENCY_BUFFER_H,
-                                         positions, set(config.UNIVERSE))
+                                         positions, set(config.UNIVERSE), peak=peak_eq)
         sev, prev_sev = checks.worst(hb), _last_check_severity(db, "checks_hb")
         if sev != checks.OK:
             db.audit("CRITICAL" if sev == checks.CRIT else "WARNING", "checks_hb", f"Heartbeat: {sev}",
@@ -440,6 +445,8 @@ def run(tier="ESTABLE", once=False):
         _log.info(f"[orq] último rebalanceo recuperado de la DB: hace {(time.time()-last_rebal)/3600:.1f}h "
                   f"→ un reinicio NO fuerza rebalanceo (se respeta la ventana de rebalanceo)")
     retry_blocked = False     # reanudación rápida: si un ciclo se bloqueó, reintenta cada heartbeat
+    consecutive_skips = 0     # ciclos omitidos SEGUIDOS por balance ilegible → escala si se acumulan
+    skip_alerted = False      # ntfy de omisión ya enviado (transición; se rearma al recuperar)
     while True:
         try:
             now = time.time()
@@ -469,13 +476,29 @@ def run(tier="ESTABLE", once=False):
                 r = cycle(tier, db)
                 if r.get("skipped"):     # balance ilegible → NO consumir la ventana; reintentar
                     retry_blocked = True
-                    _log.warning("[orq] ciclo omitido — se reintenta en el próximo heartbeat")
+                    consecutive_skips += 1
+                    _log.warning(f"[orq] ciclo omitido ({consecutive_skips} seguidos) — se reintenta en el próximo heartbeat")
+                    # ESCALADA (hallazgo 06-06): varios omitidos seguidos = el rebalanceo del día está en
+                    # riesgo de perderse EN SILENCIO → audit WARN + ntfy UNA vez (transición, sin spam).
+                    if consecutive_skips >= SKIP_ALERT_THRESHOLD and not skip_alerted:
+                        mins = consecutive_skips * HEARTBEAT_MIN
+                        _log.warning(f"[orq] ⚠️ {consecutive_skips} ciclos omitidos seguidos (~{mins}min) — rebalanceo en riesgo")
+                        db.audit("WARNING", "orchestrator", "Rebalanceo en riesgo: ciclos omitidos seguidos por balance ilegible",
+                                 detail={"consecutive_skips": consecutive_skips, "mins": mins})
+                        notify.alert_cycle_skips(consecutive_skips, mins)
+                        skip_alerted = True
                 elif r.get("blocked"):   # guarda crítica → NO consumir la ventana; reanudación rápida
                     retry_blocked = True
                     _log.warning("[orq] ciclo BLOQUEADO por guarda — reintenta en el próximo heartbeat (reanudación rápida)")
                 else:
                     last_rebal = now
                     retry_blocked = False
+                    if skip_alerted:     # recuperación tras una racha de omisiones que ya se había alertado
+                        db.audit("INFO", "orchestrator", "Rebalanceo recuperado tras omisiones",
+                                 detail={"skips_previos": consecutive_skips})
+                        notify.alert_cycle_skips_recover(consecutive_skips)
+                    consecutive_skips = 0
+                    skip_alerted = False
                     _log.info(f"[orq] ciclo completo: {r}")
             else:                                            # heartbeat (solo equity + health-check)
                 heartbeat(db)

@@ -29,18 +29,28 @@ def daily_digest(metrics: dict, live: dict | None = None, beta: float | None = N
     if metrics.get("cb_operate") is False:
         add("CRIT", "Circuit breaker DISPARADO (equity −20% del pico) — operación pausada")
 
-    # 2. Drawdown actual vs ancla −10%
+    # 2. Drawdown actual vs ancla −10% — sobre la PEOR de: snapshot del rebalanceo (drawdown_pct) y la
+    #    curva MTM intradía del track limpio (live.maxdd_intraday). El snapshot va 1 paso por detrás (el
+    #    libro sigue sangrando tras las 14 UTC), así que tomamos la más honesta de las dos.
     dd = metrics.get("drawdown_pct")
-    if dd is not None:
-        if dd <= -10.0:
-            add("CRIT", f"Drawdown {dd:.2f}% alcanzó/superó el ancla −10%")
-        elif dd <= -8.0:
-            add("WARN", f"Drawdown {dd:.2f}% se acerca al ancla −10%")
+    dd_mtm = (live or {}).get("maxdd_intraday")
+    cands = [x for x in (dd, dd_mtm) if x is not None]
+    if cands:
+        dd_eff = min(cands)
+        det = f"{dd_eff:.2f}%"
+        if dd is not None and dd_mtm is not None and abs(dd - dd_mtm) > 0.01:
+            det = f"{dd_eff:.2f}% (snapshot {dd:.2f}% / MTM intradía {dd_mtm:.2f}%)"
+        if dd_eff <= -10.0:
+            add("CRIT", f"Drawdown {det} alcanzó/superó el ancla −10%")
+        elif dd_eff <= -8.0:
+            add("WARN", f"Drawdown {det} se acerca al ancla −10%")
 
-    # 3. Tormenta de reinicios / churn (el bug del 06-02)
+    # 3. Ciclos del día: 0 = rebalanceo PERDIDO (balance ilegible/API caída, hallazgo 06-06); ≥3 = churn (06-02)
     cyc = metrics.get("cycles_today")
     if isinstance(cyc, int):
-        if cyc >= 3:
+        if cyc == 0:
+            add("CRIT", "0 ciclos hoy — el rebalanceo del día NO se ejecutó (¿balance ilegible / API caída?)")
+        elif cyc >= 3:
             add("WARN", f"{cyc} ciclos hoy — posible tormenta de reinicios/churn (esperado 1)")
         elif cyc == 2:
             add("INFO", "2 ciclos hoy — posible reinicio/deploy (esperado 1; si no hubo deploy, revisar)")
@@ -69,11 +79,7 @@ def daily_digest(metrics: dict, live: dict | None = None, beta: float | None = N
     if beta is not None and abs(beta) > 0.20:
         add("WARN", f"β {beta:+.2f} fuera de ±0.20 — revisar neutralidad del libro")
 
-    # 8. maxDD intradía honesto del track limpio (solo con muestra mínima)
-    if live and live.get("days", 0) >= 5:
-        mdd = live.get("maxdd_intraday")
-        if mdd is not None and mdd <= -10.0:
-            add("WARN", f"maxDD intradía del track {mdd:.2f}% tocó el ancla −10%")
+    # (la antigua regla #8 "maxDD intradía del track" quedó SUBSUMIDA en la #2, que ya usa live.maxdd_intraday)
 
     sev = worst([f["sev"] for f in flags])
     summary = "✅ sin anomalías" if not flags else " · ".join(f"[{f['sev']}] {f['msg']}" for f in flags)

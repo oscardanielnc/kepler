@@ -1,8 +1,16 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-04** (sesión larga: crash global
-> cripto + **3 fixes desplegados** (churn verificado, equity MTM, track honesto + monitor), **maxDD real MTM
-> −4.5% (no −1.7%)**, **#4 cobertura 2022 confirmada**, **e60: cap de concentración NO se toca**, análisis
-> estratégico SP500/QQQ/Medallion/competidores, sombras al día (4, sin conclusión aún). Hora Lima).
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-06** (revisión diaria de logs:
+> **maxDD −7.97% desde pico** ≈ −8% = ~80% del presupuesto −10% consumido (crash sigue vía tilt net-long, dentro
+> del backtest −7.3/−10, sin bug); **cycles=1 (churn aguanta)**, costes mínimos, β-dólar baja sola +0.28→+0.25.
+> 🆕 **HALLAZGO NUEVO: WARNING recurrente "Ciclo omitido: balance ilegible"** (4× en la ventana, justo antes del
+> rebal 14 UTC). El diseño OMITE+reintenta (sano, sin churn), pero (a) es fragilidad de la API Demo y (b) el
+> **monitor NO vigilaba ciclos omitidos** = punto ciego (rebalanceo perdido en silencio). **3 fixes operativos
+> IMPLEMENTADOS (local, prueba OK, PENDIENTE push+deploy de Oscar):** (1) reintento 3× en get_balance; (2)
+> escalada de ciclos omitidos en el orchestrator (ntfy "Rebalanceo en riesgo" a ≥3 seguidos) + regla cycles=0
+> CRIT en monitor; (3) chequeo de drawdown vs ancla en el HEARTBEAT (cada 15min sobre MTM vivo) + monitor usa
+> la peor de snapshot/MTM. NO tocan edge/sizing → sin backtest, pero tocan el loop vivo → verificar tras deploy.
+> Previo 2026-06-05: maxDD −7.5%, dollar-neutral λ y vol-targeting = producto no performance (no desplegar).
+> Previo 2026-06-04: 3 fixes desplegados, maxDD MTM destapado, e60 cap NO se toca, análisis competitivo.
 >
 > **⚠️ PARA QUIEN ANALICE LOGS (lección 2026-06-04, NO repetir):** leer este STATUS y el diagnóstico previo
 > ANTES de concluir. El 06-04 se re-analizó el crash en frío, se mis-atribuyó la pérdida al mercado (era
@@ -47,6 +55,107 @@
 > slippage telemetría limpia (e70 winsor). 4 sombras registrando (tx/mvrv/tvl/blend).
 > ⚠️ **La Fase 1 (guardas/checks) está en commits locales, NO en la VM todavía** (≠ el bloque de arriba que sí está vivo).
 > **⏰ RECORDATORIO ~2026-07-31:** cerrar ciclo sombras (≥60-90d → `e33_shadow_tvl_analyze` → ¿sleeve #8?).
+
+---
+
+## ESTADO ACTUAL (2026-06-06) — revisión diaria de logs (sano + 1 hallazgo operativo nuevo)
+- 📉 **maxDD −7.97% desde el pico** (4943.69 el 05-31 → 4549.47 el 06-06, cierre MTM). Subió desde −7.5% (06-05).
+  Ya es **~80% del presupuesto −10%** consumido. **Sigue DENTRO del backtest (−7.3/−10), sin bug** — mismo motor
+  ya diagnosticado: tilt net-long sangrando en el crash (precio del edge, e72/e60). β-dólar baja sola: **+0.28
+  (04) → +0.25 (05)**. Patrón consistente: el cierre MTM es peor que el snapshot 14:00 (el libro sigue sangrando
+  intradía tras rebalancear) → 04: snap −4.29 vs cierre −5.70 · 05: snap −7.52 vs cierre −7.67.
+- 🆕 **HALLAZGO NUEVO — WARNING recurrente `Ciclo omitido: balance ilegible`** (audit id 79,80,85,86; 4× en la
+  ventana, agrupados ~13:20-13:50 UTC, justo antes del rebal de las 14). Causa: `execution.get_balance()` devuelve
+  `None` cuando la API Demo responde ilegible → el ciclo se OMITE y reintenta cada heartbeat (`retry_blocked`).
+  - ✅ **El diseño funciona:** prefiere un hueco a rebalancear con valor falso; **0 churn**. El **05-06 se recuperó**
+    (ilegible 13:33/13:49 → 14:00 el ciclo SÍ corrió, id 81-84).
+  - ⚠️ **El 06-06 NO se confirma en este export** (no hay `daily_report` 06-06, último es 05-06; el export se generó
+    14:21, puede ser timing o sigue reintentando). Vigilar el próximo log: que el rebal 06-06 haya cerrado.
+  - 🔴 **PUNTO CIEGO DEL MONITOR:** `kepler/monitor.py` **no vigila ciclos omitidos** → si la API queda ilegible toda
+    la ventana, nos saltamos un rebalanceo en silencio y el digest dice "OK". Es el gap más importante a tapar.
+- 🟢 **LO QUE VA BIEN:** `cycles_today`=1 ambos días (fix churn firme) · 05-06 rebal **limpio** (slip s/d, realizado
+  $0) → el fill malo de BCH (+185bps, −$31.61) fue **one-off del 04-06**, no se repitió · costes mínimos (fees
+  ~$0.33, funding **a favor** +$1.77/+$0.86) · chequeos pre-trade y monitor OK (concentración BTC 15% ≤ cap, corr 0.11).
+- ✅ **MEJORAS OPERATIVAS IMPLEMENTADAS (2026-06-06, local — Fase 1, NO tocan edge/sizing → sin backtest; PENDIENTE
+  PUSH+DEPLOY de Oscar; tocan el loop vivo + ejecución):** las 3 del análisis, probadas con casos reales.
+  1. **Reintento en `execution.get_balance(retries=3, backoff_s=1.0)`** — 3 intentos con backoff lineal (1s,2s)
+     antes de devolver `None`; absorbe el parpadeo de la API Demo (un transitorio ya NO omite el ciclo). DRY_RUN
+     intacto (devuelve CAPITAL_USD sin red ni demora).
+  2. **Escalada de ciclos omitidos en `orchestrator.run`** (`SKIP_ALERT_THRESHOLD=3`): cuenta omisiones SEGUIDAS
+     por balance ilegible; a ≥3 (~45min) → audit `WARNING` "Rebalanceo en riesgo" + ntfy `alert_cycle_skips`
+     (UNA vez, transición); al recuperar → audit INFO + `alert_cycle_skips_recover`. **Tapa el punto ciego del
+     rebalanceo perdido EN SILENCIO** (el monitor diario no lo veía porque `_save_daily_report` solo corre en
+     ciclo exitoso). +regla defensiva en `monitor.py`: `cycles_today==0` → CRIT.
+  3. **Drawdown vs ancla en el HEARTBEAT** (`checks.check_drawdown`, cada 15min sobre el equity MTM vivo,
+     `DD_WARN=8% / DD_CRIT=10%`): caza el acercamiento al ancla en la curva MTM real, sin esperar al snapshot
+     14:00 (que va 1 paso por detrás). El pico se lee de `equity_daily`. +`monitor.py` regla #2 ahora usa la PEOR
+     de (snapshot, `live.maxdd_intraday`) y la #8 quedó subsumida. **Nota:** al desplegar, en cuanto la curva MTM
+     cruce −8% saltará UN ntfy WARN (hoy −7.97%, a un pelo) — es deseado, avisa que rozamos el ancla.
+- 🛑 **CIERRE 2026-06-06.** Sistema sano, dentro de presupuesto. Pérdida = mercado. 3 fixes operativos listos
+  (local, prueba OK). **PENDIENTE: Oscar push+deploy** (tocan loop vivo/ejecución, ver §VERIFICAR TRAS DEPLOY).
+  Próxima sesión: confirmar que el rebal 06-06 cerró + verificar los fixes en vivo. `e33` semanal de sombras si toca.
+  - **VERIFICAR TRAS DEPLOY:** (a) ya no aparecen rachas de "balance ilegible" que omitan el ciclo (o si la API
+    falla ≥3×, salta el ntfy "Rebalanceo en riesgo"); (b) el heartbeat loguea el chequeo `drawdown` y avisa al
+    cruzar −8% MTM; (c) `metrics.monitor` usa el dd MTM cuando es peor que el snapshot.
+
+---
+
+## ESTADO ACTUAL (2026-06-05) — revisión diaria de logs (crash continúa, sistema sano)
+- ✅ **LAS 4 VERIFICACIONES POST-DEPLOY 06-04 CERRARON** (log rango 06-04→06-05, gen. 12:04 UTC):
+  - `cycles_today`=**1** → fix de churn aguanta (0 ciclos espurios).
+  - bloque `costs` poblado: fees **$0.33** · funding **$1.77** · realizado **−$31.61**.
+  - `monitor`: **severity OK, flags []**. Pre-trade checks OK, concentración OK (BTC 15% ≤ cap), `cb_operate: true`.
+  - curva MTM **ya no plana**: los ticks varían continuamente tras las 14 UTC (heartbeat MTM vivo).
+- 📉 **maxDD −7.5% desde el pico** (4943.69 el 05-31 → 4571 el 06-05; mínimo intradía 06-05 ~−7.9%, recuperó algo).
+  La caída del 06-04 (−$206) fue **~−$34 realizado (≈17%) + ~−$172 MTM (≈83%)**. La pérdida es **MERCADO, no avería**.
+- ⚖️ **CLAVE HONESTA: estamos DENTRO de lo que predijo el backtest** (maxDD −7.3 a −10). No estamos peor que el
+  modelo; vivimos un drawdown de tamaño normal, solo que rápido y al inicio por coincidir con el crash global.
+  Dentro del presupuesto −10%, lejos del CB −20%. Lo incómodo: comernos ~¾ del presupuesto en la 1ª semana limpia.
+- 🎯 **Causa estructural (ya documentada 06-04, sigue vigente):** β-modelo ≈0 pero **β-dólar +0.24** (net-long $),
+  concentrado en longs de trend (NEAR/BCH/TRX/ZEC/BTC) = justo lo que sigue sangrando. En el snapshot 14:00 esos
+  5 longs = ~−188 USD vs todos los shorts juntos ~+92 → **esa asimetría ES el drawdown**. Los shorts SÍ funcionan.
+- ⚠️ **Punto a vigilar (no bug):** el rebalanceo 06-04 tuvo **un fill feo: BCH SELL +185 bps de slippage**
+  (245.06 vs ref 249.69) = grueso del realizado −$31.61. Mediana sana (−1.37 bps). Un solo dato; si se repite en
+  crashes → evaluar banda no-trade en días de crash. NO se actúa hoy.
+- 🛑 **PREGUNTA DE OSCAR (06-05): "¿el programa no debería detectar el crash sistémico y ponerse short en auto?"**
+  Respuesta: son DOS cosas. **(A) Detectar+voltear a short = MARKET TIMING → DESCARTADO** (gate de régimen y
+  carry-breadth empeoraron maxDD; lead-lag BTC→alts; timing discreto falló 3x; `kepler-conditional-signals-open`).
+  Falla porque shorteas tarde, dentro del movimiento, y el rebote en V te vuela. Kepler es β-neutral *por diseño*:
+  no apostamos dirección. **El sistema YA reacciona** (los shorts ganaron en el crash); el tema es el peso net-long.
+  **(B) Reducir el tilt net-long (β-dólar→~0) = palanca legítima, no requiere predecir** → cualquier crash duele
+  menos. **BACKTESTEADO 2 VECES MISMO DÍA → e71 (`research/e71_dollar_neutralization`) + WALK-FORWARD e72
+  (`research/e72_dollar_neutralization_wf`).** Cancelar una fracción λ de la β-dólar con hedge en BTC, re-anclar −10%.
+  **🔴 VEREDICTO FINAL = NO DESPLEGAR. e71 fue FALSO POSITIVO; el walk-forward (e72, el que manda) lo revierte.**
+  e71 (split simple + lev anclado sobre toda la muestra = lookahead) dio "λ≈0.5 mejora retorno". Con walk-forward
+  honesto (train 365d · embargo 14d · test 90d · lev anclado SOLO en train) **gana λ=0 (no tocar):**
+  | λ | Sharpe OOS | ann/mes | β-reg | bate a λ0 |
+  |---|---|---|---|---|
+  | 0.00 (hoy) | 1.77 | 3.11% | +0.19 | baseline |
+  | 0.25 | 1.76 | 3.06% | +0.15 | 46% folds |
+  | 0.50 | 1.66 | 2.85% | +0.09 | 62% folds |
+  | 1.00 | 1.40 | 2.10% | −0.04 | 54% folds |
+  Neutralizar **SOLO baja la β; CUESTA retorno** (λ=0.5: −8%). λ=0.5 gana 62% de folds pero pierde en agregado →
+  cuando pierde, pierde grande (tramos alcistas donde el net-long paga). **El net-long es una PRIMA DE RIESGO**
+  (paga de media, duele en crashes) = **mismo veredicto que la concentración (e60): es el PRECIO del edge, no un
+  error.** Regla de oro → no hay mejora de retorno → **no se toca el motor (opción B).** **Única salida viva =
+  λ=0.25 como palanca de PRODUCTO (no de performance):** baja β casi gratis (3.06≈3.11%/mes, mo+ 64→69%) → solo si
+  Oscar valora menos-β/crash más suave para la narrativa copy-lead; aparcada. **Lección de método: split IS/OOS
+  simple + anclar sobre toda la muestra → falso positivo; exigir walk-forward con lev anclado en train.**
+- 🟡 **VOL-TARGETING DINÁMICO (e73, `research/e73_vol_targeting`) — exploración tras la charla del ciclo/crash.**
+  Escalar el leverage día a día ∝ 1/vol realizada (Moreira-Muir) vs el ancla estática (e68), re-anclando a −10%,
+  walk-forward (train 365d·embargo 14d·test 90d). **VEREDICTO: NO mejora retorno** (OOS el estático gana 3.42%/mes
+  vs ~3.0-3.2; las variantes pierden 6-10%; ventanas rápidas 10d = whipsaw + picos lev 6x, descartables). **PERO
+  rescata un DIAL DE ROBUSTEZ/PRODUCTO (sim-40d, lento):** OOS mejor Sharpe (1.82→1.89), Calmar (2.95→3.20), MENOS
+  maxDD (−13.9→−12.0), meses más consistentes (67→72%), a cambio de ~6% retorno; realista (lev máx 2.3x). Win-rate
+  por fold ≤46% (no dominante). **Hallazgo fino:** el estático se PASA del ancla en OOS (−13.9 real vs −10) = el
+  sobre-apalancamiento de e29; el vol-targeting lento REDUCE ese desbordamiento → es la evolución natural de e68 y
+  por eso DISTINTO del gate binario descartado (ese empeoraba maxDD por whipsaw). **Mismo tipo que λ=0.25: producto,
+  no regla de oro. NO desplegado.** Ángulo vivo: reframear a "maxDD real ≤ ancla en cambios de régimen" (sim-40d +
+  e68), medir robustez no retorno. (Memoria `kepler-vol-targeting-dynamic`.)
+- 🛑 **CIERRE 2026-06-05.** Sistema sano, fixes aguantando, pérdida = mercado dentro de backtest. Sin código pendiente.
+  Próxima sesión: revisión diaria + `e33` semanal de sombras si toca. Candidatos de PRODUCTO aparcados (no de
+  performance, ninguno pasa la regla de oro): dollar-neutral λ=0.25 (menos β) · vol-targeting sim-40d (menos
+  desbordamiento de maxDD). Ambos esperan decisión de Oscar; default = seguir DEMO limpio.
 
 ---
 

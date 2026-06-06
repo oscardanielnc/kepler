@@ -167,6 +167,22 @@ def run_pretrade_checks(C, target, lev, beta_last, prev_lev=None, now=None, slee
 EQUITY_GAP_WARN = 0.05   # caída entre ticks (15min) que avisa
 EQUITY_GAP_CRIT = 0.10
 CYCLE_RECENCY_BUFFER_H = 6   # si no hay rebalanceo OK en MAX_REBAL_HOURS + esto → orquestador atascado
+DD_WARN = 0.08   # drawdown vs pico que avisa (acercándose al ancla −10%)
+DD_CRIT = 0.10   # drawdown vs pico = ancla alcanzada (la red DURA es el CB −20%; esto avisa MUCHO antes)
+
+
+def check_drawdown(equity, peak) -> CheckResult:
+    """Drawdown del equity MTM VIVO vs el pico, evaluado en el HEARTBEAT (cada 15min). Caza el acercamiento
+    al ancla −10% sobre la curva MTM real, sin esperar al snapshot del rebalanceo de las 14 UTC (que va 1
+    paso por detrás: el libro sigue sangrando intradía). NO es un halt (eso es el CB −20%): solo AVISA."""
+    if not peak or peak <= 0 or equity is None:
+        return _r("drawdown", OK, "sin referencia de pico")
+    dd = equity / peak - 1
+    if dd <= -DD_CRIT:
+        return _r("drawdown", CRIT, f"drawdown {dd*100:.1f}% alcanzó el ancla −{DD_CRIT*100:.0f}% (CB en −20%)", dd)
+    if dd <= -DD_WARN:
+        return _r("drawdown", WARN, f"drawdown {dd*100:.1f}% se acerca al ancla −{DD_CRIT*100:.0f}%", dd)
+    return _r("drawdown", OK, f"drawdown {dd*100:.1f}%", dd)
 
 
 def check_equity_gap(prev_eq, eq) -> CheckResult:
@@ -202,9 +218,11 @@ def check_orphans(positions, universe) -> CheckResult:
 
 
 def run_heartbeat_checks(prev_eq, eq, last_ok_ts_ms, now_ms, max_cycle_h,
-                         positions=None, universe=None) -> list[CheckResult]:
+                         positions=None, universe=None, peak=None) -> list[CheckResult]:
     """Chequeos RUNTIME (entre rebalanceos). Solo avisan (no bloquean nada; el CB es la red dura)."""
     res = [check_equity_gap(prev_eq, eq), check_cycle_recency(last_ok_ts_ms, now_ms, max_cycle_h)]
+    if peak is not None:
+        res.append(check_drawdown(eq, peak))
     if positions is not None and universe is not None:
         res.append(check_orphans(positions, universe))
     return res

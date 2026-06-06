@@ -81,7 +81,7 @@ def _delete(path, params):
 
 # ─── Estado de cuenta ─────────────────────────────────────────────────────────
 
-def get_balance():
+def get_balance(retries: int = 3, backoff_s: float = 1.0):
     """Equity REAL de la cuenta = NAV mark-to-market = totalMarginBalance
     (= totalWalletBalance + totalUnrealizedProfit). Es lo que alimenta la curva de
     equity, el maxDD y el sizing del libro.
@@ -92,14 +92,23 @@ def get_balance():
     (Bug detectado 2026-06-04; antes devolvía totalWalletBalance.)
 
     Devuelve None si la respuesta es ilegible/sin el campo → el heartbeat OMITE el punto
-    (no inventa un valor) y el ciclo cae a su fallback. Mejor un hueco que una curva falsa."""
+    (no inventa un valor) y el ciclo cae a su fallback. Mejor un hueco que una curva falsa.
+
+    REINTENTO (2026-06-06): la API Demo responde ilegible de forma INTERMITENTE (parpadeo) justo en la
+    ventana de rebalanceo (log 04→06: 4× "balance ilegible" agrupados antes de las 14 UTC). Para que un
+    parpadeo transitorio NO omita el ciclo, se reintenta `retries` veces con backoff lineal corto antes
+    de rendirse. Si TODOS fallan → None (sigue siendo mejor un hueco que un valor falso)."""
     if DRY_RUN:
         return config.CAPITAL_USD
-    d = _get("/fapi/v2/account", {"recvWindow": 5000})
-    if not isinstance(d, dict):
-        return None
-    v = d.get("totalMarginBalance")
-    return float(v) if v is not None else None
+    for i in range(max(1, retries)):
+        d = _get("/fapi/v2/account", {"recvWindow": 5000})
+        if isinstance(d, dict):
+            v = d.get("totalMarginBalance")
+            if v is not None:
+                return float(v)
+        if i < retries - 1:
+            time.sleep(backoff_s * (i + 1))   # backoff lineal: 1s, 2s, …
+    return None
 
 
 def get_positions():

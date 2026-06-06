@@ -61,15 +61,56 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
    si crece mucho = más beta-de-mercado latente (cruzar con la concentración de TRX).
 6. **Equity ilegible / balance falso.** Ya blindado (heartbeat y ciclo OMITEN si el balance no se lee, no
    inventan 5000). Si ves escalones planos a 5000 exactos → regresión de ese fix.
-   **⚠️ MATIZ (2026-06-04):** la curva SÍ se lee pero parece ser **wallet/realizado, no MTM** — queda plana a
-   7 decimales por horas y salta en escalones ~funding. Eso **subestima el maxDD intradía**. Hasta arreglarlo
-   (§4), el maxDD del heartbeat es un piso, no el real; el maxDD honesto del track exige equity con PnL no realizado.
+   **✅ RESUELTO (2026-06-04, confirmado vivo 06-05):** la curva ya es **MTM** (`totalMarginBalance`, `5152e7e`).
+   Verificado en el log 06-04→06-05: los ticks varían continuamente tras las 14 UTC (ya no plana a 7 decimales).
+   El maxDD del heartbeat ya refleja el PnL no realizado → track honesto. (Histórico del bug: §bitácora 06-04.)
+   ⚠️ **NUEVO (2026-06-06): `get_balance()` devuelve `None` de forma INTERMITENTE** → audit `Ciclo omitido:
+   balance ilegible` (4× en el log 04→06, agrupado ~13:20-13:50 UTC, antes del rebal). El diseño OMITE+reintenta
+   (sano, sin churn) y el 05-06 se recuperó; pero **(a)** es fragilidad de la API Demo de Binance y **(b)** el
+   **monitor NO cuenta ciclos omitidos** = si la API queda ilegible toda la ventana, se pierde el rebalanceo del
+   día EN SILENCIO. **✅ Fixes operativos IMPLEMENTADOS (2026-06-06, local, PENDIENTE push+deploy; Fase 1, sin
+   backtest):** (1) `execution.get_balance(retries=3, backoff_s=1.0)` reintenta con backoff antes de `None`
+   (absorbe el parpadeo); (2) `orchestrator.run` escala a `WARNING` "Rebalanceo en riesgo" + ntfy a
+   `SKIP_ALERT_THRESHOLD=3` omisiones seguidas (~45min) y avisa al recuperar, + regla `cycles_today==0`→CRIT en
+   `monitor.py` (tapa el rebalanceo perdido en silencio); (3) `checks.check_drawdown` corre en el HEARTBEAT (cada
+   15min, `DD_WARN=8%/DD_CRIT=10%` sobre el equity MTM vivo, pico de `equity_daily`) → caza el acercamiento al
+   ancla sin esperar al snapshot 14:00; `monitor.py` regla #2 ahora usa la PEOR de (snapshot, `live.maxdd_intraday`),
+   la #8 quedó subsumida. **Al desplegar saltará UN ntfy WARN cuando la curva MTM cruce −8%** (hoy −7.97%) — deseado.
 7. **Circuit breaker.** `cb_operate=false` = HALT por −20%. Debe ser rarísimo en ESTABLE. Si salta,
    investigar a fondo (no debería con maxDD objetivo −10%).
 
 ---
 
 ## 3. BITÁCORA (registro por día — el más nuevo arriba)
+
+### 2026-06-05 (DEMO — revisión diaria: las 4 verificaciones cerraron; crash continúa, sistema sano)
+- **✅ POST-DEPLOY 06-04 VERIFICADO AL 100%** (log 06-04→06-05): `cycles_today`=**1** (churn cerrado),
+  bloque `costs` poblado (fees $0.33 · funding $1.77 · realizado −$31.61), `monitor` severity **OK** (flags []),
+  curva **MTM viva** (ticks varían continuamente tras 14 UTC; ya no plana). Checks/concentración/CB todos OK.
+- **📉 maxDD −7.5% desde pico** (4943.69 05-31 → 4571 06-05). Caída 06-04 −$206 = **~−$34 realizado (17%) +
+  ~−$172 MTM (83%)** → **mercado, no avería**. Y **dentro del backtest** (maxdd −7.3/−10): drawdown de tamaño
+  normal, llegó rápido por coincidir con el crash. Dentro de presupuesto −10%, lejos del CB −20%.
+- **🎯 Causa = tilt net-long** (β-dólar +0.24, β-modelo ≈0): longs de trend NEAR/BCH/TRX/ZEC/BTC ~−188 USD vs
+  shorts juntos ~+92. Los shorts SÍ funcionan; el peso net-long es el que muerde. (estructural, ya documentado).
+- **⚠️ Slippage: un fill feo BCH SELL +185 bps** (245.06 vs ref 249.69) = grueso del realizado −$31.61; mediana
+  sana −1.37 bps. Patrón conocido (coste en momentos ilíquidos/finos). Un dato; si se repite en crashes → banda no-trade.
+- **🛑 PREGUNTA OSCAR: "¿detectar el crash y shortear en auto?"** = market timing → **DESCARTADO** (gate régimen/
+  carry-breadth empeoraron maxDD; timing discreto falló 3x). Falla por shortear tarde + rebote en V. Kepler es
+  β-neutral por diseño. Palanca legítima ≠ timing: **reducir β-dólar**.
+- **🔴 e71+e72 DOLLAR-NEUTRALIZACIÓN — NO DESPLEGAR (e71 fue falso positivo; el walk-forward e72 lo revirtió):**
+  cancelar λ de la β-dólar con hedge BTC + re-anclar a −10%. e71 (split simple + lev sobre toda la muestra =
+  lookahead) decía "λ≈0.5 mejora retorno"; **e72 walk-forward (train 365d · embargo 14d · test 90d · lev anclado en
+  train) gana λ=0**: Sharpe 1.77/3.11%/mes vs λ=0.5 1.66/2.85% (−8%). Neutralizar SOLO baja la β (+0.19→+0.09), CUESTA
+  retorno. **El net-long es prima de riesgo = precio del edge (como la concentración, e60); no se toca.** Salida viva:
+  λ=0.25 como palanca de PRODUCTO (β casi gratis) si Oscar quiere menos-β para copy-lead; aparcada. Detalle en
+  `STATUS.md §2026-06-05`. **Lección: exigir walk-forward con lev anclado en train (split simple engaña).**
+- **🟡 e73 VOL-TARGETING DINÁMICO — NO mejora retorno, pero rescata un dial de robustez (candidato PRODUCTO, NO
+  desplegado):** escalar lev ∝ 1/vol realizada vs ancla estática (e68), walk-forward. Estático gana retorno OOS
+  (3.42 vs ~3.0-3.2%/mes); pero `sim-40d` (lento) da mejor Sharpe (1.89), Calmar (3.20), menos maxDD (−13.9→−12.0),
+  meses más consistentes, lev realista (máx 2.3x). Reduce el DESBORDAMIENTO del maxDD OOS (el estático se pasa a
+  −13.9 vs −10 objetivo = sobre-apalancamiento de e29). Distinto del gate binario descartado (ese empeoraba maxDD).
+  Win-rate por fold ≤46%. Detalle `STATUS.md §2026-06-05`. **VIGILAR si se despliega:** que el maxDD real OOS quede
+  ≤ ancla y el turnover por ajuste de lev no dispare costes.
 
 ### 2026-06-04 (DEMO — FIX DE CHURN VERIFICADO EN VIVO + hallazgo equity-wallet)
 - **VM confirmada en `HEAD c009226`** (incluye `2034e74` fix churn). El fix se desplegó ~16 UTC del 06-03.

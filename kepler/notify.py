@@ -57,3 +57,18 @@ def alert_checks_warn(msg):
 def alert_checks_recover():
     send("✅ Kepler chequeos OK", "Los chequeos pre-trade volvieron a verde.",
          priority="default", tags="white_check_mark")
+
+
+def alert_cycle_skips(n, mins):
+    """El rebalanceo lleva varios ciclos omitidos seguidos (balance ilegible / API caída) → en riesgo de
+    perderse el rebalanceo del día. Hallazgo 06-06: tapa el punto ciego del rebalanceo perdido en silencio."""
+    send("🟠 Kepler REBALANCEO EN RIESGO",
+         f"{n} ciclos omitidos seguidos (~{mins}min) por balance ilegible — el rebalanceo del día está en "
+         f"riesgo. Revisar la API (demo-fapi) / conectividad. El libro sigue intacto (no se opera con valor falso).",
+         priority="high", tags="warning,hourglass")
+
+
+def alert_cycle_skips_recover(n):
+    send("✅ Kepler rebalanceo recuperado",
+         f"El rebalanceo se completó tras {n} ciclo(s) omitido(s) por balance ilegible.",
+         priority="default", tags="white_check_mark")
