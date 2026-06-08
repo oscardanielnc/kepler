@@ -1,16 +1,20 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-06** (revisión diaria de logs:
-> **maxDD −7.97% desde pico** ≈ −8% = ~80% del presupuesto −10% consumido (crash sigue vía tilt net-long, dentro
-> del backtest −7.3/−10, sin bug); **cycles=1 (churn aguanta)**, costes mínimos, β-dólar baja sola +0.28→+0.25.
-> 🆕 **HALLAZGO NUEVO: WARNING recurrente "Ciclo omitido: balance ilegible"** (4× en la ventana, justo antes del
-> rebal 14 UTC). El diseño OMITE+reintenta (sano, sin churn), pero (a) es fragilidad de la API Demo y (b) el
-> **monitor NO vigilaba ciclos omitidos** = punto ciego (rebalanceo perdido en silencio). **3 fixes operativos
-> IMPLEMENTADOS (local, prueba OK, PENDIENTE push+deploy de Oscar):** (1) reintento 3× en get_balance; (2)
-> escalada de ciclos omitidos en el orchestrator (ntfy "Rebalanceo en riesgo" a ≥3 seguidos) + regla cycles=0
-> CRIT en monitor; (3) chequeo de drawdown vs ancla en el HEARTBEAT (cada 15min sobre MTM vivo) + monitor usa
-> la peor de snapshot/MTM. NO tocan edge/sizing → sin backtest, pero tocan el loop vivo → verificar tras deploy.
-> Previo 2026-06-05: maxDD −7.5%, dollar-neutral λ y vol-targeting = producto no performance (no desplegar).
-> Previo 2026-06-04: 3 fixes desplegados, maxDD MTM destapado, e60 cap NO se toca, análisis competitivo.
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-08** (DÍA GRANDE — cambio de fase):
+> **🔴 LA CUENTA DEMO DE BINANCE MURIÓ (caducó) Y MIGRAMOS A REAL — pero PAUSADO por una decisión de PRODUCTO.**
+> 1) **Demo caído:** a las **06-08 02:32 UTC** la cuenta demo dejó de responder de golpe (`get_balance` → HTTP 400
+>    `-1109 "Invalid account"`). NO es bug nuestro: la cuenta demo de Binance **caducó/se reseteó** del lado de Binance.
+>    El sistema aguantó perfecto (0 churn, prefirió hueco a valor falso; la alarma de escalada disparó a los 45min).
+>    Regenerar keys/reactivar el demo NO lo arregló (-1109 persistente, mismo error desde 2 IPs) → demo inservible.
+> 2) **Switch a REAL:** creamos **sub-cuenta Binance dedicada** ($ aislado de las ops diarias de Oscar), keys reales,
+>    `USE_DEMO=false`, `CAPITAL_USD` 5000→250→**1200**, `TRACK_INCEPTION=2026-06-08`. DB demo **archivada**
+>    (`kepler_demo_archive_*.db`), DB operativa **reseteada a cero** (sombras CONSERVADAS — 868 filas). Script:
+>    `migrate_to_real.py`. El track real arranca limpio, sin mezclar con el demo buggeado.
+> 3) **🟡 HALLAZGO QUE FRENA EL FONDEO — min-notional de Binance:** $5 (23 símbolos), **$20 (5, incl. ETH), $50 (BTC)**.
+>    A $250 las 18 patas no entran (solo 3-5 grandes → libro concentrado, rompe la neutralidad). Para el libro completo
+>    se necesita **~$1000-1500**. PERO Oscar señaló el problema REAL: **ese mínimo es también la BARRERA DE ENTRADA del
+>    copiador** (depende de nº-posiciones × min-notional, NO de nuestro capital) → con 18 patas el copy-lead nace con
+>    techo ~$1000 de afiliados PARA SIEMPRE. Choca con la misión (copy-lead masivo). **DECISIÓN: no fondear aún.**
+> **➡️ SERVICIO PARADO, posiciones parciales CERRADAS (no cuentan, arrancaron mal). Próximo paso = BACKTEST.**
 >
 > **⚠️ PARA QUIEN ANALICE LOGS (lección 2026-06-04, NO repetir):** leer este STATUS y el diagnóstico previo
 > ANTES de concluir. El 06-04 se re-analizó el crash en frío, se mis-atribuyó la pérdida al mercado (era
@@ -24,23 +28,22 @@
 > ROBUSTEZ OPERATIVA (prioridad, el incidente de hoy probó que es el riesgo #1)** · Fase 2 producto/track
 > · Fase 3 escala. IA = herramienta operativa, NO alfa. Negocio = copy-lead. (Memorias `kepler-news-ia-bots-decision`.)
 >
-> **⏭️ PRÓXIMA EJECUCIÓN (tras sesión 2026-06-04):**
->   0. **✅ TODO DESPLEGADO Y VIVO (VM `HEAD 42a4dad`, deploy 06-04 13:40 UTC):** fix churn (verificado: 0 ciclos
->      espurios), equity MTM, track honesto, monitor. Solo faltan PUSH de los commits de docs/research locales
->      (`276f240`…`3037b53`) — código ya vivo.
->   1. **⏳ ÚNICO PENDIENTE DE VERIFICACIÓN EN VIVO: el log post-14 UTC del 06-04** (el ciclo de hoy YA corrió —
->      las sombras tienen dato 06-04). Confirmar: `cycles_today`=1 (churn cerrado def.), bloque `costs`
->      (fees/funding/realizado) poblado, `metrics.monitor` con severidad, curva MTM ya no plana.
->   2. **🔴 RECORDAR — equity MTM destapó el dd real −4.5% (no −1.7%):** la curva vieja (wallet) lo escondía.
->      El −4.5% es MAYORÍA mercado (crash + sesgo net-long β-dólar +0.49), parte menor el bug churn; el −3.06%
->      del 06-04 NO es pérdida nueva, es el cambio wallet→MTM destapando lo no realizado. Dentro de −10%, no halt.
->   3. **FASE 0 = DEMO LIMPIO ~3-4 semanas** (reloj limpio desde **2026-06-04**, post-fixes). Gate de salida:
->      0 incidentes operativos en 30d + slippage/fees reales ≈ backtest + β≈0/maxDD dentro de presupuesto.
->      **CADENCIA acordada: Oscar trae los logs CADA DÍA** → verificar estado, vigilar que no reaparezcan
->      bugs, medir el edge en vivo (Sharpe/maxDD/β) con el PRINCIPIO DE EVALUACIÓN CON BUGS (`ROADMAP.md`).
->   4. **Luego: Binance capital PROPIO chico** (arranca el track real) → **copy-lead** modesto → escala.
->      Ruta completa + gates en `ROADMAP.md §RUTA DE SALIDA`; mecánica de cuenta lead en `COPYLEAD.md`.
->   En paralelo corre solo: sombras→sleeve #8 (~2026-07-31, **cadencia SEMANAL `e33`** ver §06-04) + C3 slippage real.
+> **⏭️ PRÓXIMA EJECUCIÓN (tras sesión 2026-06-08) — EL BACKTEST QUE DECIDE EL PRODUCTO:**
+>   1. **🎯 BACKTEST: "¿cuál es el MÍNIMO de posiciones / universo barato que preserva el edge?"** El nº de
+>      posiciones fija A LA VEZ (a) nuestro capital floor y (b) la barrera de entrada del copiador. Probar variantes
+>      con menos patas (~8-12) y/o universo sesgado a símbolos de $5-min (evitar ETH-tier $20 / BTC $50 donde se
+>      pueda), reportando para cada una: **Sharpe, maxDD, y capital floor** (= min capital para que TODAS las patas
+>      superen su min-notional). Si una versión de ~10 patas conserva la mayor parte del Sharpe 1.94/maxDD −10% →
+>      WIN de producto enorme (barrera ~$400, mercado de afiliados ×N, menos capital de Oscar en riesgo). Si lo
+>      cratea → la diversificación es esencial y se asume el floor alto. **Regla de oro: decidir con números, no adivinar.**
+>      Conecta con memorias `kepler-per-sleeve-universe-rule`, `kepler-retire-thin-coins` (e53), cap concentración (e60/e69).
+>   2. **Con el resultado → decidir capital + config**, fondear la sub-cuenta, re-`migrate_to_real.py` (baseline limpio
+>      = capital final, sin artefacto de depósito), mover `TRACK_INCEPTION` al go-live definitivo, force rebalance.
+>   3. **FIX OPERATIVO pendiente (Fase 1, sin tocar edge → sin backtest):** loguear el **CUERPO** del error de Binance
+>      en `execution._get/_post` (hoy solo guardan `str(e)` = la línea HTTP; tener el `code/msg` habría dado el
+>      diagnóstico -1109 al instante). Y el monitor sigue ciego a "rebalanceo perdido N horas" (solo avisó la escalada).
+>   En paralelo corre solo: sombras→sleeve #8 (~2026-07-31, **cadencia SEMANAL `e33`**). OJO: con el servicio PARADO
+>   las sombras NO se registran — si la pausa se alarga, considerar correr solo el registro de sombras.
 >
 > **ESTADO FASES (2026-06-03):** **Fase 1 (robustez) CERRADA** (pasos 1-5, verificados). **Fase 2 núcleo
 > HECHO** (F2.1 `/api/track` + F2.2 `/track` + F2.3 research copy-lead `COPYLEAD.md` + **rediseño Stitch YA
@@ -49,12 +52,85 @@
 > hasta desplegar, las guardas NO protegen el vivo y el frontend nuevo no se ve.** C2 cerrado (ya hecho por
 > construcción; banda no-trade diferida a AUM). USDC aparcado (solo maker + promo, no game-changer).
 >
-> **Estado del sistema en PRODUCCIÓN (DESPLEGADO y verificado en vivo 2026-06-02 tarde):** 7 sleeves · ancla
-> −10% · **lev 2.23x** (vol-anchor e68, tras incidente sobre-leverage 2.93x→2.23x) · haircut 0.95 · **cap
-> 15%/nombre** (e69) · trend cap 0.25 · universo 20 long (−XLM/HBAR/LIT) · rebal 14 UTC · CB en heartbeat ·
-> slippage telemetría limpia (e70 winsor). 4 sombras registrando (tx/mvrv/tvl/blend).
-> ⚠️ **La Fase 1 (guardas/checks) está en commits locales, NO en la VM todavía** (≠ el bloque de arriba que sí está vivo).
+> **Estado del sistema (2026-06-08):** motor 7 sleeves · ancla −10% · lev 2.23x · haircut 0.95 · cap 15%/nombre ·
+> trend cap 0.25 · universo 20 long · rebal 14 UTC · CB en heartbeat · slippage telemetría limpia. **MODO REAL
+> configurado (sub-cuenta), pero SERVICIO PARADO** a la espera del backtest de nº-posiciones. Demo archivado.
+> Config viva: `CAPITAL_USD=1200` (provisional, se ajustará tras backtest), `TRACK_INCEPTION=2026-06-08` (se moverá
+> al go-live real). Commits locales pendientes de push: `e5be0d7` (switch real + migrate script), `b820990` (CAPITAL 1200).
 > **⏰ RECORDATORIO ~2026-07-31:** cerrar ciclo sombras (≥60-90d → `e33_shadow_tvl_analyze` → ¿sleeve #8?).
+
+---
+
+## ESTADO ACTUAL (2026-06-08) — caída del demo, migración a real, PAUSA por decisión de producto
+> Sesión larga de diagnóstico + migración. Cronología y decisiones:
+
+### 1. El demo de Binance murió (incidente externo, NO bug nuestro)
+- **Síntoma inicial:** el dashboard/frontend mostraba métricas del DOMINGO 06-07 estando lunes 06-08. Causa: el
+  rebalanceo del lunes nunca corrió → no se generó `daily_report` 06-08 → la UI se quedó congelada en el último día bueno.
+- **Causa raíz (diagnóstico por capas):** desde **06-08 02:32 UTC** `get_balance()` devolvía `None` de forma SOSTENIDA
+  (no el parpadeo intermitente conocido). El log crudo reveló `GET /fapi/v2/account: 400` y, pidiendo el cuerpo,
+  **`{"code":-1109,"msg":"Invalid account"}`**. Calibrado con key basura (→ -2015): la key SE reconoce pero **la cuenta
+  demo ya no existe**. Reloj VM OK (deriva 39ms, descartado -1021). Mismo -1109 desde 2 IPs (VM + local) → es de Binance.
+- **Conclusión:** la cuenta **Demo Trading de Binance caducó/se reseteó** sola. Reactivar el demo + regenerar keys
+  (3 intentos) **NO lo arregló** (-1109 persistente incluso tras "restablecer activo" a 5000 y con keys nuevas). Demo inservible.
+- **✅ El sistema se comportó IMPECABLE:** detectó balance ilegible → **omitió ciclos** (0 churn, libro intacto), reintentó,
+  y la **alarma de escalada disparó** (audit: "Rebalanceo en riesgo, 3 omisiones, 45min"). Fix #1/#2 del 06-06 funcionando.
+- **🔴 Punto ciego confirmado (real, no hipotético):** estuvimos ~14h sin rebalancear y el monitor diario NO lo gritó
+  (solo 1 push de la escalada). Tapar: check "rebalanceo perdido N horas" + loguear el CUERPO del error de Binance.
+
+### 2. Migración DEMO → REAL (sub-cuenta aislada)
+- Creada **sub-cuenta Binance dedicada** (correo virtual) → $ aislado de las operaciones diarias de Oscar (él tiene
+  $3000; quería separar el capital de Kepler para no traquear lo que no es de Kepler). Keys reales: Futuros ON, retiros
+  OFF, IP-whitelist a la VM.
+- Config: `KEPLER_USE_DEMO=false`, `KEPLER_DRY_RUN=false`, `CAPITAL_USD` 5000→250→1200, `TRACK_INCEPTION=2026-06-08`.
+- DB: `migrate_to_real.py` → **archiva** la DB demo íntegra (`kepler_demo_archive_*.db`) + **resetea a cero** las tablas
+  operativas + **CONSERVA `shadow_signal`** (868 filas, hilo de sombras continuo demo→real). Track real arranca limpio.
+- **Pelea de permisos (resuelta, lecciones):** keys reales leían cuenta pero NO operaban → `401` en order/leverage →
+  faltaba el permiso **"Enable Futures"** en la key (el read funciona con solo "Enable Reading"). Activado → trading OK.
+- **Flag de force:** un primer ciclo marcó "rebalanceo hecho" pese a fallar → para reintentar sin esperar 24h se usa
+  `touch <repo>/.force_rebalance` (one-shot, lo lee el orquestador en el siguiente heartbeat).
+
+### 3. El hallazgo que FRENA el fondeo (min-notional → barrera de entrada del copy-lead)
+- Con permisos OK, las órdenes daban **`-4164 "notional must be no smaller than 20"`**. Min-notional Binance en el
+  universo: **$5 (23 símbolos) · $20 (5, incl. ETH) · $50 (BTC)**. A $250 las 18 patas no entran (solo 3-5 grandes →
+  libro concentrado, rompe la β-neutralidad). Floor para libro completo ≈ **$1000-1500**.
+- **🧠 Insight de Oscar (clave estratégica):** ese floor **NO es solo nuestro** — es la **BARRERA DE ENTRADA del copiador**,
+  y depende de **(nº-posiciones × min-notional), NO de nuestro capital lead**. Con 18 patas, el copy-lead nace con techo
+  de afiliados ~$1000 **permanente** → muy pocas cuentas grandes pasan la valla → mata el mercado del producto.
+- **DECISIÓN (Oscar + Claude):** **NO fondear los $1200 aún.** Esto es una pregunta de DISEÑO DE PRODUCTO que se decide
+  con backtest, no apresurando capital. Servicio **PARADO**, posiciones parciales **CERRADAS** (no cuentan, arrancaron mal).
+- **Próximo:** backtest "mínimo de posiciones que preserva el edge" (ver §PRÓXIMA EJECUCIÓN arriba). El nº que salga fija
+  capital floor + barrera del copiador → decisión central del negocio copy-lead.
+
+---
+
+## ESTADO ACTUAL (2026-06-07) — revisión diaria de logs (recuperación + fixes verificados en vivo)
+> Log rango 06-06→06-07, generado 06-07 11:01 UTC (el rebal 06-07 14:00 aún no ocurre → 06-07 es heartbeat-only).
+- 🟢 **DRAWDOWN EN RECUPERACIÓN.** Pico 4943.69 (05-31). Suelo de la ventana **−8.36%** (06-06 14:00, equity 4530.48,
+  el snapshot del rebal). Desde ahí **dos cierres verdes: 06-06 +0.31% (4578.71, dd −7.38%) · 06-07 +0.81% (4615.86,
+  dd −6.63%)**. `maxdd_intraday` 06-06 = −7.46%. **Nos alejamos del ancla.** Importante: esta vez el snapshot 14:00
+  fue el MÍNIMO y el libro recuperó intradía → **invierte el patrón previo** (cierre MTM peor que snapshot). Sigue
+  siendo crash de mercado vía tilt net-long, dentro del backtest (−7.3/−10), sin bug.
+- ✅ **LOS 3 FIXES DEL 06-06 ESTÁN DESPLEGADOS Y FUNCIONARON (1ª prueba real).** Lo prueba la **nueva categoría
+  `checks_hb`** en el audit (no existía en logs previos):
+  1. **Fix #3 (drawdown vs ancla en HEARTBEAT) — CONFIRMADO VIVO Y CORRECTO.** Al cruzar −8% MTM disparó
+     `Heartbeat: WARN "drawdown −8.x% se acerca al ancla −10%"` cada 15min (audit id **91→117**, ~22 ticks), y volvió
+     a **`Heartbeat: OK` (id 118)** en cuanto la curva recuperó sobre −8%. Justo lo diseñado (avisa al rozar el ancla).
+  2. **Fix #2 (escalada de ciclos omitidos, umbral 3)** — no necesitó disparar: solo **2 omisiones seguidas** (<3).
+  3. **Monitor diario** usó el peor de snapshot/MTM → `Monitor diario: WARN` a −8.36% (id 89) + en el daily_report.
+- 🟡 **"Balance ilegible": 2 omisiones pre-rebal el 06-06** (audit id 85/86, ~13:28 y 13:43 UTC) → el rebal de las
+  14:00 **SÍ corrió** (id 88 "Ciclo ESTABLE ok 110s"). Patrón conocido de la API Demo; omite+reintenta, **0 churn**.
+  **0 omisiones el 06-07.** (Nota: id 85/86 solapan con el export anterior — son los mismos del 06-06, no nuevos.)
+- 🟢 **Rebalanceo 06-06 limpio:** `cycles_today=1` · slip **sano** (n=9, mediana 4.08 bps, worst **10.1 bps** LINK —
+  el fill malo de BCH +185bps del 06-04 **NO se repitió**) · costes: fees **$0.25** · funding **+$0.29** · realizado
+  **+$16.51** (positivo) · pre-trade checks OK (concentración BTC 15% ≤ cap, corr media 0.11, β-dólar +0.29) · `cb_operate: true`.
+- 🔴 **NEAR sigue siendo el elefante** (snapshot 14:00): long **notional 936.9, PnL −229.27** (entry 2.31 → mark 1.86,
+  −19.6%). Mayores sangradores: NEAR −229 · ZEC −54 · TRX −51 · BTC −30 · BCH −20. Shorts compensan: ADA +34 · UNI +29 ·
+  AVAX +26 · DOGE +20. **β-dólar del snapshot subió a ~0.40** (vs target pre-trade +0.29) = el tilt net-long
+  concentrado en longs de trend sigue siendo la estructura del drawdown (precio del edge, sin bug).
+- 🛑 **CIERRE 2026-06-07.** Sistema sano, recuperándose, dentro de presupuesto. Sin incidentes nuevos. Los fixes
+  operativos pasaron su bautismo de fuego (la alarma de heartbeat funciona). Próxima sesión: confirmar que el rebal
+  06-07 cerró limpio y seguir vigilando si la recuperación se sostiene / si NEAR sigue pesando. `e33` semanal si toca.
 
 ---
 

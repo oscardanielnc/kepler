@@ -83,6 +83,28 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
 
 ## 3. BITÁCORA (registro por día — el más nuevo arriba)
 
+### 2026-06-08 (🔴 CAÍDA DEL DEMO + migración a REAL + PAUSA por decisión de producto)
+- **INCIDENTE EXTERNO — la cuenta Demo de Binance caducó.** Desde **06-08 02:32 UTC**, `get_balance()` → `None`
+  sostenido. Raíz: `GET /fapi/v2/account` → HTTP 400 **`{"code":-1109,"msg":"Invalid account"}`**. La key se reconoce
+  (key basura da -2015), pero la **cuenta demo ya no existe** del lado de Binance (las cuentas Demo Trading caducan/se
+  resetean). Reloj VM OK (deriva 39ms). Mismo -1109 desde 2 IPs → no es la VM. **Reactivar demo + regenerar keys NO
+  lo arregló** (-1109 persistente). **Nuevo modo de fallo, distinto del parpadeo `None` intermitente: es un rechazo
+  DURO y persistente.**
+- **El sistema aguantó perfecto:** balance ilegible → ciclos omitidos (0 churn, libro intacto) → alarma de escalada
+  disparó a los 45min (Fix #1/#2 del 06-06 funcionando en un caso real). PERO: ~14h sin rebalancear y el monitor diario
+  NO lo gritó (solo la escalada). **Punto ciego confirmado** (ver §4 BUGS).
+- **Síntoma que vio Oscar:** dashboard mostraba métricas del domingo estando lunes = no se generó `daily_report` del
+  lunes (el rebal nunca corrió) → la UI se congela en el último día bueno. **Lección de lectura: "UI atrasada un día"
+  casi siempre = el rebalanceo de hoy no corrió, no un bug de fecha.**
+- **Migración a REAL:** sub-cuenta Binance dedicada ($ aislado), keys reales (Futuros ON / retiros OFF / IP-whitelist),
+  `USE_DEMO=false`, `CAPITAL_USD`→1200, `TRACK_INCEPTION=2026-06-08`. `migrate_to_real.py` archivó el demo y reseteó la
+  DB operativa conservando sombras. Pelea de permisos: faltaba **"Enable Futures"** en la key (leía pero no operaba, 401).
+- **🟡 HALLAZGO QUE PARÓ TODO — min-notional Binance:** `-4164 "notional ≥ 20"`. Mínimos: **$5 (23 símbolos) · $20 (5,
+  incl. ETH) · $50 (BTC)**. A $250 las 18 patas no entran → libro concentrado. Floor libro completo ≈ **$1000-1500**.
+  **Oscar señaló el problema de producto:** ese floor = **barrera de entrada del copiador** (depende de nº-posiciones,
+  no de nuestro capital) → 18 patas = techo de afiliados ~$1000 permanente. **DECISIÓN: no fondear; backtestear el nº
+  mínimo de posiciones que preserva el edge.** Servicio PARADO, posiciones parciales cerradas (no cuentan).
+
 ### 2026-06-05 (DEMO — revisión diaria: las 4 verificaciones cerraron; crash continúa, sistema sano)
 - **✅ POST-DEPLOY 06-04 VERIFICADO AL 100%** (log 06-04→06-05): `cycles_today`=**1** (churn cerrado),
   bloque `costs` poblado (fees $0.33 · funding $1.77 · realizado −$31.61), `monitor` severity **OK** (flags []),
@@ -195,6 +217,23 @@ datos; rellenar al revisar logs):
 ---
 
 ## 4. BUGS / ISSUES CONOCIDOS · TODOs
+- [ ] **🔴 NUEVO (2026-06-08) — `execution._get/_post/_delete` se tragan el CUERPO del error de Binance.** Solo
+      loguean `str(e)` = la línea HTTP (`400 Bad Request for url ...`), no el `{"code","msg"}` del body. El 06-08
+      esto retrasó horas el diagnóstico del demo caído (el `code:-1109` solo se vio pidiendo el body a mano con curl).
+      **Fix (Fase 1, sin tocar edge → sin backtest):** capturar `e.response.text`/`.json()` y loguearlo. Trivial y
+      de alto valor diagnóstico. Igual conviene un helper que mapee codes comunes (-1109 cuenta inválida, -2015 key/IP,
+      -1022 firma, -1021 reloj, -4164 min-notional, -4014/-1111 precisión).
+- [ ] **🔴 NUEVO (2026-06-08) — el monitor NO vigila "rebalanceo perdido N horas".** El 06-08 estuvimos ~14h sin
+      rebalancear (cuenta demo caída) y el digest diario no lo elevó a crítico; solo avisó la escalada de omisiones
+      (1 push). **Fix:** check en `monitor.py` que eleve a CRÍTICO si `now - last_rebal_ok > ~26h`. (Ya señalado como
+      punto ciego el 06-06; el 06-08 se materializó de verdad.)
+- [ ] **🟡 NUEVO (2026-06-08) — capital floor vs barrera de entrada (DECISIÓN DE PRODUCTO, requiere backtest).**
+      Min-notional Binance ($5/$20/$50) × 18 posiciones → floor ~$1000-1500 para libro completo, que es también la
+      barrera del copiador. **Backtest pendiente:** nº mínimo de posiciones / universo $5-min que preserve Sharpe/maxDD.
+      Si una variante de ~10 patas conserva el edge → baja la barrera ~$400 (win de producto). Ver `STATUS.md §PRÓXIMA EJECUCIÓN`.
+- [ ] **🟢 NOTA (2026-06-08) — redondeo a 0 en símbolos caros con poco capital.** A $250, BTC (15%=$37 / $63k) redondeó
+      `qty=0.000` → orden inválida. Síntoma de capital chico, no bug de fondo; a $1200 BTC=$180 entra. Vigilar si reaparece
+      con el capital final: si una pata legítima redondea a 0, saltarla explícitamente (no enviar) en `execution`.
 - [x] ~~**D0 (riesgo, prioritario):** el ancla de leverage puede exceder el −10% en vivo (e29)~~ →
       **RESUELTO 2026-06-02 (e51):** `config.LEVERAGE_HAIRCUT=0.85` (decisión de Oscar) recorta el lev
       vivo 2.02x→**1.72x** → maxDD OOS ~−11.5% (cierra el grueso del gap del ancla cediendo ~14% de
