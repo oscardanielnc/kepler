@@ -47,8 +47,10 @@ SPOT_FEE  = 0.00075    # Spot/Margin con BNB (pata spot del carry)
 SLIPPAGE  = 0.0002     # 2 bps en órdenes a mercado (conservador)
 
 # ─── Riesgo / portafolio (dials — se calibran en backtest) ───────────────────
-CAPITAL_USD        = 250.0     # REAL — sub-cuenta dedicada Kepler ($250 aislados). Solo fallback:
-                               # el sizing/equity en vivo sale de get_balance() = totalMarginBalance real.
+CAPITAL_USD        = 1200.0    # REAL — sub-cuenta dedicada Kepler ($1200 aislados). Subido de 250:
+                               # con min-notional Binance ($20 ETH-tier, $50 BTC) las 18 patas no entraban
+                               # a $250 (solo 3-5 grandes → libro concentrado). $1200 = libro completo + margen.
+                               # Solo fallback: el sizing/equity en vivo sale de get_balance() = totalMarginBalance real.
 # TRACK RECORD — inicio de la VENTANA LIMPIA para las métricas realizadas (Sharpe/maxDD/β en vivo).
 # Los días anteriores tuvieron bugs operativos (churn por reinicio, 06-02) y la equity era wallet,
 # no MTM → contaminan el número. El reloj honesto arranca con la operación estable post-fixes.
