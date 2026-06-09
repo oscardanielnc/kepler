@@ -201,6 +201,11 @@ def trend_sleeve(C):
 
 
 def compute_target(tier="ESTABLE"):
+    # MODO LOW-BARRIER (e76/e77): universo barato + β-hedge entre coins de $5 → barrera ~$300 (config).
+    # Import perezoso (lowbarrier importa de engine → evita ciclo). Misma firma de retorno.
+    if getattr(config, "LOW_BARRIER_MODE", False):
+        from kepler import lowbarrier
+        return lowbarrier.compute_low_barrier_target(tier)
     C = load(); ret = np.log(C).diff(); beta = _beta(ret)
     series = {}; weights = {}
     for name, typ, hold in SLEEVES:

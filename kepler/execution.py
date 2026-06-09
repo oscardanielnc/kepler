@@ -239,6 +239,28 @@ def _place_deltas(target_weights, equity, filt, attempt):
     return placed
 
 
+def _capital_aware_drop(target_weights, equity, filt):
+    """LOW-BARRIER (e76/e77): a poco capital, las patas cuyo notional (|w|·equity) < min-notional de su
+    símbolo NO se pueden colocar. En vez de mandar órdenes que Binance rechaza (−4164), se SUELTAN y se
+    RENORMALIZA el resto al mismo gross (redespliega el capital liberado) → el libro se adapta al capital
+    sin error ni penalización de Sharpe (validado e77: $300→~9 patas Sh 1.45 · $1000→~13 patas). Preserva
+    el gross → el maxDD anclado se respeta. A más capital, menos se suelta → réplica más fiel del modelo."""
+    import pandas as pd
+    nz = target_weights[target_weights.abs() > 1e-6]
+    g0 = nz.abs().sum()
+    keep = {s: w for s, w in nz.items()
+            if abs(w) * equity >= filt.get(s, {}).get("minnot", config.MIN_NOTIONAL_FALLBACK)}
+    out = target_weights * 0.0
+    if keep:
+        kt = pd.Series(keep); g1 = kt.abs().sum()
+        if g1 > 0:
+            kt = kt * (g0 / g1)
+        if config.MAX_POSITION_EQUITY:
+            kt = kt.clip(-config.MAX_POSITION_EQUITY, config.MAX_POSITION_EQUITY)
+        out.loc[kt.index] = kt
+    return out, len(nz) - len(keep)
+
+
 def rebalance(target_weights, equity=None):
     """Rebalancea hacia el objetivo con órdenes LÍMITE maker + gestión de no-fills:
     cancela stale → coloca → espera → re-coloca lo no llenado persiguiendo el precio,
@@ -250,6 +272,12 @@ def rebalance(target_weights, equity=None):
                 logging.info(f"[exec] DRY target {sym}: w={w:+.3f} notional={w*equity:+.0f}USD")
         return [("dry_run", len(target_weights))]
     filt = load_filters()
+    if getattr(config, "LOW_BARRIER_MODE", False):  # dropping adaptativo al capital (libro se ajusta)
+        target_weights, dropped = _capital_aware_drop(target_weights, equity, filt)
+        if dropped:
+            n_op = int((target_weights.abs() > 1e-6).sum())
+            logging.info(f"[exec] low-barrier: {dropped} pata(s) < min-notional a ${equity:.0f} soltada(s) "
+                         f"→ libro adaptativo, operando {n_op} patas (gross preservado)")
     current = get_positions()
     # FIX HUÉRFANAS: incluir en el target (peso 0) las posiciones ABIERTAS que ya NO están en él
     # (coins retiradas del universo como XLM/HBAR/LIT, o cuya señal cayó). _place_deltas las cierra

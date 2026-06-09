@@ -90,6 +90,20 @@ LEVERAGE_HAIRCUT   = 0.95      # Oscar 2026-06-02 (e51, re-ajustado tras e52/e53
 # ancla_raw_full (9.0% × 2.274). e68: mantiene maxDD real ≤9.5% en TODAS las ventanas, mismo retorno con
 # historia completa (2.16x). 0=desactiva el vol-anchor (solo maxdd-anchor, statu quo viejo).
 TARGET_VOL_ANCHOR  = 0.205     # vol anual operativa que clava el maxDD presupuestado en la referencia full
+
+# ─── MODO LOW-BARRIER (copy-lead de baja barrera, e76/e77 2026-06-09) ─────────────────────────
+# El min-notional Binance ($5 mayoría · $20 ETH-tier · $50 BTC) × Nº-posiciones = BARRERA DE ENTRADA del
+# copiador. El libro full-20 necesita ~$7k para colocarse → mata el mercado copy-lead. SOLUCIÓN (idea Oscar,
+# validada e77): NO operar los caros (BTC/ETH/BCH/ETC/LINK/LTC), sino el universo BARATO ($5) y re-neutralizar
+# la β ENTRE esos coins (no shortear BTC). Resultado: Sharpe 1.46-1.47 (≈full 1.48), β≈−0.01, barrera ~$300-485,
+# robusto a slip×3 y OOS. El CAPITAL decide cuántas patas (dropping adaptativo en execution): $300→~9, $1000+→~13.
+LOW_BARRIER_MODE   = True      # True → engine usa kepler.lowbarrier; False → libro full-20 legacy.
+# Universo barato operado: los 14 de $5-min MENOS ZEC (fina, arrastra por slippage en este universo; e77:
+# quitarla sube el %/mes 1.56→1.92 manteniendo Sharpe 1.47 y β neutral). 13 coins líquidos de $5 min-notional.
+LOW_BARRIER_UNIVERSE = ["AAVEUSDT", "ADAUSDT", "ATOMUSDT", "AVAXUSDT", "BNBUSDT", "DOGEUSDT", "DOTUSDT",
+                        "FILUSDT", "NEARUSDT", "SOLUSDT", "TRXUSDT", "UNIUSDT", "XRPUSDT"]
+# Min-notional por símbolo (fallback si exchangeInfo no responde). execution prefiere el LIVE de Binance.
+MIN_NOTIONAL_FALLBACK = 5.0
 # HORA del rebalanceo diario (ejecución, e54): la liquidez cripto sigue el reloj US/EU → pico 14-16 UTC
 # (solape US-mañana/EU-tarde, 1.5× la media), zonas muertas 21-23 y 03-05 UTC. Fijar el rebalanceo a la
 # hora más líquida baja ~21% el slippage (~0.1-0.15%/mes) sin añadir turnover ni β. Antes iba a la deriva
