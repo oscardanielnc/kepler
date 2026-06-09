@@ -266,18 +266,18 @@ def rebalance(target_weights, equity=None):
     cancela stale → coloca → espera → re-coloca lo no llenado persiguiendo el precio,
     hasta MAKER_RETRIES. Lo que no llene queda para el próximo ciclo (drift lento, OK)."""
     equity = equity or get_balance() or config.CAPITAL_USD
-    if DRY_RUN:
-        for sym, w in target_weights.items():
-            if abs(w) > 1e-3:
-                logging.info(f"[exec] DRY target {sym}: w={w:+.3f} notional={w*equity:+.0f}USD")
-        return [("dry_run", len(target_weights))]
-    filt = load_filters()
-    if getattr(config, "LOW_BARRIER_MODE", False):  # dropping adaptativo al capital (libro se ajusta)
+    filt = load_filters()   # exchangeInfo (público) — funciona también en DRY_RUN para previsualizar el libro real
+    if getattr(config, "LOW_BARRIER_MODE", False):  # dropping adaptativo al capital (libro se ajusta ANTES del DRY)
         target_weights, dropped = _capital_aware_drop(target_weights, equity, filt)
         if dropped:
             n_op = int((target_weights.abs() > 1e-6).sum())
             logging.info(f"[exec] low-barrier: {dropped} pata(s) < min-notional a ${equity:.0f} soltada(s) "
                          f"→ libro adaptativo, operando {n_op} patas (gross preservado)")
+    if DRY_RUN:
+        for sym, w in target_weights.items():
+            if abs(w) > 1e-3:
+                logging.info(f"[exec] DRY target {sym}: w={w:+.3f} notional={w*equity:+.0f}USD")
+        return [("dry_run", int((target_weights.abs() > 1e-6).sum()))]
     current = get_positions()
     # FIX HUÉRFANAS: incluir en el target (peso 0) las posiciones ABIERTAS que ya NO están en él
     # (coins retiradas del universo como XLM/HBAR/LIT, o cuya señal cayó). _place_deltas las cierra

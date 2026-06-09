@@ -47,17 +47,16 @@ SPOT_FEE  = 0.00075    # Spot/Margin con BNB (pata spot del carry)
 SLIPPAGE  = 0.0002     # 2 bps en órdenes a mercado (conservador)
 
 # ─── Riesgo / portafolio (dials — se calibran en backtest) ───────────────────
-CAPITAL_USD        = 1200.0    # REAL — sub-cuenta dedicada Kepler ($1200 aislados). Subido de 250:
-                               # con min-notional Binance ($20 ETH-tier, $50 BTC) las 18 patas no entraban
-                               # a $250 (solo 3-5 grandes → libro concentrado). $1200 = libro completo + margen.
-                               # Solo fallback: el sizing/equity en vivo sale de get_balance() = totalMarginBalance real.
+CAPITAL_USD        = 300.0     # REAL low-barrier — sub-cuenta Kepler, stress-test del PEOR CASO ($300).
+                               # Con LOW_BARRIER_MODE el libro se adapta: a $300 ~9 patas baratas, todas ≥ min-notional
+                               # (e78). Solo fallback/DRY: el equity en vivo sale de get_balance() real.
 # TRACK RECORD — inicio de la VENTANA LIMPIA para las métricas realizadas (Sharpe/maxDD/β en vivo).
 # Los días anteriores tuvieron bugs operativos (churn por reinicio, 06-02) y la equity era wallet,
 # no MTM → contaminan el número. El reloj honesto arranca con la operación estable post-fixes.
 # Regla ROADMAP §PRINCIPIO DE EVALUACIÓN CON BUGS: no se borra el pasado, se ETIQUETA y se excluye.
-TRACK_INCEPTION    = "2026-06-08"   # REAL go-live: sub-cuenta $250, DB operativa reseteada a cero.
-                                    # El periodo DEMO (05-30→06-08, 5000 USDT, bugs + caída cuenta demo)
-                                    # queda ARCHIVADO aparte (kepler_demo_archive_*.db), fuera del track real.
+TRACK_INCEPTION    = "2026-06-09"   # REAL go-live low-barrier: sub-cuenta $300, DB reseteada a cero al desplegar.
+                                    # DEMO (05-30→06-08) + intentos fallidos 06-08 quedan ARCHIVADOS, fuera del track.
+                                    # Mover si el go-live real se retrasa.
 MAX_WEIGHT_NORMAL  = 0.25      # tope normal por activo (por-sleeve, pre vol-parity)
 # CAP de concentración del LIBRO COMBINADO (e69, Oscar 2026-06-02): el cap 0.25 es POR-SLEEVE; tras
 # combinar (vp·Σ) + leverage, un nombre puede acumular de varios sleeves (incidente: TRX 23% del equity
