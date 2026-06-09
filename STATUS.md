@@ -6,9 +6,12 @@
 > la β ENTRE esos coins). e78 validó la IMPLEMENTACIÓN de producción (`kepler/lowbarrier.py` + branch en engine +
 > dropping adaptativo en execution): **Sharpe 1.48 (= full-20), 1.98%/mes, maxDD −9.5, β −0.01, 13 coins baratos,
 > SIN BTC/ETH.** El CAPITAL decide las patas: **$300→9 · $500→10 · $1000→12 · $1500→13, todas ≥ min-notional, Sharpe
-> y β estables en todo el rango.** `config.LOW_BARRIER_MODE=True`. **Commits locales pendientes de push** (`a63386d`
-> y antecesores `e5be0d7`/`b820990`/`7ea612e`/`a0389c6`/`77be653`). **Próximo: deploy + fondear $300 (stress-test del
-> peor caso) + go-live track real.** ⚠️ Falta re-validar en DEMO/DRY antes de real y mover `TRACK_INCEPTION` al go-live.
+> y β estables en todo el rango.** `config.LOW_BARRIER_MODE=True`.
+> **🟢🟢 GO-LIVE HECHO — 2026-06-09 15:26 UTC:** track REAL low-barrier VIVO en sub-cuenta **$298**. 1er ciclo: 12-pos
+> cheap (10 colocadas + 2 chasing), **β −0.011**, lev 1.18x, **órdenes LLENAN sin −4164/−401**, huérfanas de ayer (BTC/BCH/
+> ZEC/XRP) cerradas, CB OK, **sombras resumidas**. DRY en la VM pasó antes de arriesgar capital. `TRACK_INCEPTION=2026-06-09`.
+> **A VIGILAR:** slippage de la 1ª build **6.5bps med (peor NEAR 31)** = coste one-off de armar el libro desde plano →
+> debe BAJAR a ~4bps en ciclos incrementales (si persiste alto, investigar). Cadencia diaria de logs retomada.
 >
 > **--- contexto previo (2026-06-08): la cuenta demo murió y migramos a real ---**
 > **🔴 LA CUENTA DEMO DE BINANCE MURIÓ (caducó) Y MIGRAMOS A REAL — luego PAUSADO por la decisión de PRODUCTO de arriba.**
