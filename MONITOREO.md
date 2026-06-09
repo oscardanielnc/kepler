@@ -83,6 +83,22 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
 
 ## 3. BITÁCORA (registro por día — el más nuevo arriba)
 
+### 2026-06-09 (🟢 MODO LOW-BARRIER diseñado, validado y GO-LIVE en real $298)
+- **Problema resuelto:** el min-notional × nº-posiciones era la barrera del copiador (~$7k full-20). e76 (frontera
+  nº-pos) + e77 (universo barato + β-hedge entre coins, idea de Oscar) + e78 (validación ruta producción) →
+  **universo de 13 coins de $5, β-neutralizado entre ellos, dropping adaptativo al capital. Sharpe 1.48 (=full-20),
+  1.98%/mes, maxDD −9.5, β −0.01, barrera ~$300.**
+- **Implementado en producción:** `config.LOW_BARRIER_MODE=True` · `kepler/lowbarrier.py` · branch en `engine` ·
+  `execution._capital_aware_drop` (suelta patas < min-notional al capital vivo, renormaliza a igual gross → libro
+  adaptativo: $300→~10 patas · $1000→12 · $1500→13). El drop corre ANTES del DRY → el papel previsualiza el libro real.
+- **GO-LIVE 15:26 UTC (proceso disciplinado):** DRY_RUN en VM primero (cero riesgo) → REAL. Sub-cuenta $298,
+  `migrate_to_real` (baseline limpio, 980 sombras conservadas), force rebal. **1er ciclo: 12-pos cheap, órdenes LLENAN
+  sin −4164/−401, β −0.011, lev 1.18x, huérfanas (BTC/BCH/ZEC/XRP) cerradas, CB OK. Track real arranca 2026-06-09.**
+- **🟡 PUNTO A VIGILAR (mañana):** slippage 1ª build **6.5bps med · peor NEAR 31.15** = coste one-off de armar el libro
+  desde plano (cruza spreads). Debe BAJAR a ~4bps en ciclos incrementales. Si persiste alto en coins líquidos → investigar
+  (no-fills/GTX, o que el universo barato tenga peor microestructura de lo modelado). β-dólar snapshot 0.24 (net-long inicial).
+- **🟢 Adaptación del producto al capital confirmada en vivo:** a $298 operó 10 patas, todas ≥ min-notional, sin error.
+
 ### 2026-06-08 (🔴 CAÍDA DEL DEMO + migración a REAL + PAUSA por decisión de producto)
 - **INCIDENTE EXTERNO — la cuenta Demo de Binance caducó.** Desde **06-08 02:32 UTC**, `get_balance()` → `None`
   sostenido. Raíz: `GET /fapi/v2/account` → HTTP 400 **`{"code":-1109,"msg":"Invalid account"}`**. La key se reconoce

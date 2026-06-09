@@ -42,22 +42,18 @@
 > ROBUSTEZ OPERATIVA (prioridad, el incidente de hoy probó que es el riesgo #1)** · Fase 2 producto/track
 > · Fase 3 escala. IA = herramienta operativa, NO alfa. Negocio = copy-lead. (Memorias `kepler-news-ia-bots-decision`.)
 >
-> **⏭️ PRÓXIMA EJECUCIÓN (tras sesión 2026-06-08) — EL BACKTEST QUE DECIDE EL PRODUCTO:**
->   1. **🎯 BACKTEST: "¿cuál es el MÍNIMO de posiciones / universo barato que preserva el edge?"** El nº de
->      posiciones fija A LA VEZ (a) nuestro capital floor y (b) la barrera de entrada del copiador. Probar variantes
->      con menos patas (~8-12) y/o universo sesgado a símbolos de $5-min (evitar ETH-tier $20 / BTC $50 donde se
->      pueda), reportando para cada una: **Sharpe, maxDD, y capital floor** (= min capital para que TODAS las patas
->      superen su min-notional). Si una versión de ~10 patas conserva la mayor parte del Sharpe 1.94/maxDD −10% →
->      WIN de producto enorme (barrera ~$400, mercado de afiliados ×N, menos capital de Oscar en riesgo). Si lo
->      cratea → la diversificación es esencial y se asume el floor alto. **Regla de oro: decidir con números, no adivinar.**
->      Conecta con memorias `kepler-per-sleeve-universe-rule`, `kepler-retire-thin-coins` (e53), cap concentración (e60/e69).
->   2. **Con el resultado → decidir capital + config**, fondear la sub-cuenta, re-`migrate_to_real.py` (baseline limpio
->      = capital final, sin artefacto de depósito), mover `TRACK_INCEPTION` al go-live definitivo, force rebalance.
+> **⏭️ PRÓXIMA EJECUCIÓN (tras sesión 2026-06-09) — ACUMULAR TRACK + VIGILAR EN VIVO:**
+>   1. **🔎 REVISIÓN DIARIA DE LOGS (cadencia retomada).** El sistema low-barrier está VIVO en real $298. Vigilar
+>      cada día: (a) **slippage incremental** — la 1ª build dio 6.5bps med (peor NEAR 31); debe BAJAR a ~4bps en
+>      ciclos incrementales (si persiste alto, investigar — los coins baratos son líquidos); (b) **β ≈ 0** y **dd chico**;
+>      (c) que las 2 patas sin llenar se completaron; (d) el edge en vivo (Sharpe/maxDD) vs backtest (~3-4 sem para nº honesto).
+>   2. **COPY-TRADING (cuando el track tenga días sólidos):** abrir el copy en Binance + fijar mínimo de copia
+>      (~$300 mercado máx / ~$500 réplica más fiel). No hay prisa — primero acumular track verificable.
 >   3. **FIX OPERATIVO pendiente (Fase 1, sin tocar edge → sin backtest):** loguear el **CUERPO** del error de Binance
->      en `execution._get/_post` (hoy solo guardan `str(e)` = la línea HTTP; tener el `code/msg` habría dado el
->      diagnóstico -1109 al instante). Y el monitor sigue ciego a "rebalanceo perdido N horas" (solo avisó la escalada).
->   En paralelo corre solo: sombras→sleeve #8 (~2026-07-31, **cadencia SEMANAL `e33`**). OJO: con el servicio PARADO
->   las sombras NO se registran — si la pausa se alarga, considerar correr solo el registro de sombras.
+>      en `execution._get/_post` (hoy solo `str(e)` = línea HTTP; el `code/msg` habría dado el −1109 al instante) +
+>      check en `monitor.py` de "rebalanceo perdido N horas" (puntos ciegos del incidente 06-08). Cosmético: quitar
+>      el `FutureWarning` de pct_change (engine/lowbarrier) y el texto "arrancará en $250" hardcodeado en migrate_to_real.
+>   En paralelo corre solo: sombras→sleeve #8 (~2026-07-31, **cadencia SEMANAL `e33`**); resumieron con el go-live.
 >
 > **ESTADO FASES (2026-06-03):** **Fase 1 (robustez) CERRADA** (pasos 1-5, verificados). **Fase 2 núcleo
 > HECHO** (F2.1 `/api/track` + F2.2 `/track` + F2.3 research copy-lead `COPYLEAD.md` + **rediseño Stitch YA
@@ -66,12 +62,42 @@
 > hasta desplegar, las guardas NO protegen el vivo y el frontend nuevo no se ve.** C2 cerrado (ya hecho por
 > construcción; banda no-trade diferida a AUM). USDC aparcado (solo maker + promo, no game-changer).
 >
-> **Estado del sistema (2026-06-08):** motor 7 sleeves · ancla −10% · lev 2.23x · haircut 0.95 · cap 15%/nombre ·
-> trend cap 0.25 · universo 20 long · rebal 14 UTC · CB en heartbeat · slippage telemetría limpia. **MODO REAL
-> configurado (sub-cuenta), pero SERVICIO PARADO** a la espera del backtest de nº-posiciones. Demo archivado.
-> Config viva: `CAPITAL_USD=1200` (provisional, se ajustará tras backtest), `TRACK_INCEPTION=2026-06-08` (se moverá
-> al go-live real). Commits locales pendientes de push: `e5be0d7` (switch real + migrate script), `b820990` (CAPITAL 1200).
+> **Estado del sistema (2026-06-09) — LOW-BARRIER VIVO EN REAL:** motor 7 sleeves · ancla −10% · cap 15%/nombre ·
+> rebal 14 UTC · CB en heartbeat · **`LOW_BARRIER_MODE=True`** → universo BARATO de 13 coins de $5 (sin BTC/ETH-tier),
+> β-hedge entre ellos, **dropping adaptativo al capital** en execution. **Sub-cuenta REAL aislada, equity ~$298, lev
+> ~1.18x, ~10-12 patas, β −0.011.** `CAPITAL_USD=300` · `TRACK_INCEPTION=2026-06-09`. Demo + intentos previos archivados.
+> Commits pendientes de push: `b8581ff` y antecesores (low-barrier + go-live). Frontend/dashboard sigue apuntando a la DB
+> reseteada → muestra el track real desde 2026-06-09.
 > **⏰ RECORDATORIO ~2026-07-31:** cerrar ciclo sombras (≥60-90d → `e33_shadow_tvl_analyze` → ¿sleeve #8?).
+
+---
+
+## ESTADO ACTUAL (2026-06-09) — modo LOW-BARRIER diseñado, validado y EN VIVO en real
+> De "proyecto cancelable" a "producto vivo y vendible" en una sesión. Resumen:
+
+### 1. El problema (de ayer) y la idea que lo resolvió
+- e76 cuantificó: min-notional Binance ($5/$20/$50) × 18 patas → **barrera ~$7k para el copiador** (floor_p90 $74k
+  en el universo completo). Reducir nº-posiciones solo bajaba a ~$1.5k (lo clavan BTC $50 / ETH-tier $20 con peso chico).
+- **Idea de Oscar (validada):** NO operar los caros, sino el universo BARATO ($5) y **re-neutralizar la β ENTRE esos
+  coins** (no shortear BTC). e77: quitar los caros a lo bruto MATA el edge (Sharpe 0.93); con β-hedge entre baratos
+  VUELVE intacto (1.43-1.47), β −0.01. Quitando ZEC (fina) sube el %/mes a 1.9 (≈ full-20).
+
+### 2. Implementación de producción (commits locales)
+- **`kepler/lowbarrier.py`** (nuevo): reconstruye la matriz de pesos diaria, restringe al universo barato (13 coins),
+  β-neutraliza, ancla leverage al maxDD del tier. Misma firma que `engine.compute_target`.
+- **`config.LOW_BARRIER_MODE=True`** + `LOW_BARRIER_UNIVERSE` (13 coins: AAVE/ADA/ATOM/AVAX/BNB/DOGE/DOT/FIL/NEAR/SOL/TRX/UNI/XRP).
+- **`engine.compute_target`** enruta a lowbarrier si el flag.
+- **`execution._capital_aware_drop`** (corre ANTES del DRY): suelta patas < min-notional al capital vivo + renormaliza
+  a igual gross → **el libro se adapta al capital** ($300→9-10 · $1000→12 · $1500→13), todas colocables, Sharpe/β estables.
+- Validación `research/e78` (ruta REAL de producción): Sharpe 1.48, 1.98%/mes, maxDD −9.5, β −0.009; reproduce e77.
+
+### 3. Go-live (2026-06-09 15:26 UTC) — proceso disciplinado
+- **DRY_RUN en la VM primero** (sin tocar capital): el motor low-barrier corrió limpio, libro a $300 = ~9-10 patas baratas.
+- **Luego REAL:** sub-cuenta fondeada a **$298**, `migrate_to_real.py` (baseline limpio, 980 sombras conservadas), force rebal.
+- **1er ciclo OK:** 12-pos cheap (10 colocadas + 2 chasing), **órdenes LLENAN sin −4164/−401**, β −0.011, lev 1.18x,
+  huérfanas de ayer (BTC/BCH/ZEC/XRP) cerradas, CB OK, sombras resumidas. **El track real honesto arranca HOY.**
+- 🟡 **Único punto abierto:** slippage 1ª build 6.5bps med (peor NEAR 31) = coste one-off de armar desde plano → debe
+  bajar a ~4bps incremental. Revisar mañana.
 
 ---
 
