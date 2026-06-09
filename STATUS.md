@@ -1,6 +1,17 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-08** (DÍA GRANDE — cambio de fase):
-> **🔴 LA CUENTA DEMO DE BINANCE MURIÓ (caducó) Y MIGRAMOS A REAL — pero PAUSADO por una decisión de PRODUCTO.**
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-09**.
+> **🟢 MODO LOW-BARRIER IMPLEMENTADO Y VALIDADO — el copy-lead es VIABLE a ~$300 (barrera rescatada).**
+> e76 destapó que el min-notional Binance ($5/$20/$50) × 18 patas = barrera ~$7k para el copiador → mataba el
+> negocio. e77 probó la idea de Oscar (no operar BTC/ETH-tier caros, sino el universo BARATO de $5 + re-neutralizar
+> la β ENTRE esos coins). e78 validó la IMPLEMENTACIÓN de producción (`kepler/lowbarrier.py` + branch en engine +
+> dropping adaptativo en execution): **Sharpe 1.48 (= full-20), 1.98%/mes, maxDD −9.5, β −0.01, 13 coins baratos,
+> SIN BTC/ETH.** El CAPITAL decide las patas: **$300→9 · $500→10 · $1000→12 · $1500→13, todas ≥ min-notional, Sharpe
+> y β estables en todo el rango.** `config.LOW_BARRIER_MODE=True`. **Commits locales pendientes de push** (`a63386d`
+> y antecesores `e5be0d7`/`b820990`/`7ea612e`/`a0389c6`/`77be653`). **Próximo: deploy + fondear $300 (stress-test del
+> peor caso) + go-live track real.** ⚠️ Falta re-validar en DEMO/DRY antes de real y mover `TRACK_INCEPTION` al go-live.
+>
+> **--- contexto previo (2026-06-08): la cuenta demo murió y migramos a real ---**
+> **🔴 LA CUENTA DEMO DE BINANCE MURIÓ (caducó) Y MIGRAMOS A REAL — luego PAUSADO por la decisión de PRODUCTO de arriba.**
 > 1) **Demo caído:** a las **06-08 02:32 UTC** la cuenta demo dejó de responder de golpe (`get_balance` → HTTP 400
 >    `-1109 "Invalid account"`). NO es bug nuestro: la cuenta demo de Binance **caducó/se reseteó** del lado de Binance.
 >    El sistema aguantó perfecto (0 churn, prefirió hueco a valor falso; la alarma de escalada disparó a los 45min).
