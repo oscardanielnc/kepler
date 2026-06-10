@@ -79,18 +79,25 @@
 > ROBUSTEZ OPERATIVA (prioridad, el incidente de hoy probó que es el riesgo #1)** · Fase 2 producto/track
 > · Fase 3 escala. IA = herramienta operativa, NO alfa. Negocio = copy-lead. (Memorias `kepler-news-ia-bots-decision`.)
 >
-> **⏭️ PRÓXIMA EJECUCIÓN (tras sesión 2026-06-09) — ACUMULAR TRACK + VIGILAR EN VIVO:**
->   1. **🔎 REVISIÓN DIARIA DE LOGS (cadencia retomada).** El sistema low-barrier está VIVO en real $298. Vigilar
->      cada día: (a) **slippage incremental** — la 1ª build dio 6.5bps med (peor NEAR 31); debe BAJAR a ~4bps en
->      ciclos incrementales (si persiste alto, investigar — los coins baratos son líquidos); (b) **β ≈ 0** y **dd chico**;
->      (c) que las 2 patas sin llenar se completaron; (d) el edge en vivo (Sharpe/maxDD) vs backtest (~3-4 sem para nº honesto).
->   2. **COPY-TRADING (cuando el track tenga días sólidos):** abrir el copy en Binance + fijar mínimo de copia
+> **⏭️ PRÓXIMA EJECUCIÓN (tras sesión 2026-06-10) — MAÑANA 2026-06-11, log post-14 UTC:**
+>   1. **🔎 VERIFICAR EL 1er CICLO CON λnet=0.25** (deploy ~06-10 14:58 UTC; el ciclo de hoy corrió con
+>      código viejo): (a) lev **~1.49x** + **UN WARN de salto** (+26% vs 1.18, esperado, NO investigar) y
+>      después banda (0.9,2.0) sin WARN recurrente; (b) **net del snapshot ~+0.06** (antes +0.09); (c) β ≈ 0;
+>      (d) turnover one-off mayor de lo normal (re-pesado λnet) — solo ese día. Si Oscar no pasó el one-liner
+>      de git log/grep, confirmar ahí mismo que el commit `20cdaa2` está vivo.
+>   2. **🔎 SLIPPAGE INCREMENTAL — 4º intento de veredicto** (06-09 build 6.5bps; 06-10 solo 1 orden sin fills
+>      en el export): debe estar ~4bps mediana. Ojo: el ciclo λnet mueve más libro → leer el slippage de ESE
+>      turnover extra también. Si persiste >10bps mediana, investigar.
+>   3. **REVISIÓN DIARIA estándar:** β ≈ 0 · dd chico · cycles_today=1 · monitor OK · costes triviales ·
+>      edge vivo vs backtest (~3-4 sem para nº honesto).
+>   4. **COPY-TRADING (cuando el track tenga días sólidos):** abrir el copy en Binance + fijar mínimo de copia
 >      (~$300 mercado máx / ~$500 réplica más fiel). No hay prisa — primero acumular track verificable.
->   3. **FIX OPERATIVO pendiente (Fase 1, sin tocar edge → sin backtest):** loguear el **CUERPO** del error de Binance
->      en `execution._get/_post` (hoy solo `str(e)` = línea HTTP; el `code/msg` habría dado el −1109 al instante) +
->      check en `monitor.py` de "rebalanceo perdido N horas" (puntos ciegos del incidente 06-08). Cosmético: quitar
->      el `FutureWarning` de pct_change (engine/lowbarrier) y el texto "arrancará en $250" hardcodeado en migrate_to_real.
->   En paralelo corre solo: sombras→sleeve #8 (~2026-07-31, **cadencia SEMANAL `e33`**); resumieron con el go-live.
+>   5. **FIX OPERATIVO pendiente (Fase 1, sin tocar edge → sin backtest):** loguear el **CUERPO** del error de
+>      Binance en `execution._get/_post` + check en `monitor.py` de "rebalanceo perdido N horas" (puntos ciegos
+>      del incidente 06-08). Cosmético: `FutureWarning` de pct_change (engine/lowbarrier) y el "arrancará en
+>      $250" hardcodeado en migrate_to_real.
+>   PRÓXIMAMENTE (decidido, no urgente): producto dual Estable/Growth (ROADMAP F3.1) + análisis de sleeves
+>   (F3.1b). En paralelo corre solo: sombras→sleeve #8 (~2026-07-31, **cadencia SEMANAL `e33`**).
 >
 > **ESTADO FASES (2026-06-03):** **Fase 1 (robustez) CERRADA** (pasos 1-5, verificados). **Fase 2 núcleo
 > HECHO** (F2.1 `/api/track` + F2.2 `/track` + F2.3 research copy-lead `COPYLEAD.md` + **rediseño Stitch YA
