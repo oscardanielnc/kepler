@@ -81,6 +81,32 @@
 
 ---
 
+## ESTADO ACTUAL (2026-06-10) — 1ª revisión diaria post go-live: sistema sano + fix de check
+> Sesión corta de operación. El low-barrier lleva ~1 día vivo en real; nada roto, un WARN cosmético arreglado.
+
+### 1. Revisión del log 06-09→06-10 (sistema 🟢)
+- **Log generado 13:24 UTC, ANTES del rebalanceo de las 14 UTC** → contiene SOLO el ciclo de go-live (06-09 15:27) +
+  ~22h de heartbeats. El ciclo de hoy aún no había corrido (1 solo `daily_report`, 1 ciclo en `audit`).
+- **Estado sano:** equity **$298.17 → $297.56** (MTM **−0.21%**, rango 296.8–299.3) · β **−0.011** · net +0.087 · gross 0.57 ·
+  **12 posiciones** (top TRX 15% = en cap) · CB OK · **monitor diario "sin anomalías"** · costes triviales.
+- **Las 12 patas están abiertas → las 2 "chasing" del go-live se llenaron** (punto (c) de vigilancia: resuelto).
+- Cierres con pérdida realizada (ZEC −$1.21, XRP −$0.61 vs BCH +$0.80 / AVAX +$0.43 / UNI +$0.34) = limpieza de las
+  **huérfanas del libro anterior**, coste one-off esperado.
+
+### 2. Fix aplicado — WARN espurio de leverage en low-barrier (commit local `e06175b`)
+- **Síntoma:** el check pre-trade marcaba `🟡 leverage 1.18x fuera de banda (1.3, 2.9)` en CADA ciclo.
+- **Causa:** `checks.LEV_BAND=(1.3,2.9)` calibrada para ESTABLE full-20 (~2.2x); en low-barrier el lev de diseño es ~1.18x.
+- **Arreglo:** `checks.LEV_BAND_LOW_BARRIER=(0.7,1.6)` (anclada al 1.18x validado e78/go-live, misma anchura relativa que la
+  full), elegida según `config.LOW_BARRIER_MODE`. CRIT duros (0.5/3.2) sin tocar. **e75 pasa entero** (1.18x/1.55x→OK,
+  3.4x→CRIT bloquea). Config del check, **NO toca edge → sin backtest.**
+
+### 3. Pendiente / a vigilar mañana
+- **🟡 Slippage incremental SIN VEREDICTO:** el log solo trae el build de go-live (6.5bps med, peor NEAR 31). El veredicto
+  (¿baja a ~4bps?) llega con el log de mañana, que incluirá el rebalanceo de las 14 UTC.
+- **PUSH+DEPLOY pendiente (Oscar):** hasta desplegar, la VM sigue mostrando el WARN cosmético (inofensivo, no bloquea).
+
+---
+
 ## ESTADO ACTUAL (2026-06-09) — modo LOW-BARRIER diseñado, validado y EN VIVO en real
 > De "proyecto cancelable" a "producto vivo y vendible" en una sesión. Resumen:
 

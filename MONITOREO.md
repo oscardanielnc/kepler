@@ -83,6 +83,20 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
 
 ## 3. BITÁCORA (registro por día — el más nuevo arriba)
 
+### 2026-06-10 (🟢 1ª revisión diaria post go-live — sistema sano + fix WARN de leverage low-barrier)
+- **Log revisado:** `kepler_2026-06-09_a_2026-06-10.json` (generado **13:24 UTC**, ANTES del rebalanceo de las 14 UTC →
+  contiene SOLO el ciclo de go-live + ~22h de heartbeats; **el ciclo de hoy aún no había corrido**).
+- **Estado 🟢 sano:** equity **$298.17 → $297.56** (MTM **−0.21%**, rango 296.8–299.3) · β **−0.011** · net +0.087 · gross 0.57 ·
+  **12 posiciones** (top TRX 15% = en cap) · CB OK · **monitor diario "sin anomalías"** · costes triviales (fees $0.05,
+  funding $0.05, realizado +$0.04). **Las 12 patas están abiertas → las 2 que quedaron "chasing" en el go-live se llenaron.**
+- **🔧 FIX — WARN espurio de leverage:** el check pre-trade marcaba `🟡 leverage 1.18x fuera de banda (1.3, 2.9)` en CADA
+  ciclo. Causa: `LEV_BAND` estaba calibrada para ESTABLE full-20 (~2.2x); en low-barrier el lev de diseño es ~1.18x.
+  **Arreglado:** `checks.LEV_BAND_LOW_BARRIER=(0.7,1.6)` (anclada al 1.18x validado e78/go-live, misma anchura relativa),
+  elegida según `config.LOW_BARRIER_MODE`. CRIT duros (0.5/3.2) sin tocar. e75 pasa entero. Config del check, NO toca edge
+  → sin backtest. Commit local `e06175b`, **pendiente push+deploy (Oscar)**.
+- **🟡 Slippage incremental — SIN VEREDICTO TODAVÍA.** El log solo trae el build de go-live (6.5bps med, peor NEAR 31);
+  no hay ciclo incremental aún. **Se confirma (¿baja a ~4bps?) con el log de mañana** (que sí incluirá el rebal de las 14 UTC).
+
 ### 2026-06-09 (🟢 MODO LOW-BARRIER diseñado, validado y GO-LIVE en real $298)
 - **Problema resuelto:** el min-notional × nº-posiciones era la barrera del copiador (~$7k full-20). e76 (frontera
   nº-pos) + e77 (universo barato + β-hedge entre coins, idea de Oscar) + e78 (validación ruta producción) →
@@ -233,6 +247,10 @@ datos; rellenar al revisar logs):
 ---
 
 ## 4. BUGS / ISSUES CONOCIDOS · TODOs
+- [x] ~~**🟡 (2026-06-10) — WARN espurio de leverage en low-barrier.**~~ El check pre-trade usaba `LEV_BAND=(1.3,2.9)`
+      (calibrada para ESTABLE full-20 ~2.2x) → en low-barrier (lev de diseño ~1.18x) disparaba WARN en CADA ciclo, ruido
+      en el canal de alertas. **RESUELTO:** `checks.LEV_BAND_LOW_BARRIER=(0.7,1.6)` elegida según `config.LOW_BARRIER_MODE`;
+      CRIT duros (0.5/3.2) sin tocar; e75 pasa. Commit local `e06175b`, **pendiente push+deploy**.
 - [ ] **🔴 NUEVO (2026-06-08) — `execution._get/_post/_delete` se tragan el CUERPO del error de Binance.** Solo
       loguean `str(e)` = la línea HTTP (`400 Bad Request for url ...`), no el `{"code","msg"}` del body. El 06-08
       esto retrasó horas el diagnóstico del demo caído (el `code:-1109` solo se vio pidiendo el body a mano con curl).
