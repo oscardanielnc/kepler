@@ -129,6 +129,33 @@ def _beta_neutralize(W, beta_daily, keep):
     return Wn.mul((g0 / g1).fillna(0.0), axis=0)
 
 
+def _net_neutralize(W, beta_daily, keep, lam):
+    """Cancela una fracción λ del NET-$ (Σw) repartiéndola ENTRE los coins `keep`, preservando la
+    neutralidad-β ya construida (Σwβ=0). Validado e79 (λ=0.25: +retorno Y −maxDD OOS, 69% folds).
+    Proyección de 2 restricciones: Δ = β·x₁ + 1·x₂ (solo en keep) t.q. βᵀΔ=0 y 1ᵀΔ=λ·Σw.
+    Re-normaliza el gross al original (escalar global → no rompe ninguna de las dos restricciones)."""
+    if not lam:
+        return W.copy()
+    B = beta_daily.reindex(W.index).reindex(columns=W.columns).fillna(0.0)
+    cols = list(W.columns)
+    kidx = np.array([cols.index(c) for c in keep if c in cols])
+    A = W.values.astype(float).copy()
+    Bv = B.values.astype(float)
+    ones = np.ones(len(kidx))
+    for i in range(len(A)):
+        w = A[i]; bk = Bv[i][kidx]
+        M = np.array([[bk @ bk, bk @ ones], [bk @ ones, float(len(kidx))]])
+        try:
+            x = np.linalg.solve(M, np.array([0.0, lam * float(w.sum())]))
+        except np.linalg.LinAlgError:
+            continue
+        wn = w.copy(); wn[kidx] -= bk * x[0] + ones * x[1]
+        g0 = np.abs(w).sum(); g1 = np.abs(wn).sum()
+        if g1 > 0:
+            A[i] = wn * (g0 / g1)
+    return pd.DataFrame(A, index=W.index, columns=W.columns)
+
+
 def _book_return(W, rd, cost):
     held = W.shift(1).reindex(rd.index).fillna(0.0)
     turn = (W - W.shift(1)).abs().reindex(rd.index).fillna(0.0)
@@ -142,6 +169,8 @@ def low_barrier_book(C, panels):
     beta_daily = beta.resample("1D").last()
     keep = [s for s in config.LOW_BARRIER_UNIVERSE if s in C.columns]
     Wlb = _beta_neutralize(_renorm_gross(Wc, keep), beta_daily, keep)
+    # e79: cancelar λnet del net-$ restante (Σw) preservando Σwβ=0 → +retorno Y −maxDD OOS (flywheel).
+    Wlb = _net_neutralize(Wlb, beta_daily, keep, getattr(config, "LOW_BARRIER_NET_LAMBDA", 0.0))
     rd = C.resample("1D").last().pct_change().reindex(Wlb.index).fillna(0.0)
     # ADV = volumen-$ medio DIARIO por símbolo (quote_volume es horario → resample a 1D y promediar).
     adv = panels["quote_volume"].resample("1D").sum().mean()

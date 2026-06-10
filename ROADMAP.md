@@ -93,7 +93,18 @@ El cuello de botella NO es "terminar el proyecto" (ya casi no hay qué hacer sal
   cuando el track real lo respalde. ← el negocio.
 
 ## FASE 3 — CAPITAL / ESCALA  ← cuando el track record real lo respalde (decisión de Oscar)
-- **F3.1 · Tier ESTABLE→BALANCEADO:** subir el presupuesto de maxDD solo con track real que lo justifique.
+- **F3.1 · PRODUCTO DUAL (decidido 2026-06-10, ejecutar PRÓXIMAMENTE — no ahora):** dos carteras copy
+  con el MISMO motor low-barrier: **Kepler Estable (maxDD −10%)** = escaparate institucional/bajo-DD +
+  **Kepler Growth (−25/−30%)** = gancho del ranking ROI (a −30% el retorno backtest ~×3, aún con la mitad
+  del MDD de los martingalas). Responde al problema real de captación: el copiador de Binance ordena por
+  ROI y el ~2%/mes del Estable es invisible en esa vitrina. El tier es PRESUPUESTO de maxDD (regla
+  2026-05-30) → mismo edge, leverage re-anclado. **Requisitos antes de abrir:** (a) backtest de re-anclaje
+  del low-barrier a −25/−30 (lev resultante sano vs cap 4x, patas a $300, desbordamiento OOS); (b) segunda
+  sub-cuenta + config por tier; (c) track Estable con semanas sólidas primero. Sustituye al viejo
+  "ESTABLE→BALANCEADO" (ya no es migrar de tier, es OFRECER ambos).
+- **F3.1b · Análisis de sleeves (PRÓXIMAMENTE, pedido Oscar 2026-06-10):** contribución/correlación por
+  sleeve sobre el libro vivo low-barrier (¿algún sleeve diluye en el universo barato? ¿pesos vol-parity
+  óptimos aquí?) — molde e49/e53 (LOO por sleeve, IS selección/OOS validación). Conecta con sombras→#8.
 - **F3.2 · Capacidad/AUM:** slicing pasivo (e55, diferido) + cap de tamaño por liquidez (ROADMAP B4)
   cuando el AUM lo exija (cruce ~$1-4M en coins finos). Hoy a tamaño DEMO no aporta.
 - **F3.3 · Retirar $1800 de Brayan/Btc-Panda** (martingala, ruina probada e13). Recordatorio persistente.

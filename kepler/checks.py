@@ -20,12 +20,15 @@ _RANK = {OK: 0, WARN: 1, CRIT: 2}
 COVERAGE_MARGIN_D   = 120     # el panel debe arrancar a <= HIST_START + este margen (warmup rev60d + listing)
 FRESH_MAX_AGE_H     = 12.0    # última barra: CRIT si más vieja que esto (pipeline roto)
 # Banda WARN del leverage de la ESTRATEGIA. El ancla de maxDD −10% FIJA el leverage de diseño de cada
-# modo, así que la banda se calibra a ESE punto: full-20 ESTABLE ~2.2x → (1.3, 2.9); LOW_BARRIER (universo
-# barato $5, β-hedge entre coins) ~1.18x → (0.7, 1.6) (misma anchura relativa; e78 + go-live 06-09 validaron
-# 1.18x). Sin esta separación, low-barrier disparaba un WARN espurio en CADA ciclo (1.18x < 1.3) → ruido en
-# el canal de alertas. La banda se elige según config.LOW_BARRIER_MODE; los CRIT (suelo/techo duros) NO cambian.
+# modo, así que la banda se calibra a ESE punto con la misma anchura relativa que la full (≈0.6×–1.3× del
+# diseño): full-20 ESTABLE ~2.2x → (1.3, 2.9). Sin esta separación, low-barrier disparaba un WARN espurio
+# en CADA ciclo → ruido en el canal de alertas. La banda se elige según config.LOW_BARRIER_MODE; los CRIT
+# (suelo/techo duros) NO cambian.
+# 2026-06-10: low-barrier re-anclada (0.7,1.6)@1.18x → (0.9,2.0)@1.49x: con λnet=0.25 (e79) el libro 1x
+# es más suave y el flywheel re-ancla el lev de diseño a ~1.49x (e78 re-validado). OJO: el 1er ciclo
+# post-deploy disparará UN WARN de salto (1.18→1.49 = +26% > LEV_JUMP_WARN) — esperado, es el cambio de diseño.
 LEV_BAND             = (1.3, 2.9)   # full-20 ESTABLE (~2.2x)
-LEV_BAND_LOW_BARRIER = (0.7, 1.6)   # universo barato (~1.18x), e78/go-live 2026-06-09
+LEV_BAND_LOW_BARRIER = (0.9, 2.0)   # universo barato + λnet=0.25 (~1.49x), e78/e79 2026-06-10
 LEV_CRIT_HI         = 3.2     # CRIT si lev por encima (ancla claramente fallando)
 LEV_CRIT_LO         = 0.5     # CRIT si lev por debajo
 LEV_JUMP_WARN       = 0.20    # |Δlev/lev_prev| que dispara WARN (cambio brusco vs ciclo previo)

@@ -101,6 +101,16 @@ LOW_BARRIER_MODE   = True      # True → engine usa kepler.lowbarrier; False �
 # quitarla sube el %/mes 1.56→1.92 manteniendo Sharpe 1.47 y β neutral). 13 coins líquidos de $5 min-notional.
 LOW_BARRIER_UNIVERSE = ["AAVEUSDT", "ADAUSDT", "ATOMUSDT", "AVAXUSDT", "BNBUSDT", "DOGEUSDT", "DOTUSDT",
                         "FILUSDT", "NEARUSDT", "SOLUSDT", "TRXUSDT", "UNIUSDT", "XRPUSDT"]
+# NET-$ NEUTRALIZACIÓN PARCIAL del libro low-barrier (e79, Oscar 2026-06-10). El libro low-barrier ya
+# fuerza β-dólar Σwβ=0 cada día (_beta_neutralize) → el λ de e72 está incorporado por construcción. Lo
+# único neutralizable restante es el NET-$ puro (Σw, mediana +0.09 ≈ 19% del gross, herencia del trend
+# long-only). e79 (walk-forward 13 folds, lev anclado en train, costes reales): cancelar λnet=0.25 del
+# net-$ entre los 13 coins (proyección que PRESERVA Σwβ=0) MEJORA retorno Y riesgo OOS: 2.34 vs 2.05%/mes,
+# maxDD −10.9 vs −12.1, gana 69% de folds, robusto a slippage ×3. Pico interior en 0.25-0.50 (0.75/1.0
+# degradan fuerte → no subir sin nuevo backtest). 0.25 = pre-registrado por Oscar (e72) antes de e79.
+# 0=desactiva (libro e77/e78 puro). NOTA: el vol-targeting sim-40d (e73) NO pasó en low-barrier (e79:
+# 38% folds, desbordamiento igual, lev errático) → NO desplegado; e79 documenta el porqué.
+LOW_BARRIER_NET_LAMBDA = 0.25
 # Min-notional por símbolo (fallback si exchangeInfo no responde). execution prefiere el LIVE de Binance.
 MIN_NOTIONAL_FALLBACK = 5.0
 # HORA del rebalanceo diario (ejecución, e54): la liquidez cripto sigue el reloj US/EU → pico 14-16 UTC

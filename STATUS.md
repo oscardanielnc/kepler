@@ -1,9 +1,37 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-10**.
-> **🔧 FIX 2026-06-10 (revisión de logs 06-09→06-10):** el check pre-trade de leverage disparaba un **WARN
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-10 (sesión 2)**.
+> **🟢 MEJORA DE EDGE VALIDADA Y LISTA (sesión 2) — λnet=0.25 sobre el libro low-barrier (e79; commit local,
+> PENDIENTE push+deploy de Oscar).** Oscar pidió activar λ=0.25 (e72) + vol-targeting sim-40d (e73); ambos
+> estaban validados sobre el FULL-20 → regla de oro: re-validar sobre el LOW-BARRIER vivo (e79). Resultado:
+> (1) **el λ de e72 ya estaba INCORPORADO por construcción** (β-dólar Σwβ=0 exacta cada día vía
+> `_beta_neutralize`; por eso el β vivo es −0.011 vs +0.19 del full); lo único restante era el **NET-$
+> puro** (Σw mediana +0.09 ≈ 19% del gross, herencia del trend long-only). (2) Su análogo **λnet=0.25**
+> (cancela ¼ del net-$ ENTRE los 13 coins con proyección que PRESERVA Σwβ=0) **PASA la regla de oro:
+> OOS walk-forward 2.34 vs 2.05%/mes Y maxDD −10.9 vs −12.1, gana 69% de folds, robusto a slip×3**
+> (pico interior 0.25-0.50; 0.75/1.0 degradan fuerte → NO subir λ sin nuevo backtest; 0.25 estaba
+> pre-registrado por Oscar ANTES de e79 → no es cherry-picking del grid). → IMPLEMENTADO en
+> `lowbarrier._net_neutralize` + `config.LOW_BARRIER_NET_LAMBDA=0.25` (e79 valida la MISMA función de
+> producción). e78 re-validado: Sharpe 1.51 · 1.95%/mes · maxDD −9.5 · β −0.011 · net target +0.06 ·
+> 10 patas a $300 (estable a $1500) · **lev de diseño 1.18→1.49x** (flywheel: libro 1x más suave →
+> ambas anclas dan más lev) → banda checks re-anclada `LEV_BAND_LOW_BARRIER=(0.9,2.0)`; e75 pasa entero.
+> (3) **sim-40d NO pasó en low-barrier** (gana solo 38% de folds, desbordamiento igual −11.9 vs −12.1,
+> lev errático máx 3.86x) → **NO desplegado, por regla de oro** (en el full-20 sí valía; este libro ya
+> desborda menos por construcción y λnet entrega esa robustez CON retorno, no a cambio de retorno).
+> **VERIFICAR TRAS DEPLOY:** (a) 1 WARN one-off de salto de lev (1.18→1.49, +26%) — esperado, es el
+> cambio de diseño, NO investigar como anomalía; (b) lev del ciclo ~1.4-1.5x dentro de (0.9,2.0) sin
+> WARN recurrente; (c) net del snapshot baja a ~+0.06 (antes +0.09); (d) β sigue ≈0; (e) el rebalanceo
+> post-deploy moverá ALGO más de libro de lo normal (re-pesado λnet, one-off).
+> **🔜 PRÓXIMAMENTE (decisión Oscar 2026-06-10, NO ahora):** (a) **PRODUCTO DUAL** — dos carteras copy con
+> el mismo motor: **Kepler Estable (maxDD −10%)** = escaparate institucional + **Kepler Growth (−25/−30%)**
+> = gancho del ranking ROI (a −30% el retorno backtest ~×3 con la MITAD del MDD de los martingalas). El tier
+> es presupuesto de maxDD (regla 2026-05-30); requiere backtest de re-anclaje a −25/−30 sobre low-barrier +
+> segunda sub-cuenta. (b) **ANÁLISIS DE SLEEVES** para seguir mejorando el edge (contribución/correlación
+> por sleeve sobre el libro vivo; conecta con sombras→#8 ~07-31).
+> **🔧 FIX 2026-06-10 (sesión 1, revisión de logs 06-09→06-10):** el check pre-trade de leverage disparaba un **WARN
 > espurio en CADA ciclo** en low-barrier (lev de diseño ~1.18x < banda full 1.3) → ruido en el canal de
 > alertas. Arreglado: `checks.LEV_BAND_LOW_BARRIER=(0.7,1.6)` (anclada al 1.18x validado e78/go-live, misma
-> anchura relativa que la full); la banda se elige según `config.LOW_BARRIER_MODE`. CRIT duros sin tocar
+> anchura relativa que la full) — **SUPERSEDED en sesión 2: re-anclada a (0.9,2.0) @1.49x tras λnet=0.25,
+> ver arriba**; la banda se elige según `config.LOW_BARRIER_MODE`. CRIT duros sin tocar
 > (0.5/3.2). e75 pasa entero (1.18x y 1.55x → OK; 3.4x → CRIT bloquea). Es config del check, NO toca edge →
 > sin backtest. **Commit local — PENDIENTE push+deploy (Oscar).** El resto del log 06-09→06-10: sistema sano
 > (equity $298.17→$297.56, MTM −0.21%, β −0.011, 12 pos, CB/monitor OK). El log se generó 13:24 UTC, ANTES
@@ -78,6 +106,52 @@
 > Commits pendientes de push: `b8581ff` y antecesores (low-barrier + go-live). Frontend/dashboard sigue apuntando a la DB
 > reseteada → muestra el track real desde 2026-06-09.
 > **⏰ RECORDATORIO ~2026-07-31:** cerrar ciclo sombras (≥60-90d → `e33_shadow_tvl_analyze` → ¿sleeve #8?).
+
+---
+
+## ESTADO ACTUAL (2026-06-10 · sesión 2) — λnet=0.25 validado (e79) e implementado; sim-40d descartado en low-barrier
+> Contexto: análisis estratégico del proyecto (retorno bajo para captar copiadores). Decisiones de Oscar:
+> activar λ=0.25 + sim-40d → **re-validados sobre el libro vivo ANTES de tocar nada (regla de oro)**;
+> producto dual (Estable/Growth) PRÓXIMAMENTE; análisis de sleeves PRÓXIMAMENTE; "verde cada día" descartado
+> con matemática (Sharpe 1.94 ⇒ ~54% días verdes; 100% verde = firma martingala, el patrón que NO somos).
+
+### 1. e79 (`research/e79_lowbarrier_product_overlays.py`) — el backtest que mandó
+- **Parte 1 (λ):** β-dólar del libro low-barrier = **0.0000 exacta** (mediana y p95) → el λ de e72 ya
+  está dentro por construcción. Lo neutralizable restante = net-$ (Σw): mediana +0.093, p95 0.236.
+  **λnet walk-forward (13 folds, train 365·embargo 14·test 90, lev anclado en train, costes reales):**
+  | λnet | Sh OOS | %/mes | maxDD | mo+ | folds | slip×3 |
+  |---|---|---|---|---|---|---|
+  | 0.00 | 1.31 | 2.05 | −12.1 | 64% | base | Sh 1.04 · −11.8 |
+  | **0.25 ←** | **1.37** | **2.34** | **−10.9** | 67% | **69%** | **Sh 1.09 · −10.8** |
+  | 0.50 | 1.38 | 2.56 | −10.3 | 72% | 69% | Sh 1.08 · −12.1 |
+  | 0.75 | 1.30 | 2.46 | −14.0 | 72% | 46% | degrada |
+  | 1.00 | 1.03 | 1.55 | −17.5 | 62% | 38% | degrada |
+  Se elige **0.25** (pre-registrado por Oscar antes del experimento; el más robusto a slip×3; 0.50 queda
+  como candidato si el vivo confirma — NO subir sin nuevo backtest).
+- **Parte 2 (sim-40d):** en low-barrier NO entrega su beneficio del full-20: OOS maxDD −11.9 vs −12.1
+  (en full era −12.0 vs −13.9), bate al estático solo en **38% de folds**, mismo retorno/Calmar/mo+, lev
+  máx 3.86x (vs diseño ~1.2-1.5) → operativamente feo (patas 7-10 oscilando, banda de checks, turnover).
+  **NO se despliega** (regla de oro + criterio del propio e73: exige >50% folds). Sigue válido como dial
+  para el libro FULL-20 (e73) si algún día vuelve a operarse.
+
+### 2. Cambios implementados (commit local, PENDIENTE push+deploy)
+- `kepler/lowbarrier.py`: **`_net_neutralize(W, beta_daily, keep, lam)`** (proyección 2-restricciones:
+  cancela λ·Σw repartido entre los 13 coins, preserva Σwβ=0, re-normaliza gross) aplicado en
+  `low_barrier_book` tras `_beta_neutralize`. e79 importa y valida **esta misma función** (fuente única).
+- `config.py`: **`LOW_BARRIER_NET_LAMBDA = 0.25`** (0 = libro e77/e78 puro) con racional completo.
+- `kepler/checks.py`: **`LEV_BAND_LOW_BARRIER (0.7,1.6) → (0.9,2.0)`** re-anclada al nuevo lev de diseño
+  1.49x (misma anchura relativa). CRIT duros (0.5/3.2) sin tocar.
+- Validación: **e79 reproducido con la función de producción (números idénticos)** · **e78 entero**
+  (Sharpe 1.51 · 1.95%/mes · maxDD −9.5 · β −0.011 · sin símbolos caros · 10 patas a $300 todas ≥
+  min-notional · Sharpe 1.47-1.50 estable $300→$1500) · **e75 entero** (normal no bloquea con lev 1.49;
+  3.4x CRIT bloquea) · py_compile OK.
+
+### 3. Efectos esperados en vivo (verificar tras deploy)
+- lev de diseño **1.18 → ~1.49x** → 1 WARN one-off de salto (+26% > 20%) en el 1er ciclo — esperado.
+- net del snapshot **+0.09 → ~+0.06**; β sigue ≈ −0.01; gross igual; ~10-13 patas (puede abrir patas
+  chicas nuevas por el reparto del hedge; el dropping adaptativo las filtra a $300).
+- Rebalanceo post-deploy moverá algo más de libro de lo normal (re-pesado λnet, one-off).
+- El backtest OOS promete **~+0.3%/mes y ~1.2 puntos menos de maxDD**; el número honesto lo dirá el track.
 
 ---
 
