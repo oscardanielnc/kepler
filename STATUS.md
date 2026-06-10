@@ -1,5 +1,14 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-09**.
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-10**.
+> **🔧 FIX 2026-06-10 (revisión de logs 06-09→06-10):** el check pre-trade de leverage disparaba un **WARN
+> espurio en CADA ciclo** en low-barrier (lev de diseño ~1.18x < banda full 1.3) → ruido en el canal de
+> alertas. Arreglado: `checks.LEV_BAND_LOW_BARRIER=(0.7,1.6)` (anclada al 1.18x validado e78/go-live, misma
+> anchura relativa que la full); la banda se elige según `config.LOW_BARRIER_MODE`. CRIT duros sin tocar
+> (0.5/3.2). e75 pasa entero (1.18x y 1.55x → OK; 3.4x → CRIT bloquea). Es config del check, NO toca edge →
+> sin backtest. **Commit local — PENDIENTE push+deploy (Oscar).** El resto del log 06-09→06-10: sistema sano
+> (equity $298.17→$297.56, MTM −0.21%, β −0.011, 12 pos, CB/monitor OK). El log se generó 13:24 UTC, ANTES
+> del rebalanceo de las 14 UTC → **el slippage incremental sigue SIN veredicto** (solo está el build de go-live);
+> se confirma con el log de mañana.
 > **🟢 MODO LOW-BARRIER IMPLEMENTADO Y VALIDADO — el copy-lead es VIABLE a ~$300 (barrera rescatada).**
 > e76 destapó que el min-notional Binance ($5/$20/$50) × 18 patas = barrera ~$7k para el copiador → mataba el
 > negocio. e77 probó la idea de Oscar (no operar BTC/ETH-tier caros, sino el universo BARATO de $5 + re-neutralizar

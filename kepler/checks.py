@@ -19,7 +19,13 @@ _RANK = {OK: 0, WARN: 1, CRIT: 2}
 # ── Umbrales (tunables) ─────────────────────────────────────────────────────
 COVERAGE_MARGIN_D   = 120     # el panel debe arrancar a <= HIST_START + este margen (warmup rev60d + listing)
 FRESH_MAX_AGE_H     = 12.0    # última barra: CRIT si más vieja que esto (pipeline roto)
-LEV_BAND            = (1.3, 2.9)   # banda WARN del leverage de estrategia (ESTABLE ~2.2)
+# Banda WARN del leverage de la ESTRATEGIA. El ancla de maxDD −10% FIJA el leverage de diseño de cada
+# modo, así que la banda se calibra a ESE punto: full-20 ESTABLE ~2.2x → (1.3, 2.9); LOW_BARRIER (universo
+# barato $5, β-hedge entre coins) ~1.18x → (0.7, 1.6) (misma anchura relativa; e78 + go-live 06-09 validaron
+# 1.18x). Sin esta separación, low-barrier disparaba un WARN espurio en CADA ciclo (1.18x < 1.3) → ruido en
+# el canal de alertas. La banda se elige según config.LOW_BARRIER_MODE; los CRIT (suelo/techo duros) NO cambian.
+LEV_BAND             = (1.3, 2.9)   # full-20 ESTABLE (~2.2x)
+LEV_BAND_LOW_BARRIER = (0.7, 1.6)   # universo barato (~1.18x), e78/go-live 2026-06-09
 LEV_CRIT_HI         = 3.2     # CRIT si lev por encima (ancla claramente fallando)
 LEV_CRIT_LO         = 0.5     # CRIT si lev por debajo
 LEV_JUMP_WARN       = 0.20    # |Δlev/lev_prev| que dispara WARN (cambio brusco vs ciclo previo)
@@ -75,15 +81,18 @@ def check_data_freshness(C, now=None) -> CheckResult:
         return _r("data_freshness", CRIT, f"no se pudo evaluar frescura: {e}")
 
 
-def check_leverage(lev, prev_lev=None) -> CheckResult:
-    """Banda absoluta (CRIT si extremo = ancla fallando) + salto vs ciclo previo (WARN)."""
+def check_leverage(lev, prev_lev=None, band=None) -> CheckResult:
+    """Banda absoluta (CRIT si extremo = ancla fallando) + salto vs ciclo previo (WARN). La banda WARN se
+    elige según el modo (full vs low-barrier) salvo que se pase `band` explícita (tests)."""
     if lev is None or lev != lev:
         return _r("leverage", CRIT, "leverage None/NaN")
     if lev > LEV_CRIT_HI or lev < LEV_CRIT_LO:
         return _r("leverage", CRIT, f"leverage {lev:.2f}x fuera de [{LEV_CRIT_LO},{LEV_CRIT_HI}] — ancla anómala", lev)
+    if band is None:
+        band = LEV_BAND_LOW_BARRIER if getattr(config, "LOW_BARRIER_MODE", False) else LEV_BAND
     sev, msgs = OK, [f"{lev:.2f}x"]
-    if not (LEV_BAND[0] <= lev <= LEV_BAND[1]):
-        sev = WARN; msgs.append(f"fuera de banda {LEV_BAND}")
+    if not (band[0] <= lev <= band[1]):
+        sev = WARN; msgs.append(f"fuera de banda {band}")
     if prev_lev and prev_lev > 0:
         jump = abs(lev / prev_lev - 1)
         if jump > LEV_JUMP_WARN:
