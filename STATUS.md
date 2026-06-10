@@ -153,6 +153,21 @@
 - Rebalanceo post-deploy moverá algo más de libro de lo normal (re-pesado λnet, one-off).
 - El backtest OOS promete **~+0.3%/mes y ~1.2 puntos menos de maxDD**; el número honesto lo dirá el track.
 
+### 4. Revisión del log 06-10 (export 15:08 UTC, post-rebalanceo) — sistema 🟢, deploy hecho pero sin ciclo nuevo aún
+- **Ciclo 14:00 UTC limpio (CON CÓDIGO VIEJO):** 1 ciclo (27s) · equity $297.92 · β-modelo −0.011 /
+  β-dólar −0.022 · gross 0.57 · net +0.091 · 12 target / 10 colocadas (AVAX/UNI ~$2 < min-notional →
+  dropping las filtra, por diseño) · top TRX 15% = en cap · monitor "sin anomalías" · CB OK · sombras OK ·
+  fees $0.00 / funding +$0.01 · **solo 1 orden** (turnover mínimo). El WARN de leverage salió con banda
+  **(1.3, 2.9)** = prueba de que a las 14:00 el código vivo era pre-e06175b/pre-λnet.
+- **Deploy ~14:58:36 UTC (09:58 Lima):** heartbeat fuera de cadencia (12 min vs 15) = reinicio del servicio;
+  leyó equity OK y **NO forzó rebalanceo** (fix de churn aguantando). El código nuevo queda SIN verificar en
+  vivo hasta el ciclo de mañana 14 UTC (o el one-liner de git log/grep que se le pasó a Oscar).
+- **Slippage incremental: 3er día SIN veredicto** — el ciclo de hoy solo puso 1 orden y el export no trae
+  fills de hoy (posible chasing GTX). Mañana evaluar: (a) slippage ~4bps, (b) 1er ciclo λnet (lev ~1.49x,
+  UN WARN de salto esperado, banda (0.9,2.0), net ~+0.06, turnover one-off mayor).
+- Equity día: cierre parcial $297.53 (−0.22% desde inception, MTM intradía mín −0.82%) — ruido normal.
+  El "Sharpe −19.1" del track = 2 días de datos, sin significado (ignorar hasta ≥30d).
+
 ---
 
 ## ESTADO ACTUAL (2026-06-10) — 1ª revisión diaria post go-live: sistema sano + fix de check
