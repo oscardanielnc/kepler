@@ -57,6 +57,12 @@ CAPITAL_USD        = 300.0     # REAL low-barrier — sub-cuenta Kepler, stress-
 TRACK_INCEPTION    = "2026-06-09"   # REAL go-live low-barrier: sub-cuenta $300, DB reseteada a cero al desplegar.
                                     # DEMO (05-30→06-08) + intentos fallidos 06-08 quedan ARCHIVADOS, fuera del track.
                                     # Mover si el go-live real se retrasa.
+# Umbral de MADUREZ para publicar ratios anualizados (Sharpe/Sortino/retorno anualizado). Con pocos días
+# estos ratios son basura estadística (p.ej. N=4 → "Sharpe −26 / ann −78%") y, en la página del copy-lead,
+# ESPANTAN al copiador con un número sin significado. Por debajo de este umbral se devuelven None y la UI
+# muestra "—" / "a ≥N días". maxDD, retorno total, vol y % días+ SÍ se muestran (descriptores honestos a
+# cualquier N; el maxDD es justo nuestro argumento). Subir/bajar es decisión de producto, no toca el motor.
+TRACK_MIN_DAYS_RATIOS = 30          # 1 mes natural de track antes de publicar un Sharpe/Sortino/ann.
 MAX_WEIGHT_NORMAL  = 0.25      # tope normal por activo (por-sleeve, pre vol-parity)
 # CAP de concentración del LIBRO COMBINADO (e69, Oscar 2026-06-02): el cap 0.25 es POR-SLEEVE; tras
 # combinar (vp·Σ) + leverage, un nombre puede acumular de varios sleeves (incidente: TRX 23% del equity

@@ -83,6 +83,57 @@ Cada uno: qué es, por qué importa, y qué hacer si se dispara.
 
 ## 3. BITÁCORA (registro por día — el más nuevo arriba)
 
+### 2026-06-12 (🟢 sistema sano · 4 días en rojo = ruido idiosincrático −1.1σ, NO bug · 1ª vez sangran ambos lados)
+- **Log revisado:** `kepler_2026-06-11_a_2026-06-12.json` (export 15:22 UTC). 2 ciclos: 06-11 14:00 y 06-12 14:00. Oscar
+  preguntó preocupado por "3 días perdiendo dinero".
+- **Respuesta honesta con números (4 días, inception 06-09):** equity 298.18 → 295.79 → 294.06 → **292.89** = **−1.77% MTM**
+  (~−$5.3). Descomposición: **realizado −$1.38** (casi todo el cierre del short ATOM −$1.95 el 06-11, churn legítimo) ·
+  **costes ≈ +$0.02** (fees+funding 4d, netos a favor, triviales) · **MTM no realizado ≈ −$3.9** (libro abierto, recuperable).
+  **El 84% de la pérdida es marca a mercado, no dinero salido de la cuenta** (no confundir, lección 06-04).
+- **NO es bug/churn/costes/slippage:** cycles_today=1 los 4 días (0 churn) · slippage **excelente** (06-11 mediana 0.92bps /
+  06-12 0.76bps; maker GTX casi sin coste) · monitor OK · checks pre-trade OK · CB OK · **0 WARN/ERROR en el audit**.
+- **Encuadre estadístico:** con la vol del diseño (~12.5% anual ≈ 0.8%/día) **−1.77% en 4 días ≈ −1.1σ = ruido normal.**
+  La pérdida diaria **se desacelera** (−0.80% → −0.59% → −0.40%), no acelera. (La vol_ann viva 5.79% es de N=4, no fiable;
+  usar la del backtest como denominador.)
+- **🆕 Hallazgo del 06-12 — 1ª vez que sangran AMBOS lados** (longs −$2.1 / shorts −$1.9), distinto del crash de junio
+  (donde los shorts compensaban). Causa: **rebote que apretó los shorts** (AAVE short −1.02, DOGE/ADA/DOT en rojo) mientras
+  TRX long seguía cayendo (−1.83, el mayor sangrador recurrente). **PERO el libro ya está casi neutral en $:** net **+$17**
+  (06-11 era +$45), **β-dólar 0.019** (06-11 0.11), β-modelo −0.013 → confirma que la pérdida es **selección de nombres,
+  no exposición direccional.** Ruido = precio del edge, dentro de presupuesto (dd intradía −2.18% vs ancla −10%).
+- **lev sigue 1.21x** (no sube al 1.49x de diseño) → el flywheel de +retorno sigue sin materializarse, consistente con 06-11
+  (ancla conservadora por la vol del crash). Vigilar convergencia al normalizarse la vol.
+- **🔧 2 FIXES IMPLEMENTADOS (sin tocar edge → sin backtest; commit local, PENDIENTE push+deploy de Oscar):**
+  1. **Gate de madurez de ratios.** `Sharpe −26.3 / Sortino −13.4 / ann −78%` con N=4 días = basura matemática que
+     espanta al copiador. **Arreglo:** `config.TRACK_MIN_DAYS_RATIOS=30` → `track.realized` devuelve Sharpe/Sortino/
+     ann_return = `None` por debajo de 30 días; la UI (`track.html`) muestra "—" + "se publica a ≥30 días", y las
+     narrativas (`orchestrator._save_daily_report` + `/api/track`) dicen "Sharpe n/d (<30d)". **maxDD/retorno total/
+     vol/%días+ SÍ se muestran** (honestos a cualquier N; el maxDD es el argumento de venta). Frontend/reporte, no
+     toca motor. Probado: py_compile OK · N=4→None, N=35→ratios presentes.
+  2. **n_positions vivo vs objetivo.** `n_positions` reportaba solo el **objetivo (13)**; el detalle tenía **10 llenas**
+     (SOL/XRP/ATOM < min-notional a $293 → dropping adaptativo los soltó, por diseño). **Arreglo:** el reporte añade
+     `n_positions_live` (leído del snapshot) y la narrativa dice "**10/13 pos**"; `/api/track` + `track.html` muestran
+     "10 / 13". El objetivo se conserva (`n_positions_target`) para los umbrales de la watch-list.
+  - **VERIFICAR TRAS DEPLOY:** (a) la página `/track` y la narrativa diaria ya NO muestran Sharpe/Sortino/ann negativos
+    (sale "—" / "n/d") hasta ≥30 días de track; (b) la narrativa muestra "10/13 pos" cuando el dropping suelta patas.
+
+### 2026-06-11 (🟢 λnet=0.25 verificado VIVO · slippage incremental cerrado · lev no sube a diseño)
+- **Log revisado:** `kepler_2026-06-10_a_2026-06-11.json` (export 14:53 UTC). Trae 2 ciclos: 06-10 14:00 (código viejo)
+  y **06-11 14:00 = 1er ciclo con λnet desplegado**.
+- **✅ Deploy CONFIRMADO en VM (6 one-liners de Oscar):** HEAD=`20cdaa2`=origin/main, árbol limpio,
+  `LOW_BARRIER_NET_LAMBDA=0.25`, `_net_neutralize` llamada en `lowbarrier.py:173`, `LEV_BAND_LOW_BARRIER=(0.9,2.0)`,
+  servicio `active since 06-10 14:58 GMT` → el ciclo de hoy corrió con código nuevo. Ya no es hipótesis.
+- **λnet — lado defensivo SÍ:** net **+0.091 → +0.038** · β-modelo **−0.013** · gross 0.656 · 13 pos · top TRX 15% ·
+  monitor OK · CB OK · cycles_today=1. El check pre-trade pasó **OK** con banda low-barrier (el 06-10 con código viejo
+  disparaba WARN con banda full `(1.3,2.9)` → prueba de que la banda nueva está viva).
+- **🟡 λnet — lado retorno NO (a vigilar):** lev de diseño 1.49x; **en vivo 1.209x** (06-10 era 1.185x → +2%, sin el
+  WARN de salto previsto). **El flywheel de +retorno no se materializa.** Hipótesis: el ancla `leverage_for_maxdd_anchor`
+  reacciona a la vol del crash de junio → dial conservador para clavar −10% (NO es bug, protege maxDD en tiempo real).
+  Vigilar si el lev converge a ~1.49x al normalizarse la vol; si sigue ~1.2x con vol normal → revisar ventana del ancla.
+- **✅ SLIPPAGE INCREMENTAL — VEREDICTO CERRADO:** 06-11 **n=6 · mediana 0.92bps · peor 2.6bps (ATOM)**. vs go-live
+  6.5/31bps → confirma que el 6.5 fue one-off de armar el libro; el rebalanceo normal cuesta ~1bps. **Punto cerrado.**
+- **Equity:** 298.18 → 295.79 → **294.37** (dd **−1.28% MTM**, intradía máx −1.64%). Mercado (NEAR/TRX longs sangrando),
+  net-long pero más chico. Realizado −$1.42 (cierre short ATOM −$1.95, churn legítimo). β-dólar realizado +0.11.
+
 ### 2026-06-10 (🟢 1ª revisión diaria post go-live — sistema sano + fix WARN de leverage low-barrier)
 - **Log revisado:** `kepler_2026-06-09_a_2026-06-10.json` (generado **13:24 UTC**, ANTES del rebalanceo de las 14 UTC →
   contiene SOLO el ciclo de go-live + ~22h de heartbeats; **el ciclo de hoy aún no había corrido**).

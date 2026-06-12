@@ -162,8 +162,16 @@ async function load(){
   }
   $("mode-badge").textContent="DEMO · "+t.days+" día(s)"+(t.clean_window&&t.inception?" · desde "+t.inception:"");
   colpct($("k-tot"),t.total_return);
-  $("k-sh").textContent=(+t.sharpe).toFixed(2); $("k-sh").style.color=t.sharpe>=1?"var(--grn)":"var(--primary)";
-  $("k-sh-ref").textContent="ref. backtest "+(t.backtest&&t.backtest.sharpe!=null?t.backtest.sharpe:"—");
+  // Sharpe/Sortino/ann sólo cuando el track es MADURO (≥min_days_ratios); con pocos días son ruido y
+  // espantan al copiador → "—" + nota de cuándo se publican. maxDD/retorno/vol sí se muestran siempre.
+  const btref="ref. backtest "+(t.backtest&&t.backtest.sharpe!=null?t.backtest.sharpe:"—");
+  if(t.sharpe!=null){
+    $("k-sh").textContent=(+t.sharpe).toFixed(2); $("k-sh").style.color=t.sharpe>=1?"var(--grn)":"var(--primary)";
+    $("k-sh-ref").textContent=btref;
+  }else{
+    $("k-sh").textContent="—"; $("k-sh").style.color="var(--mut)";
+    $("k-sh-ref").textContent="se publica a ≥"+(t.min_days_ratios||30)+" días · "+btref;
+  }
   $("k-dd").textContent=(+t.maxdd).toFixed(2)+"%"; $("k-dd").style.color=t.maxdd>-10?"var(--grn)":"var(--red)";
   $("k-dd-ref").textContent="peor caso · presupuesto −10%";
   if($("k-dd-intra"))$("k-dd-intra").textContent=t.maxdd_intraday!=null?(+t.maxdd_intraday).toFixed(2)+"%":"—";
@@ -171,11 +179,11 @@ async function load(){
   $("k-mo").textContent=(+t.pos_months).toFixed(0)+"%";
   $("k-beta").textContent=t.beta!=null?((t.beta>=0?"+":"")+(+t.beta).toFixed(2)):"—";
   $("k-days").textContent=t.days;
-  colpct($("k-ann"),t.ann_return);
-  $("k-sortino").textContent=(+t.sortino).toFixed(2);
+  if(t.ann_return!=null){colpct($("k-ann"),t.ann_return);}else{$("k-ann").textContent="—";$("k-ann").style.color="var(--mut)";}
+  $("k-sortino").textContent=t.sortino!=null?(+t.sortino).toFixed(2):"—";
   $("k-vol").textContent=(+t.vol_ann).toFixed(1)+"%";
   $("k-posd").textContent=(+t.pos_days).toFixed(0)+"%";
-  $("k-np").textContent=t.n_positions!=null?t.n_positions:"—";
+  $("k-np").textContent=t.n_positions!=null?((t.n_positions_target!=null&&t.n_positions_target!=t.n_positions)?(t.n_positions+" / "+t.n_positions_target):t.n_positions):"—";
   $("k-gross").textContent=t.gross!=null?(+t.gross).toFixed(2)+"x":"—";
   // monthly heatmap
   $("monthly").innerHTML=(t.monthly||[]).slice().reverse().map(m=>{

@@ -72,10 +72,19 @@ def realized(daily, ticks=None, inception: str | None = None) -> dict:
     monthly = [{"month": m, "return": round((v - 1) * 100, 2)} for m, v in bym.items()]
     pos_days = sum(1 for x in rets if x > 0) / n * 100
     pos_months = sum(1 for x in monthly if x["return"] > 0) / len(monthly) * 100 if monthly else 0.0
+    # GATE DE MADUREZ: con pocos días, anualizar (sqrt(365)) un puñado de retornos da ratios sin sentido
+    # (N=4 → Sharpe −26 / ann −78%). En la página del copy-lead eso ESPANTA con un número-ruido. Por debajo
+    # del umbral devolvemos None para Sharpe/Sortino/ann_return → la UI muestra "—". maxDD/total/vol/%+ SÍ
+    # se publican (descriptores honestos a cualquier N; el maxDD es nuestro argumento de venta).
+    min_days = int(getattr(config, "TRACK_MIN_DAYS_RATIOS", 30))
+    mature = n >= min_days
     return {
         "days": n, "inception": inception or d[0][0],
-        "total_return": round(total, 2), "ann_return": round(ann, 2),
-        "sharpe": round(sharpe, 2), "sortino": round(sortino, 2),
+        "total_return": round(total, 2),
+        "ann_return": round(ann, 2) if mature else None,
+        "sharpe": round(sharpe, 2) if mature else None,
+        "sortino": round(sortino, 2) if mature else None,
+        "ratios_mature": mature, "min_days_ratios": min_days,
         "vol_ann": round(sd * math.sqrt(365) * 100, 2),
         "maxdd": round(maxdd, 2), "maxdd_daily": round(maxdd_daily, 2),
         "maxdd_intraday": round(maxdd_intra, 2),

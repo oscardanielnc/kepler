@@ -219,9 +219,22 @@ def _save_daily_report(db: DB, tier, mode, equity, target, lev, bt, operate):
     gross = float(target.abs().sum()) if target is not None else 0.0
     net = float(target.sum()) if target is not None else 0.0
     npos = int((target.abs() > 0.005).sum()) if target is not None else 0
+    # POSICIONES REALMENTE ABIERTAS (≠ objetivo): el dropping adaptativo al capital suelta las patas
+    # < min-notional (a $293, SOL/XRP/ATOM cayeron) → el libro objetivo (npos) puede ser > el vivo. Para
+    # el copy-lead lo honesto es mostrar AMBOS. Se lee del último snapshot (escrito en este mismo ciclo);
+    # en DRY/sin posiciones queda None y la narrativa cae al objetivo. Blindado: si falla, n_live=None.
+    n_live = None
+    try:
+        srow = db.conn.execute("SELECT detail FROM portfolio_snapshot ORDER BY ts DESC LIMIT 1").fetchone()
+        if srow and srow[0]:
+            ps = json.loads(srow[0]).get("positions") or []
+            if ps:
+                n_live = len(ps)
+    except Exception:
+        n_live = None
     metrics = {"day": day, "mode": mode, "tier": tier, "equity": round(float(equity), 2),
                "today_return_pct": round(ret_pct, 3), "drawdown_pct": round(dd_pct, 3),
-               "n_positions": npos, "gross": round(gross, 3), "net": round(net, 3),
+               "n_positions": npos, "n_positions_live": n_live, "gross": round(gross, 3), "net": round(net, 3),
                "leverage": round(float(lev), 3), "top_position": top, "cycles_today": int(cycles),
                "slippage_real": slip, "costs": costs, "cb_operate": bool(operate),
                "backtest": {"sharpe": round(bt.get("sharpe", 0), 2), "ann": round(bt.get("ann", 0), 1),
@@ -250,10 +263,14 @@ def _save_daily_report(db: DB, tier, mode, equity, target, lev, bt, operate):
         _log.warning(f"[report] monitor diario omitido (no fatal): {e}")
     live_txt = ""
     if live and live.get("days", 0) >= 1:
-        live_txt = (f"track {live['days']}d Sharpe {live.get('sharpe')} maxDD {live.get('maxdd')}% "
+        sh = live.get("sharpe")
+        sh_txt = (f"Sharpe {sh}" if sh is not None
+                  else f"Sharpe n/d (<{live.get('min_days_ratios', 30)}d)")
+        live_txt = (f"track {live['days']}d {sh_txt} maxDD {live.get('maxdd')}% "
                     f"(desde {live.get('inception')}) · ")
+    pos_txt = f"{n_live}/{npos} pos" if (n_live is not None and n_live != npos) else f"{npos} pos"
     narr = (f"{mode} {tier} · ${float(equity):.0f} ({ret_pct:+.2f}% hoy, dd {dd_pct:.2f}%) · "
-            f"{npos} pos gross {gross:.2f} net {net:+.2f} lev {lev:.2f}x · "
+            f"{pos_txt} gross {gross:.2f} net {net:+.2f} lev {lev:.2f}x · "
             + (f"slip med {slip['median_bps']}bps (peor {slip['worst_sym']} {slip['worst_bps']}) · " if slip else "slip s/d · ")
             + f"coste fees ${costs['fees']:.2f}"
             + (f" funding ${costs['funding']:.2f}" if costs['funding'] is not None else "")

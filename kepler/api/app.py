@@ -194,21 +194,29 @@ def track():
     clean = m.get("days", 0) > 0
     if not clean:
         m = trackmod.realized(daily_rows, tick_rows, None)
+    # Sharpe sólo cuando el track es MADURO (≥ config.TRACK_MIN_DAYS_RATIOS); con pocos días es ruido y
+    # espanta al copiador (ver track.realized). Hasta entonces, la narrativa lo dice sin enseñar el número.
+    sh = m.get("sharpe")
+    sh_txt = (f"Sharpe realizado {sh:.2f} (referencia backtest {bt.get('sharpe')})" if sh is not None
+              else f"Sharpe aún no fiable (se publica a ≥{m.get('min_days_ratios', 30)}d; "
+                   f"referencia backtest {bt.get('sharpe')})")
+    n_live = len(det.get("positions") or []) or None
     narrative = (f"DEMO · {m['days']} día(s) en vivo desde {m['inception']}"
                  f"{' (ventana limpia post-fixes)' if clean else ' (historial completo; ventana limpia aún vacía)'} · "
-                 f"retorno total {m['total_return']:+.2f}% · Sharpe realizado {m['sharpe']:.2f} "
-                 f"(referencia backtest {bt.get('sharpe')}) · maxDD {m['maxdd']:.2f}% "
+                 f"retorno total {m['total_return']:+.2f}% · {sh_txt} · maxDD {m['maxdd']:.2f}% "
                  f"(intradía {m['maxdd_intraday']:.2f}%, presupuesto −10%) · {m['pos_months']:.0f}% meses+ · "
                  f"β {('%+.2f' % beta) if beta is not None else '—'}. "
                  f"Track en construcción — el número honesto se consolida con semanas, no con días.")
     return {"days": m["days"], "days_all": len(rows), "inception": m["inception"], "clean_window": clean,
             "total_return": m["total_return"], "ann_return": m["ann_return"],
             "sharpe": m["sharpe"], "sortino": m["sortino"], "vol_ann": m["vol_ann"],
+            "ratios_mature": m.get("ratios_mature"), "min_days_ratios": m.get("min_days_ratios"),
             "maxdd": m["maxdd"], "maxdd_intraday": m["maxdd_intraday"], "maxdd_daily": m["maxdd_daily"],
             "pos_days": m["pos_days"], "pos_months": m["pos_months"],
             "beta": beta, "gross": snap[0]["gross"] if snap else None,
             "net": snap[0]["net"] if snap else None,
-            "n_positions": snap[0]["n_positions"] if snap else None,
+            "n_positions": n_live if n_live is not None else (snap[0]["n_positions"] if snap else None),
+            "n_positions_target": snap[0]["n_positions"] if snap else None,
             "monthly": m["monthly"], "backtest": bt,
             "equity_curve": [{"day": r["day"], "equity": r["equity"]} for r in rows],
             "narrative": narrative}
