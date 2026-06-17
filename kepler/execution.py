@@ -239,12 +239,20 @@ def _place_deltas(target_weights, equity, filt, attempt):
     return placed
 
 
-def _capital_aware_drop(target_weights, equity, filt):
+def _capital_aware_drop(target_weights, equity, filt, beta=None):
     """LOW-BARRIER (e76/e77): a poco capital, las patas cuyo notional (|w|·equity) < min-notional de su
     símbolo NO se pueden colocar. En vez de mandar órdenes que Binance rechaza (−4164), se SUELTAN y se
     RENORMALIZA el resto al mismo gross (redespliega el capital liberado) → el libro se adapta al capital
     sin error ni penalización de Sharpe (validado e77: $300→~9 patas Sh 1.45 · $1000→~13 patas). Preserva
-    el gross → el maxDD anclado se respeta. A más capital, menos se suelta → réplica más fiel del modelo."""
+    el gross → el maxDD anclado se respeta. A más capital, menos se suelta → réplica más fiel del modelo.
+
+    β-AWARE (e80, 2026-06-17): el engine envía un libro β-neutral (Σwβ=0), pero soltar patas rompe esa
+    neutralidad — si las soltadas son de un lado (p.ej. SOL+ADA largas a $300 → libro net-SHORT), el β-dólar
+    REAL deriva (visto en vivo 06-12→17: −0.075). Por eso, tras el drop se RE-NEUTRALIZA la β sobre las
+    SUPERVIVIENTES (wᵢ -= c·βᵢ, c=Σwβ/Σβ²) antes de renormalizar el gross — espejo del β-neutralize del
+    engine, pero sobre el set que de verdad se opera. e80 (walk-forward, costes reales): clava β-$ resid=0
+    cada día, Sharpe 1.44→1.46, retorno 1.75→1.95%/mes, maxDD −9.5 sin cambio. Si beta=None → gross-only
+    (fallback idéntico al legacy; flatten/main no pasan β)."""
     import pandas as pd
     nz = target_weights[target_weights.abs() > 1e-6]
     g0 = nz.abs().sum()
@@ -252,7 +260,13 @@ def _capital_aware_drop(target_weights, equity, filt):
             if abs(w) * equity >= filt.get(s, {}).get("minnot", config.MIN_NOTIONAL_FALLBACK)}
     out = target_weights * 0.0
     if keep:
-        kt = pd.Series(keep); g1 = kt.abs().sum()
+        kt = pd.Series(keep)
+        if beta is not None:                 # B (e80): re-neutralizar β-dólar sobre las supervivientes
+            bk = beta.reindex(kt.index).astype(float).fillna(0.0)
+            den = float((bk * bk).sum())
+            if den > 0:
+                kt = kt - bk * (float((kt * bk).sum()) / den)
+        g1 = kt.abs().sum()
         if g1 > 0:
             kt = kt * (g0 / g1)
         if config.MAX_POSITION_EQUITY:
@@ -261,14 +275,15 @@ def _capital_aware_drop(target_weights, equity, filt):
     return out, len(nz) - len(keep)
 
 
-def rebalance(target_weights, equity=None):
+def rebalance(target_weights, equity=None, beta=None):
     """Rebalancea hacia el objetivo con órdenes LÍMITE maker + gestión de no-fills:
     cancela stale → coloca → espera → re-coloca lo no llenado persiguiendo el precio,
-    hasta MAKER_RETRIES. Lo que no llene queda para el próximo ciclo (drift lento, OK)."""
+    hasta MAKER_RETRIES. Lo que no llene queda para el próximo ciclo (drift lento, OK).
+    `beta` (Serie β por-símbolo, opcional) → re-neutraliza la β-dólar tras el capital-drop (e80, β-aware)."""
     equity = equity or get_balance() or config.CAPITAL_USD
     filt = load_filters()   # exchangeInfo (público) — funciona también en DRY_RUN para previsualizar el libro real
     if getattr(config, "LOW_BARRIER_MODE", False):  # dropping adaptativo al capital (libro se ajusta ANTES del DRY)
-        target_weights, dropped = _capital_aware_drop(target_weights, equity, filt)
+        target_weights, dropped = _capital_aware_drop(target_weights, equity, filt, beta)
         if dropped:
             n_op = int((target_weights.abs() > 1e-6).sum())
             logging.info(f"[exec] low-barrier: {dropped} pata(s) < min-notional a ${equity:.0f} soltada(s) "

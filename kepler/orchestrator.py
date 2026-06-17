@@ -376,8 +376,8 @@ def cycle(tier="ESTABLE", db: DB | None = None) -> dict:
         _log_signals(db, target[target.abs() > 0.005], vp, weights, lev, asof)
     except Exception as e:
         _log.warning(f"[orq] no se pudieron loguear señales: {e}")
-    # 6. rebalanceo
-    orders = execution.rebalance(target, equity)
+    # 6. rebalanceo (beta_last → re-neutraliza la β-dólar tras el capital-drop, e80 β-aware)
+    orders = execution.rebalance(target, equity, beta=beta_last)
     # 6b. registrar FILLS reales (diff posiciones) + leer posiciones reales con PnL
     positions_detail = []
     if not execution.DRY_RUN:

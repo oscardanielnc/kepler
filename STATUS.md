@@ -1,5 +1,42 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-12**.
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-17**.
+> **🟢 REVISIÓN DIARIA 2026-06-17 — bleed = MTM short book en rally de alts (NO bug); + FIX β-aware del capital-drop (e80) IMPLEMENTADO, PENDIENTE push+deploy.**
+> Log `kepler_2026-06-12_a_2026-06-17.json` (6 ciclos, todos "Ciclo ESTABLE ok" 22-74s, checks/CB OK).
+> **Track 9d (inception 06-09): 298.18 → 291.80 = −2.14% MTM**, maxDD live **−3.4%** (vs ancla −10%, holgado).
+> Oscar reportó "solo pierde y pierde". **Diagnóstico (descartado bug de ejecución):** (1) el gap "13 obj →
+> 9-11 vivas" **NO son no-fills**, es el low-barrier drop por diseño (06-17 SOL $2.7 + ADA $2.2 < min-notional
+> $5 → 12−2=10, cuadra exacto). (2) WARN slippage 18.5bps del 06-17 = **1 solo fill de FIL (n=2)**, ruido — resto
+> de días 0.7-3.7bps, varios negativos. (3) Costes 9d triviales: fees ≈−$0.10, funding ≈−$0.08, realizado ≈−$1.65.
+> **El −2.1% es MTM no realizado del short book en rally de alts:** AAVE short −$4.28 (entró 60.7→75, +24% en
+> contra), UNI short −$3.12 (+31%), DOT −$1.10; NEAR long +$3.53 amortigua. Mercado, no fuga.
+> **🔧 FIX β-aware del capital-drop (e80, regla de oro PASADA):** detectado drift β-dólar vivo a **−0.075** (era ~0).
+> Raíz: el engine envía libro β-neutral (Σwβ=0), pero `execution._capital_aware_drop` soltaba patas y **solo
+> preservaba gross** → al soltar las largas chicas (SOL/ADA) el libro real queda net-short / β≠0. **e80** (walk-forward,
+> costes reales, re-ancla −10%): re-neutralizar β sobre las SUPERVIVIENTES tras el drop (variante B) → β-$ residual
+> **0.023→0.000**, Sharpe **1.44→1.46**, retorno 1.75→**1.95%/mes**, maxDD −9.5 sin cambio. Variante C (β+net λ=0.25
+> sobre supervivientes) DESCARTADA (cuesta Sharpe 1.42, sobre-cancela el net que λ ya gestiona). **IMPLEMENTADO:**
+> `execution._capital_aware_drop(…, beta=None)` re-neutraliza β si recibe la Serie; `rebalance(…, beta=None)` la
+> enhebra; `orchestrator` pasa `beta_last`. **Fallback seguro:** `beta=None` → gross-only idéntico al legacy
+> (flatten/main no pasan β). Smoke test: a $292 gross preservado + β→0; py_compile + imports OK. **Caveat honesto:**
+> a capital degenerado (<$300, 3-6 patas) el clip `MAX_POSITION_EQUITY=0.15` se vuelve binding y re-introduce algo
+> de β (B sigue ≥ A) — fuera del floor operativo (~$300, e77), no se sobre-ingenió. **Alcance:** NO revierte el
+> −2.1% actual (es mercado); impide que el libro vivo vuelva a derivar net-short en próximos rebalanceos (fix de
+> correctitud, no de retorno). **VERIFICAR TRAS DEPLOY:** β-dólar del snapshot vuelve a ~0 (no −0.07) cuando se
+> sueltan patas de un lado; nº-pos y net sin cambio; sin WARN nuevo. Experimento: `research/e80_capital_drop_neutrality.py`.
+> **🟢 REVISIÓN DIARIA 2026-06-14 — RECUPERACIÓN (2 días verdes seguidos) + los 2 fixes de producto VERIFICADOS VIVOS.**
+> Log `kepler_2026-06-13_a_2026-06-14.json` (2 ciclos: 06-13 y 06-14 a las 14 UTC, ambos "Ciclo ESTABLE ok" 68s/22s,
+> **0 WARN/ERROR**, monitor/checks OK, cycles_today=1). **Track 6d (inception 06-09): 298.18 → 294.78 (último tick) =
+> −1.14% MTM**, recuperando desde el −1.77% del 06-12. dd diario: −1.97% (12) → −1.57% (13) → **−1.14% (14)**, dos cierres
+> verdes (+0.36% / +0.44%); lejos del ancla −10%. **🔧 PUSH+DEPLOY de los 2 fixes del 06-12 CONFIRMADO VIVO:** (1) gate de
+> madurez de ratios → `ratios_mature:false`, `sharpe:null`, narrativa **"Sharpe n/d (<30d)"** (antes mostraba −26.3);
+> (2) `n_positions_live:10` → narrativa **"10/13 pos"** (el dropping adaptativo suelta BNB/SOL/ATOM, las 3 patas más
+> chicas, a $293). β≈0 (modelo −0.013 / dólar +0.015), net +0.022 (λnet OK), gross 0.65, top TRX 15% en cap. Costes y
+> slippage triviales (1 orden/ciclo, ~0.74bps). **lev sigue 1.21x** (sin converger al 1.49 de diseño — ancla conservadora
+> por la vol; a vigilar, no bug). Recuperación por selección (NEAR volteó +0.47, FIL +0.44; AAVE short −1.58 y TRX long
+> −1.30 aún sangran). **NADA QUE CORREGIR.** Ver §ESTADO ACTUAL (2026-06-14).
+> **--- (Databento evaluado y APARCADO 2026-06-14):** es CME (no Binance) y solo cubre BTC/ETH (los coins que el
+> low-barrier excluyó) → solapamiento con el libro vivo ≈0; aparcado en "revisar información pagada", vigilar el item
+> Binance de su roadmap. Sin gasto de crédito (memoria `kepler-databento-evaluado-aparcado`).
 > **🟢 REVISIÓN DIARIA 2026-06-12 — sistema SANO; "4 días en rojo" = ruido idiosincrático −1.1σ, NO bug.** Oscar
 > preocupado por la pérdida sostenida. Log `kepler_2026-06-11_a_2026-06-12.json`. **Track 4d (inception 06-09):
 > 298.18 → 292.89 = −1.77% MTM (~−$5.3).** Descomposición: realizado **−$1.38** (cierre short ATOM −$1.95, churn
@@ -143,6 +180,43 @@
 > Commits pendientes de push: `b8581ff` y antecesores (low-barrier + go-live). Frontend/dashboard sigue apuntando a la DB
 > reseteada → muestra el track real desde 2026-06-09.
 > **⏰ RECORDATORIO ~2026-07-31:** cerrar ciclo sombras (≥60-90d → `e33_shadow_tvl_analyze` → ¿sleeve #8?).
+
+---
+
+## ESTADO ACTUAL (2026-06-14) — recuperación confirmada + 2 fixes de producto verificados vivos; nada que corregir
+> Revisión del log 06-13→06-14 (export 18:03 UTC, 2 ciclos). Sesión de operación + se evaluó y aparcó Databento.
+
+### 1. Recuperación tras los 4 días rojos (sano, dentro de presupuesto)
+- **2 cierres verdes seguidos:** 06-13 **+0.36%** (293.50) · 06-14 **+0.44%** (294.78 último tick). dd diario mejora
+  −1.97% (12) → −1.57% (13) → **−1.14% (14)**. Track 6d: 298.18 → 294.78 = **−1.14% MTM**, recuperando desde −1.77%.
+- La recuperación es **por selección de nombres** (igual de β-neutral): NEAR long volteó −0.22→**+0.47**, FIL aguanta
+  **+0.44**; el lastre sigue siendo AAVE short (squeeze, −1.58) y TRX long (−1.30). Ruido = precio del edge.
+
+### 2. ✅ Los 2 fixes de producto del 06-12 están DESPLEGADOS Y VERIFICADOS VIVOS (era el push+deploy pendiente)
+- **Gate de madurez de ratios:** daily_report 06-13/06-14 traen `ratios_mature:false`, `min_days_ratios:30`,
+  `sharpe:null`/`sortino:null`/`ann_return:null` → narrativa **"Sharpe n/d (<30d)"**. Antes (06-10/11/12) mostraba
+  Sharpe −19.1/−24.34/−26.3 (basura para el copy-lead). Confirmado vivo.
+- **n_positions vivo vs objetivo:** `n_positions:13`, `n_positions_live:10` → narrativa **"10/13 pos"**. El dropping
+  adaptativo suelta BNB/SOL/ATOM (los 3 pesos más chicos: −0.011 / +0.008 / −0.015) a equity ~$293. Confirmado vivo.
+
+### 3. Estado del motor (snapshots 06-13 / 06-14)
+- β-modelo **−0.013** ambos días · β-dólar −0.007 (13) / +0.015 (14) ≈ 0 ✓ · net +0.027 / **+0.022** (λnet recortando) ·
+  gross 0.655 · 13 pesos / 10 colocadas · top TRX 15% = en cap · backtest del libro Sharpe 1.44-1.45 / maxDD −9.5.
+- **lev sigue 1.209x** (06-10 era 1.185 → +2%, NO converge al 1.49 de diseño). Mismo hallazgo del 06-11: el ancla
+  `leverage_for_maxdd_anchor` está conservadora viendo la vol del crash. No es bug; **vigilar convergencia** al normalizarse.
+- Costes/slippage triviales: 06-13 1 orden BNB 0.74bps, realizado −$0.10; 06-14 sin fills nuevos (turnover mínimo).
+- 0 WARN/ERROR · monitor "sin anomalías" · checks pre-trade OK · CB OK · sombras OK (TVL 11·BLEND 20·tx 13·mvrv 12).
+
+### 4. Databento evaluado → APARCADO (decisión Oscar)
+- Oscar trajo credenciales de prueba. Veredicto: Databento es **CME (no Binance)** y su único cripto es **BTC/ETH**
+  (los coins que low-barrier excluyó) → solapamiento con el libro vivo ≈ 0; lo potente (order-book/ticks) es la frontera
+  intradía ya descartada por coste. **Aparcado en "revisar información pagada"**, sin gastar crédito; vigilar el item
+  Binance de su roadmap. Memoria `kepler-databento-evaluado-aparcado`. (Recordatorio: Oscar debe rotar la API key.)
+
+### 5. Pendientes (sin cambios urgentes)
+- **VIGILAR convergencia del lev** (1.21x→¿1.49x?) al bajar la vol; si tras semanas con vol normal sigue ~1.2x, revisar
+  la ventana del ancla en low-barrier. Sin código pendiente. FIX operativo de Fase 1 (cuerpo de error Binance + check
+  "rebal perdido N horas") sigue en cola (no urgente, la cuenta real no tiene el bug del demo). `e33` semanal de sombras.
 
 ---
 
