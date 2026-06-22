@@ -27,7 +27,33 @@
 > HEAD d9280d5, λ=0.35, net/gross +0.107→+0.085, β −0.012, 13 patas, lev OK, 0 errores; el reinicio NO forzó rebalanceo
 > → el re-pesado λ entra en el ciclo 14:00 UTC del 06-23 (1 turnover one-off esperado ese día, trivial).
 > **VERIFICAR 06-23 tras el ciclo:** net del snapshot baja a ~+0.24 (pre-drop), β sigue ≈0, sin WARN nuevo, días-verdes
-> sin cambio. **PENDIENTE DISCUSIÓN:** Oscar quiere proponer un pivote/idea nueva (conversación abierta, sin cerrar aún).
+> sin cambio.
+> **🧪 PIVOTES DE OSCAR EVALUADOS Y REFUTADOS (mismo día, con backtest — la regla de oro hizo su trabajo):**
+> (1) **Scalp "estilo John"** (TP chico +$1, entrar a favor de tendencia, salir rápido): **e83
+> (`research/e83_scalp_trend_tpsl.py`)** — OHLC horario, TP/SL, costos taker reales (12bps RT), intrabar pesimista,
+> benchmark de dirección ALEATORIA. **Esperanza neta NEGATIVA en todos los combos y todos los años (−14 a −21 bps/op),
+> y ≈ IGUAL que aleatorio** → la tendencia intradía no aporta edge tras costos; el TP chico solo reordena la
+> distribución (WR 60% con payoff 0.34-0.62 = la ilusión de John: ganas casi siempre y pierdes dinero). Refutado
+> TAMBIÉN por la propia tvindicators de Oscar: ahí el edge viene de WR 42% **dejando correr ganadores** (ATR-stop),
+> lo OPUESTO a recortar a +$1. (2) **TradFi average-down en WDC/SNDK** (promediar a la baja en acciones en tendencia):
+> **la propia tvindicators YA testeó WDC y lo rechazó como "beta, sin edge"** (ESTADO_PROYECTO.md líneas 45/60);
+> promediar a la baja = beta apalancada + martingala (agregar a perdedores), opuesto a la metodología validada de
+> Oscar. NO se hace. Patrón nombrado: los 3 pivotes (TP chico, hold-hasta-revertir, average-down) son la MISMA firma
+> short-vol/martingala. Memoria `kepler-pivotes-scalp-tradfi-refutados`.
+> **🎯 DECISIÓN DE OSCAR: "madurar lo que hay, no tocar" + montar evaluación honesta.** Kepler (neutral) y
+> tvindicators (direccional, corr ~0) son complementarios y ambos están a media validación → dejarlos acumular track.
+> **🚦 GATE PRE-REGISTRADO (decidido 06-22, ANTES de los datos — juzgar por reglas, no por frustración):** la
+> rentabilidad de un Sharpe ~1.4 NO es confirmable en 30-60d (física estadística: ~6 meses para t-stat≥1, ~1.5-2
+> años para p<0.05). El gate corto es de SEGURIDAD, no de rentabilidad:
+> · **30d (~2026-07-09):** CONTINUAR si maxDD < 7%, β≈0, ciclos limpios. ALARMA si maxDD > 8% o β driftea.
+> · **60d (~2026-08-08):** CONTINUAR si maxDD < 8% y no caer > −5%. ALARMA si caída > −5% sin recuperar (estructural).
+> · **6-12 meses = el gate REAL de rentabilidad:** Sharpe vivo con t-stat ≥ 1 y maxDD sostenido → vendible + abrir
+> caso de copy-lead. Sharpe persistente ≤ 0 → edge muerto, parar. **Pendiente de Oscar (la decisión de fondo):
+> ¿dispuesto a correr el track 6-18 meses?** Si no, el market-neutral a micro-capital no vale el esfuerzo (legítimo).
+> **CONSTRUIR cuando Oscar quiera (producto, no estrategia, NO urgente):** (a) presentación high-water-mark en
+> `/track` para que la curva se SIENTA verde al cobrar (replica el atractivo de John sin la cola); (b) decisión de
+> tier ESTABLE→GROWTH (e81: neutral a −30% = +11%/mes backtest, el gancho real, sin añadir β); (c) evaluación
+> unificada Kepler+tvindicators. NINGUNO toca el edge.
 > **🟢 REVISIÓN DIARIA 2026-06-17 — bleed = MTM short book en rally de alts (NO bug); + FIX β-aware del capital-drop (e80) IMPLEMENTADO, PENDIENTE push+deploy.**
 > Log `kepler_2026-06-12_a_2026-06-17.json` (6 ciclos, todos "Ciclo ESTABLE ok" 22-74s, checks/CB OK).
 > **Track 9d (inception 06-09): 298.18 → 291.80 = −2.14% MTM**, maxDD live **−3.4%** (vs ancla −10%, holgado).
