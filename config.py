@@ -110,13 +110,16 @@ LOW_BARRIER_UNIVERSE = ["AAVEUSDT", "ADAUSDT", "ATOMUSDT", "AVAXUSDT", "BNBUSDT"
 # NET-$ NEUTRALIZACIÓN PARCIAL del libro low-barrier (e79, Oscar 2026-06-10). El libro low-barrier ya
 # fuerza β-dólar Σwβ=0 cada día (_beta_neutralize) → el λ de e72 está incorporado por construcción. Lo
 # único neutralizable restante es el NET-$ puro (Σw, mediana +0.09 ≈ 19% del gross, herencia del trend
-# long-only). e79 (walk-forward 13 folds, lev anclado en train, costes reales): cancelar λnet=0.25 del
-# net-$ entre los 13 coins (proyección que PRESERVA Σwβ=0) MEJORA retorno Y riesgo OOS: 2.34 vs 2.05%/mes,
-# maxDD −10.9 vs −12.1, gana 69% de folds, robusto a slippage ×3. Pico interior en 0.25-0.50 (0.75/1.0
-# degradan fuerte → no subir sin nuevo backtest). 0.25 = pre-registrado por Oscar (e72) antes de e79.
-# 0=desactiva (libro e77/e78 puro). NOTA: el vol-targeting sim-40d (e73) NO pasó en low-barrier (e79:
-# 38% folds, desbordamiento igual, lev errático) → NO desplegado; e79 documenta el porqué.
-LOW_BARRIER_NET_LAMBDA = 0.25
+# long-only). e79 (walk-forward 13 folds, lev anclado en train, costes reales): cancelar λnet del net-$
+# entre los 13 coins (proyección que PRESERVA Σwβ=0) MEJORA retorno Y riesgo OOS. Pico interior 0.25-0.50
+# (0.75/1.0 degradan, 46% folds → no subir sin backtest).
+# e82 (2026-06-22, auditoría): el net-$ vivo creció a +0.34 (trend muy largo en el rally de alts) → se
+# re-validó el grid sobre datos VIVOS y locales. λ=0.35 BATE al 0.25 en AMBAS añadas y ambos niveles de
+# coste (+retorno +2.42→+2.67%/mes, maxDD ≤, +días-verdes, misma robustez 69-77% folds) con maxDD ESTABLE
+# a la añada; λ=0.50 gana más retorno pero su maxDD bajo slip×3 oscila −9.7/−12.1 entre añadas (no robusto)
+# → 0.50 = candidato si el net elevado persiste varias semanas. 0=desactiva (libro e77/e78 puro).
+# NOTA: el vol-targeting sim-40d (e73) NO pasó en low-barrier (e79) → NO desplegado.
+LOW_BARRIER_NET_LAMBDA = 0.35
 # Min-notional por símbolo (fallback si exchangeInfo no responde). execution prefiere el LIVE de Binance.
 MIN_NOTIONAL_FALLBACK = 5.0
 # HORA del rebalanceo diario (ejecución, e54): la liquidez cripto sigue el reloj US/EU → pico 14-16 UTC
