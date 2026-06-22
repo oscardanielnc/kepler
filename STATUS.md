@@ -1,5 +1,33 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-17**.
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-22**.
+> **🔴🟢 AUDITORÍA FUERTE 2026-06-22 (Oscar: "1 mes y no gano dinero, idle rinde más") — pivote estratégico + 1 deploy.**
+> **DATOS REALES (VM):** track real 06-09→06-22 = 298.18→294.47 = **−1.24% en 14d**, maxDD vivo −3.4% (ancla −10%),
+> 14/14 ciclos, 0 errores, costes triviales, β +0.014 (e80 vivo y OK). Demo previo (full-20, 05-30→06-07) = **−6.5%**
+> (tilt net-long atravesó el crash de junio). **Combinado ~23d: negativo en ambas ventanas vs backtest +3.5%/mes.**
+> El −1.24% en 14d es **ruido** (vol 13.5% → ±3.2% a 1σ; esperado +0.6%), NO se puede declarar muerto el edge con 14 datos.
+> **DECISIÓN DE OSCAR:** el market-neutral plano es INVENDIBLE como copy-lead en cripto (nadie copia un plano con
+> dientes rojos); pidió REFORMULAR hacia "verde-constante seguro" (su benchmark: alguien que le hace $1/día sobre $800).
+> **e81 (`research/e81_long_biased_steady.py`) — long-bias REFUTADO por su propio backtest:** comparé 2 construcciones
+> (A: dejar de pelear la β · B: base larga + overlay), dial completo neutral→100%-largo, WF, costes reales, 2022-2026.
+> **El sesgo largo NO añade NI UN día verde** (todo se queda en ~50-52% — días-verdes es ~coin-flip en cripto),
+> **recorta retorno 3-5x, y MUERE en el bear 2022** (las construcciones B negativas en 2022; el neutral +10 a +23%).
+> **"Verde cada día" NO es estrategia — es estructura de comisión (high-water-mark):** el benchmark de Oscar cobra
+> solo en máximos → su curva de FEES se ve verde, su estrategia subyacente tiene rojos. Comparábamos peras con manzanas.
+> **El neutral DOMINA y escala con el tier** (WF OOS, costes reales): ESTABLE −10% +2.6%/mes · −20% +6.3% · −25% +8.7% ·
+> GROWTH −30% **+11.0%/mes** (lev 3.1x, días-verdes y Sortino invariantes al lev). El gancho real NO es añadir β; es
+> gastar más presupuesto de maxDD en lo que ya tiene el mejor retorno/riesgo. **RUMBO ELEGIDO: arreglar leaks + esperar
+> 30-60d en ESTABLE** (no apalancar a ciegas un edge aún sin confirmar vivo); GROWTH = decisión futura de Oscar.
+> **🔧 DEPLOY HECHO (d9280d5, regla de oro PASADA):** auditoría de los 2 "leaks" que detecté → (1) **lev 1.21x NO es
+> leak**: el ancla lo clava correcto (book 1x maxDD 7.9% → lev 1.28×haircut=1.21x para −10%); el "1.49x de diseño" era
+> número VIEJO de e78/e79 (otra ventana de datos). NO se toca. (2) **net-tilt SÍ real**: el snapshot vivo tenía net
+> +0.27 (raw +0.34) — el trend muy largo en el rally. **e82 (`research/e82_net_lambda_revalidate.py`)** re-validó λnet
+> sobre datos VIVOS y locales: **λnet 0.25→0.35** bate al 0.25 en ambas añadas y ambos costes (+retorno +2.42→+2.67%/mes,
+> maxDD ≤, +días-verdes, 69-77% folds) con maxDD ESTABLE a la añada; λ=0.50 gana más retorno pero su maxDD ×3 oscila
+> −9.7/−12.1 entre añadas (no robusto) → **candidato si el net elevado persiste**. **Desplegado y verificado vivo:**
+> HEAD d9280d5, λ=0.35, net/gross +0.107→+0.085, β −0.012, 13 patas, lev OK, 0 errores; el reinicio NO forzó rebalanceo
+> → el re-pesado λ entra en el ciclo 14:00 UTC del 06-23 (1 turnover one-off esperado ese día, trivial).
+> **VERIFICAR 06-23 tras el ciclo:** net del snapshot baja a ~+0.24 (pre-drop), β sigue ≈0, sin WARN nuevo, días-verdes
+> sin cambio. **PENDIENTE DISCUSIÓN:** Oscar quiere proponer un pivote/idea nueva (conversación abierta, sin cerrar aún).
 > **🟢 REVISIÓN DIARIA 2026-06-17 — bleed = MTM short book en rally de alts (NO bug); + FIX β-aware del capital-drop (e80) IMPLEMENTADO, PENDIENTE push+deploy.**
 > Log `kepler_2026-06-12_a_2026-06-17.json` (6 ciclos, todos "Ciclo ESTABLE ok" 22-74s, checks/CB OK).
 > **Track 9d (inception 06-09): 298.18 → 291.80 = −2.14% MTM**, maxDD live **−3.4%** (vs ancla −10%, holgado).
