@@ -1,5 +1,19 @@
 # KEPLER — Estado vivo · Changelog · Pendientes
-> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-22**.
+> # ⬛ PROYECTO ARCHIVADO — 2026-06-26 (decisión de Oscar). NO está corriendo. NO reanudar sin decisión explícita.
+> **Cierre go/no-go (2026-06-26):** track real 18d = 298.18→292.91 = **−1.77%** (ruido, −0.64σ; sistema impecable:
+> maxDD −3.4%, β≈0, 0 errores, costes triviales). Veredicto: el edge no se puede confirmar en <6-18 meses (física
+> estadística); Oscar NO está dispuesto a financiar ese track ni a subir a GROWTH. **Sombras analizadas (única vía de
+> rescate "sleeve nuevo"): NINGUNA desplegable.** MVRV era el único serio (backtest +2.15%/mes, sombra viva +7.4%)
+> pero restringido al universo low-barrier (5 coins) **resta −0.40%/mes** — su edge vivía en BCH/ETH/LTC, los coins que
+> el pivote copy-lead excluye. Conflicto estructural: cantera on-chain = coins caros, libro = coins baratos. Memoria
+> `kepler-onchain-sleeves-vs-lowbarrier-conflict`.
+> **TEARDOWN HECHO (2026-06-26 ~11:10 Lima):** (1) 10 posiciones reales CERRADAS (market reduceOnly, cuenta FLAT,
+> 0 órdenes abiertas); (2) sub-cuenta queda **$292.36 USDT 100% líquido**; (3) servicios `kepler` + `kepler-api`
+> STOP + DISABLE (no rearrancan); (4) DB final archivada en `archive_final_2026-06-26/kepler_final.db`.
+> **PENDIENTE DE OSCAR (manual, fuera de mi alcance):** (a) retirar los $292.36 (sub→master→withdraw); (b) **REVOCAR
+> las API keys en Binance** (están en una VM abandonada, /etc/kepler.env); (c) detener/terminar la instancia Oracle
+> (yo solo tengo SSH, no consola Oracle); (d) opcional: archivar repo GitHub, desuscribir topic ntfy.
+> **Empieza cada sesión leyendo este archivo.** Última actualización: **2026-06-26 (ARCHIVADO)**.
 > **🔴🟢 AUDITORÍA FUERTE 2026-06-22 (Oscar: "1 mes y no gano dinero, idle rinde más") — pivote estratégico + 1 deploy.**
 > **DATOS REALES (VM):** track real 06-09→06-22 = 298.18→294.47 = **−1.24% en 14d**, maxDD vivo −3.4% (ancla −10%),
 > 14/14 ciclos, 0 errores, costes triviales, β +0.014 (e80 vivo y OK). Demo previo (full-20, 05-30→06-07) = **−6.5%**
